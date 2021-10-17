@@ -57,6 +57,9 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
             return colDef.type;
         }
         if (instanceOfTNumber(o)) {
+            if (o.value.indexOf(".")) {
+                return TableColumnType.numeric;
+            }
             return TableColumnType.int;
         }
         if (instanceOfTDate(o)) {

@@ -5,12 +5,14 @@ import {test_worker} from "./worker";
 import {DBData} from "sksql";
 import * as fs from "fs";
 import {test_date} from "./test_date";
-
+import {test_insert} from "./test_insert";
 let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
 
 
 DBData.instance.initWorkerPool(4, sksqlData);
 
+
+test_insert();
 test_date();
 test_numeric();
 test_parser();

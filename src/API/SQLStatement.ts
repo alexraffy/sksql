@@ -153,6 +153,21 @@ export class SQLStatement {
             // console.log(statement);
             if (instanceOfTQueryCreateTable(statement)) {
                 ret.push(processCreateStatement(this.ast, statement));
+                if (i < statements.length) {
+                    // the next statement may need info about this table
+                    let tt = DBData.instance.getTableDataAndIndex(statement.name.table);
+                    let def = readTableDefinition(tt.table.data);
+                    walk.push(
+                        {
+                            name: def.name,
+                            table: tt.table,
+                            def: def,
+                            rowLength: recordSize(tt.table.data),
+                            cursor: {tableIndex: tt.index, offset: 0, blockIndex: 0, rowLength: 0},
+                            alias: ""
+                        }
+                    );
+                }
             }
             if (instanceOfTQueryInsert(statement)) {
                 ret.push(processInsertStatement(this.ast, statement, this.parameters, walk));

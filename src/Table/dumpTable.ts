@@ -40,7 +40,7 @@ export function dumpTable(table: ITable) {
             let value: string | number | bigint | boolean | numeric | TDate = readValue(table, def, def.columns[x], dv);
             if (isNumeric(value)) {
                 ret += numericDisplay(value) + "\t";
-            } if (instanceOfTDate(value)) {
+            } else if (instanceOfTDate(value)) {
                 ret += padLeft(value.year.toString(), 4, "0") + "-" + padLeft(value.month.toString(), 2, "0") + "-" + padLeft(value.day.toString(), 2, "0") + "\t";
             } else {
                 ret += value + "\t";

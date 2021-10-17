@@ -76,6 +76,7 @@ export function readValue(table: ITable, tableDef: ITableDefinition, column: Tab
             value.e = fullRow.getUint16(column.offset + offset + 2 + 4);
             value.approx = 0;
         }
+        break;
         case TableColumnType.date:
         {
             value = {
@@ -89,6 +90,7 @@ export function readValue(table: ITable, tableDef: ITableDefinition, column: Tab
             value.month = fullRow.getUint8(column.offset + offset + 2 + 4);
             value.day = fullRow.getUint8(column.offset + offset + 2 + 4 + 1);
         }
+        break;
     }
 
     return value;

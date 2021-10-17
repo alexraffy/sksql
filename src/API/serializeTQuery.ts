@@ -21,9 +21,20 @@ import {instanceOfTQueryColumn} from "../Query/Guards/instanceOfTQueryColumn";
 import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
 import {TNull} from "../Query/Types/TNull";
 import {instanceOfTNull} from "../Query/Guards/instanceOfTNull";
+import { TArray } from "../Query/Types/TArray";
+import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
+import { TDate } from "../Query/Types/TDate";
+import { instanceOfTDate } from "../Query/Guards/instanceOfTDate";
+import { padLeft } from "../Date/padLeft";
+import { TVariable } from "../Query/Types/TVariable";
+import { numeric } from "../Numeric/numeric";
+import {isNumeric} from "../Numeric/isNumeric";
+import {numericDisplay} from "../Numeric/numericDisplay";
+import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 
 
-export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryComparisonExpression | TQueryFunctionCall | TNull | TColumn | TQueryColumn | TString | TLiteral | TNumber | TBoolValue | string): string {
+
+export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryComparisonExpression | TQueryFunctionCall | TVariable | TNull | TColumn | TQueryColumn | TString | TLiteral | TNumber | TBoolValue | TDate | TArray | numeric | string): string {
     if (instanceOfTNumber(a)) {
         return a.value;
     }
@@ -35,6 +46,24 @@ export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryC
     }
     if (instanceOfTNull(a)) {
         return "null";
+    }
+    if (isNumeric(a)) {
+        return numericDisplay(a);
+    }
+    if (instanceOfTVariable(a)) {
+        return (a as TVariable).name;
+    }
+    if (instanceOfTArray(a)) {
+        let str = "(";
+        for (let i = 0; i < a.array.length; i++) {
+            // @ts-ignore
+            str += serializeTQuery(a.array[i]);
+        }
+        str += ")";
+        return str;
+    }
+    if (instanceOfTDate(a)) {
+        return a.year + "-" + padLeft(a.month, 2, "0") + "-" + padLeft(a.day, 2, "0");
     }
     if (instanceOfTColumn(a)) {
         return `[${a.table}].[${a.column}]`;

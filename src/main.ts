@@ -54,8 +54,15 @@ export * from "./Table/writeTableDefinition";
 
 export * from "./Numeric/numeric";
 export * from "./Numeric/numericAdd";
+export * from "./Numeric/numericAdjustExponent";
+export * from "./Numeric/numericCmp";
 export * from "./Numeric/numericDisplay";
+export * from "./Numeric/numericFromNumber";
+export * from "./Numeric/numericIsInfinite";
+export * from "./Numeric/numericIsNaN";
 export * from "./Numeric/numericLoad";
+export * from "./Numeric/numericSub";
+export * from "./Numeric/numericToNumber";
 
 
 export * from "./Blocks/blockInfo";
@@ -82,7 +89,9 @@ export * from "./Cursor/ITableCursor";
 export * from "./Cursor/readFirst";
 export * from "./Cursor/readNext";
 
+export * from "./Date/padLeft";
 export * from "./Date/parseDateString";
+export * from "./Date/TDateCmp";
 
 export * from "./Query/Enums/kCommandType";
 export * from "./Query/Enums/kOrder";

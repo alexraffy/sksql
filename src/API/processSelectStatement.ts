@@ -166,7 +166,7 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
                 let value = evaluate(select.columns[i].expression, parameters, tables, returnTableDefinition.columns[i]);
                 writeValue(returnTable, returnTableDefinition, returnTableDefinition.columns[i], resultRow, value, 0);
             }
-            if (select.top !== undefined) {
+            if (select.top !== undefined && (select.orderBy.length === 0 || (select.orderBy[0].column as TLiteral).value !== "ROWID")) {
                 let maxCount = evaluate(select.top, parameters, undefined, undefined);
                 if (maxCount <= numberOfRowsAdded) {
                     done = true;

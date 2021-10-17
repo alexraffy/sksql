@@ -5,6 +5,9 @@ import {evaluate} from "./evaluate";
 import {instanceOfTQueryComparison} from "../Query/Guards/instanceOfTQueryComparison";
 import {kQueryComparison} from "../Query/Enums/kQueryComparison";
 import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
+import { TArray } from "../Query/Types/TArray";
+import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
+import { compareValues } from "./compareValues";
 
 
 export function evaluateWhereClause(struct: TQueryComparison | TQueryComparisonExpression , parameters: {name: string, value: any}[], tables: TTableWalkInfo[]): boolean {
@@ -15,7 +18,10 @@ export function evaluateWhereClause(struct: TQueryComparison | TQueryComparisonE
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
         let leftValue = evaluate(qc.left, parameters, tables, undefined);
-        let rightValue = evaluate(qc.right, parameters, tables, undefined);
+        let rightValue = undefined;
+        if ( !instanceOfTArray(qc.right)) {
+            rightValue = evaluate(qc.right, parameters, tables, undefined);
+        }
         switch (qc.comp.value) {
             case kQueryComparison.equal:
                 return (qc.comp.negative === true) ? leftValue !== rightValue : leftValue === rightValue;
@@ -47,7 +53,17 @@ export function evaluateWhereClause(struct: TQueryComparison | TQueryComparisonE
                 //TODO
                 return false;
             case kQueryComparison.in:
-                //TODO
+                let rightArray: TArray = qc.right as TArray;
+                
+                for (let x = 0; x < rightArray.array.length; x++) {
+                    // @ts-ignore
+                    let rv = evaluate(rightArray.array[x], parameters, tables, undefined);
+                    if (compareValues(leftValue, rv) === 0) {
+                        return true;
+                    }
+
+                }
+                
                 return false;
         }
     }

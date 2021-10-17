@@ -3,6 +3,7 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
+import { ITableDefinition } from "../main";
 
 
 let workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
@@ -45,6 +46,9 @@ export class DBData {
     constructor() {
         this.allTables = [];
         DBData._instance = this;
+        let dual = new SQLStatement("CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');");
+        dual.run();
+
     }
     static get instance(): DBData {
         if (DBData._instance === undefined) {
@@ -75,6 +79,16 @@ export class DBData {
             let tb = readTableDefinition(at[i].data);
             if (tb.name.localeCompare(tableName) === 0) {
                 return at[i];
+            }
+        }
+        return undefined;
+    }
+    getTableDataAndIndex(tableName: string): {index: number, table: ITable} {
+        let at = this.allTables;
+        for (let i = 0; i < at.length; i++ ) {
+            let tb = readTableDefinition(at[i].data);
+            if (tb.name.localeCompare(tableName) === 0) {
+                return {index: i, table: at[i]};
             }
         }
         return undefined;

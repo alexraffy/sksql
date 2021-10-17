@@ -1,5 +1,5 @@
 
-import {parseDateString, SQLStatement, dumpTable, DBData, readTableDefinition} from "sksql";
+import {parseDateString, SQLStatement, dumpTable, DBData, readTableDefinition, readTableAsJSON} from "sksql";
 import * as assert from "assert";
 
 
@@ -28,7 +28,7 @@ export function test_date() {
     st.run();
     console.log(readTableDefinition(DBData.instance.getTable("date_tests").data));
     let inserts = new SQLStatement("INSERT INTO date_tests(dates) VALUES(@date)");
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 10; i++) {
         let y = 1920 + parseInt(""+ (Math.random()*100) );
         let m = 1 + parseInt("" + (Math.random() * 11) );
         let d = 1 + parseInt("" + (Math.random() * 30) );
@@ -39,5 +39,5 @@ export function test_date() {
     let sort = new SQLStatement("SELECT dates FROM date_tests ORDER BY dates DESC");
     let result = sort.run();
     console.log(dumpTable(DBData.instance.getTable(result[0].resultTableName)));
-
+    console.log(readTableAsJSON(result[0].resultTableName));
 }

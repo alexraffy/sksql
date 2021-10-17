@@ -8,11 +8,12 @@ import {TColumn} from "./TColumn";
 import {TString} from "./TString";
 import {TComparison} from "./TComparison";
 import {TNull} from "./TNull";
+import { TArray } from "./TArray";
 
 
 export interface TQueryComparison {
     kind: "TQueryComparison";
     left: TQueryExpression | TNull | TColumn | TString | TLiteral | TNumber | TQueryColumn;
     comp: TComparison;
-    right: TQueryExpression | TNull | TColumn | TString | TLiteral | TNumber | TQueryColumn;
+    right: TQueryExpression | TNull | TColumn | TString | TLiteral | TNumber | TQueryColumn | TArray;
 }

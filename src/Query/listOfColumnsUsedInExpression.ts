@@ -80,9 +80,11 @@ export function listOfColumnsUsedInExpression(struct: TQueryAnyType, tables: TTa
         let qi = struct as TQueryInsert;
         if (qi.hasValues) {
             for (let i = 0; i < qi.values.length; i++) {
-                let cols = listOfColumnsUsedInExpression(qi.values[i], tables);
-                if (cols.length > 0) {
-                    ret.push(...cols);
+                for (let x = 0; x < qi.values[i].values.length; x++) {
+                    let cols = listOfColumnsUsedInExpression(qi.values[i].values[x], tables);
+                    if (cols.length > 0) {
+                        ret.push(...cols);
+                    }
                 }
             }
         }

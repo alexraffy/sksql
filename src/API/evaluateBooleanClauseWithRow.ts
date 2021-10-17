@@ -8,6 +8,9 @@ import {kQueryComparison} from "../Query/Enums/kQueryComparison";
 import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
 import {ITable} from "../Table/ITable";
 import {evaluateWithRow} from "./evaluateWithRow";
+import { TArray } from "../Query/Types/TArray";
+import { compareValues } from "./compareValues";
+import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
 
 
 export function evaluateBooleanClauseWithRow(struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
@@ -18,7 +21,10 @@ export function evaluateBooleanClauseWithRow(struct: TQueryComparisonExpression 
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
         let leftValue = evaluateWithRow(qc.left, table, def, undefined, fullRow, offset);
-        let rightValue = evaluateWithRow(qc.right, table, def, undefined, fullRow, offset);
+        let rightValue = undefined;
+        if (!instanceOfTArray(qc.right)) {
+            rightValue = evaluateWithRow(qc.right, table, def, undefined, fullRow, offset);
+        }
         switch (qc.comp.value) {
             case kQueryComparison.equal:
                 return (qc.comp.negative === true) ? leftValue !== rightValue : leftValue === rightValue;
@@ -48,7 +54,17 @@ export function evaluateBooleanClauseWithRow(struct: TQueryComparisonExpression 
                 //TODO
                 return false;
             case kQueryComparison.in:
-                //TODO
+                let rightArray: TArray = qc.right as TArray;
+
+                for (let x = 0; x < rightArray.array.length; x++) {
+                    // @ts-ignore
+                    let rv = evaluate(rightArray.array[x], parameters, tables, undefined);
+                    if (compareValues(leftValue, rv) === 0) {
+                        return true;
+                    }
+
+                }
+
                 return false;
         }
     }

@@ -52,7 +52,7 @@ export const predicateTQueryInsert = function *(callback) {
     let gotMore = ",";
 
     let columns: TLiteral[] = [];
-    let values: (TQueryExpression | TQueryFunctionCall | TNull | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber)[] = [];
+    let values: {values: (TQueryExpression | TQueryFunctionCall | TNull | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber)[]}[] = [];
     let selectStatement: TQuerySelect = undefined;
 
     if (hasColumns === "(") {
@@ -75,17 +75,26 @@ export const predicateTQueryInsert = function *(callback) {
 
     if (valuesOrSelect === true) {
         yield str("VALUES");
-        yield maybe(atLeast1(whitespaceOrNewLine));
-        yield str("(");
-        gotMore = ",";
-        while (gotMore === ",") {
+
+        let gotMultipleInsert = ",";
+        while (gotMultipleInsert === ",") {
+            let vals = {values: []};
             yield maybe(atLeast1(whitespaceOrNewLine));
-            let value = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTNull, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
-            values.push(value);
+            yield str("(");
+            gotMore = ",";
+            while (gotMore === ",") {
+                yield maybe(atLeast1(whitespaceOrNewLine));
+                let value = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTNull, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
+                vals.values.push(value);
+                yield maybe(atLeast1(whitespaceOrNewLine));
+                gotMore = yield maybe(str(","));
+            }
+            yield str(")");
+            values.push(vals);
             yield maybe(atLeast1(whitespaceOrNewLine));
-            gotMore = yield maybe(str(","));
+            gotMultipleInsert = yield maybe(str(","))
         }
-        yield str(")");
+
     } else {
         selectStatement = yield predicateTQuerySelect;
     }

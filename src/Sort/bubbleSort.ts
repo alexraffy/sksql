@@ -12,6 +12,8 @@ import {kOrder} from "../Query/Enums/kOrder";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {TDateCmp} from "../Date/TDateCmp";
 import {TDate} from "../Query/Types/TDate";
+import { numericCmp } from "../Numeric/numericCmp";
+import { numeric } from "../Numeric/numeric";
 
 /*
     sort the table rows in place
@@ -72,7 +74,10 @@ export function bubbleSort(table: ITable, def: ITableDefinition, orderBys: TQuer
                         break;
                         case TableColumnType.numeric:
                         {
-
+                            compareValue = numericCmp(col1 as numeric, col2 as numeric);
+                            if (o.order === kOrder.desc) {
+                                compareValue = -compareValue;
+                            }
                         }
                         break;
                         case TableColumnType.varchar:

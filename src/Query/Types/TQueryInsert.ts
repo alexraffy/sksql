@@ -16,6 +16,6 @@ export interface TQueryInsert {
     table: TTable,
     columns: TLiteral[];
     hasValues: boolean;
-    values: (TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TNull | TColumn | TString | TLiteral | TNumber)[];
+    values: {values: (TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TNull | TColumn | TString | TLiteral | TNumber)[]}[];
     selectStatement: TQuerySelect;
 }

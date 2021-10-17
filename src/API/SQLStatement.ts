@@ -4,12 +4,6 @@ import {parse} from "../BaseParser/parse";
 import {predicateTQueryCreateTable} from "../Query/Parser/predicateTQueryCreateTable";
 import {TQueryCreateTable} from "../Query/Types/TQueryCreateTable";
 import {Stream} from "../BaseParser/Stream";
-import {ITableDefinition} from "../Table/ITableDefinition";
-import {TableColumnType} from "../Table/TableColumnType";
-import {newTable} from "../Table/newTable";
-import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
-import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
-import {TColumn} from "../Query/Types/TColumn";
 import {TQueryInsert} from "../Query/Types/TQueryInsert";
 import {predicateTQueryInsert} from "../Query/Parser/predicateTQueryInsert";
 import {ParseResult} from "../BaseParser/ParseResult";
@@ -18,25 +12,10 @@ import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
 import {instanceOfTQueryInsert} from "../Query/Guards/instanceOfTQueryInsert";
 import {DBData} from "./DBInit";
 import {readTableDefinition} from "../Table/readTableDefinition";
-import {addRow} from "../Table/addRow";
-import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
-import {TBoolValue} from "../Query/Types/TBoolValue";
-import {TQueryExpression} from "../Query/Types/TQueryExpression";
-import {TVariable} from "../Query/Types/TVariable";
-import {TString} from "../Query/Types/TString";
-import {TLiteral} from "../Query/Types/TLiteral";
-import {TNumber} from "../Query/Types/TNumber";
-import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
-import {instanceOfTString} from "../Query/Guards/instanceOfTString";
-import {instanceOfTQueryExpression} from "../Query/Guards/instanceOfTQueryExpression";
-import {kQueryExpressionOp} from "../Query/Enums/kQueryExpressionOp";
-import {instanceOfTNumber} from "../Query/Guards/instanceOfTNumber";
-import {writeValue} from "../BlockIO/writeValue";
 import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {recordSize} from "../Table/recordSize";
 import {TTableWalkInfo} from "./TTableWalkInfo";
-import {evaluate} from "./evaluate";
 import {processCreateStatement} from "./processCreateStatement";
 import {processInsertStatement} from "./processInsertStatement";
 import {processSelectStatement} from "./processSelectStatement";
@@ -55,34 +34,21 @@ import {TQueryDelete} from "../Query/Types/TQueryDelete";
 import {oneOf} from "../BaseParser/Predicates/oneOf";
 import {eof} from "../BaseParser/Predicates/eof";
 import {str} from "../BaseParser/Predicates/str";
+import {kResultType} from "./kResultType";
+import {readTableAsJSON} from "./readTableAsJSON";
+
 
 
 export class SQLStatement {
 
+    query: string = "";
     parameters: {name: string, value: any}[] = [];
 
     ast: ParseResult | ParseError;
 
     constructor(st: string) {
-        let callback = function () {}
+        this.query = st;
 
-        this.ast = parse(callback, function *(callback) {
-            let ret: (TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string)[] = [];
-            let result: TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string | undefined = "";
-            let exit = yield eof;
-            while (!exit) {
-                result = yield oneOf([predicateTQueryCreateTable, predicateTQueryInsert, predicateTQuerySelect, predicateTQueryUpdate, predicateTQueryDelete, whitespaceOrNewLine, str("")],"");
-                if (result !== undefined && typeof result !== "string") {
-                    ret.push(result);
-                }
-                exit = yield eof;
-            }
-
-            yield returnPred({
-                type: "TSQLStatement",
-                statements: ret
-            });
-        }, new Stream(st, 0));
 
     }
 
@@ -116,14 +82,49 @@ export class SQLStatement {
         return undefined;
     }
 
-    run(): SQLResult[] {
+    runOnWebWorker(): Promise<string> {
+        return new Promise<string>( (resolve, reject) => {
+            DBData.instance.updateWorkerDB(0);
+            DBData.instance.sendWorkerQuery(0, this, reject, resolve);
+
+        });
+    }
+    private parse() {
+        let callback = function () {}
+
+        this.ast = parse(callback, function *(callback) {
+            let ret: (TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string)[] = [];
+            let result: TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string | undefined = "";
+            let exit = yield eof;
+            while (!exit) {
+                result = yield oneOf([predicateTQueryCreateTable, predicateTQueryInsert, predicateTQuerySelect, predicateTQueryUpdate, predicateTQueryDelete, whitespaceOrNewLine, str("")],"");
+                if (result !== undefined && typeof result !== "string") {
+                    ret.push(result);
+                }
+                exit = yield eof;
+            }
+
+            yield returnPred({
+                type: "TSQLStatement",
+                statements: ret
+            });
+        }, new Stream(this.query, 0));
+    }
+    run(type: kResultType = kResultType.SQLResult): SQLResult[] | any[] {
+        if (this.ast === undefined) {
+            this.parse();
+        }
         let ret: SQLResult[] = [];
         if (this.hasErrors) {
-            return [{
-                error: (this.ast as ParseError).description,
-                rowCount: 0,
-                resultTableName: ""
-            } as SQLResult];
+            if (type === kResultType.SQLResult) {
+                return [{
+                    error: (this.ast as ParseError).description,
+                    rowCount: 0,
+                    resultTableName: ""
+                } as SQLResult];
+            } else if (type === kResultType.JSON) {
+                return [];
+            }
         }
         let walk : TTableWalkInfo[] = [];
         for (let i = 0; i < DBData.instance.allTables.length; i++) {
@@ -166,21 +167,18 @@ export class SQLStatement {
                 ret.push(processDeleteStatement(this.ast, statement, this.parameters, walk));
             }
         }
-        return ret;
+        if (type === kResultType.SQLResult) {
+            return ret;
+        } else if (type === kResultType.JSON) {
+            for (let i = 0; i < ret.length; i++) {
+                if (ret[i].resultTableName !== undefined && ret[i].resultTableName !== "") {
+                    return readTableAsJSON(ret[i].resultTableName);
+                }
+            }
+
+        }
 
     }
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 }

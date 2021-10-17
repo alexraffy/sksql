@@ -24,6 +24,7 @@ import {TTableWalkInfo} from "./TTableWalkInfo";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {numeric} from "../Numeric/numeric";
+import {TDate} from "../Query/Types/TDate";
 
 
 export function processInsertStatement(parseResult: ParseResult, statement: TQueryInsert, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
@@ -52,7 +53,7 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
     for (let i = 0; i < def.columns.length; i++) {
         let colDef = def.columns[i];
         let columnProcessed: boolean = false;
-        let value: string | number | boolean | bigint | numeric = undefined;
+        let value: string | number | boolean | bigint | numeric | TDate = undefined;
 
         if (def.hasIdentity === true && def.identityColumnName.toUpperCase() === colDef.name.toUpperCase()) {
             // get last value

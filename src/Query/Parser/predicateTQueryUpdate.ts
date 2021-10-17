@@ -28,6 +28,8 @@ import {TNumber} from "../Types/TNumber";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {TQueryTable} from "../Types/TQueryTable";
 import {kQueryJoin} from "../Enums/kQueryJoin";
+import {TDate} from "../Types/TDate";
+import {predicateTDate} from "./predicateTDate";
 
 /*
     tries to parse an update statement
@@ -65,7 +67,7 @@ export const predicateTQueryUpdate = function *(callback) {
     let assignments: {
         column: TColumn,
         operator: kQueryAssignOp,
-        value: TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber
+        value: TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber
     }[] = [];
 
     while (gotMore === ",") {
@@ -74,7 +76,7 @@ export const predicateTQueryUpdate = function *(callback) {
         yield maybe(whitespace);
         yield str("=");
         yield maybe(whitespace);
-        const expression = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "");
+        const expression = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTDate, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "");
         yield maybe(whitespace);
 
         assignments.push({

@@ -17,6 +17,7 @@ import {TLiteral} from "../Types/TLiteral";
 import {TQueryFunctionCall} from "../Types/TQueryFunctionCall";
 import {predicateTBoolValue} from "./predicateTBoolValue";
 import {predicateTVariable} from "./predicateTVariable";
+import {predicateTDate} from "./predicateTDate";
 
 
 /*
@@ -30,7 +31,7 @@ export const predicateTQueryColumn = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    let left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall,  predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "" );
+    let left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall,  predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "" );
     yield maybe(whitespace);
     let as = yield maybe(str("AS "));
     let columnName = "";

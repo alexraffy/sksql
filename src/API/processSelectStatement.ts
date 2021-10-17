@@ -82,7 +82,7 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
                 table = tableNames[0];
             }
             let t = tables.find((t) => { return t.alias === table;});
-            let colDef = t.def.columns.find( (col) => { return col.name === name;});
+            let colDef = t.def.columns.find( (col) => { return col.name.toUpperCase() === name.toUpperCase();});
 
             columns.push({
                 tableName: t.name,

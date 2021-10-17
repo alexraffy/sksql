@@ -13,10 +13,9 @@
     "removeComments": false,
     "noImplicitAny": false,
     "suppressImplicitAnyIndexErrors": true,
-    "allowSyntheticDefaultImports": true,
-    "typeRoots": ["node_modules/@types","extra_typings"],
+    "allowSyntheticDefaultImports": true
   },
   "exclude": [
-    "node_modules", "build", "dist", "resources_master", "tests"
+    "node_modules", "build", "dist", "resources_master", "../src"
   ]
 }

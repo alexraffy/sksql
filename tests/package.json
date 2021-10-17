@@ -1,0 +1,14 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "scripts": {
+    "sksql-03-build-tests": "tsc -p tsconfig_tests.json",
+    "sksql-04-run-tests": "node build/main.js"
+  },
+  "dependencies": {
+    "sksql": "file:.."
+  },
+  "devDependencies": {
+    "@types/node": "^15.12.5"
+  }
+}

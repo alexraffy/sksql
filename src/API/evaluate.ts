@@ -29,17 +29,21 @@ import {isNumeric} from "../Numeric/isNumeric";
 import {numericSub} from "../Numeric/numericSub";
 import {instanceOfTNumeric} from "../Query/Guards/instanceOfTNumeric";
 import {numericFromNumber} from "../Numeric/numericFromNumber";
+import {TDate} from "../Query/Types/TDate";
+import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 
 
-export function evaluate(struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn | TVariable | TBoolValue | TColumn | TString |  TLiteral | TNumber,
+export function evaluate(struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn | TVariable | TBoolValue | TColumn | TDate | TString |  TLiteral | TNumber,
         parameters: {name: string, value: any}[],
         tables: TTableWalkInfo[],
-        colDef: TableColumn): string | number | boolean | bigint | numeric {
+        colDef: TableColumn): string | number | boolean | bigint | numeric | TDate {
 
     if (instanceOfTNull(struct)) {
         return undefined;
     }
-
+    if (instanceOfTDate(struct)) {
+        return struct;
+    }
     if (instanceOfTVariable(struct)) {
         // look up the parameter
         let exists = parameters.find((p) => { return p.name === struct.name;});
@@ -130,6 +134,7 @@ export function evaluate(struct: string | number | bigint | boolean | TQueryExpr
                     return numericSub(left.value, right.value);
             }
         }
+
         if (typeof left === "number" && typeof right === "number") {
             switch (op) {
                 case kQueryExpressionOp.add:

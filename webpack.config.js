@@ -14,5 +14,10 @@ module.exports = {
     optimization: {
         minimize: true
     },
+    resolve: {
+        fallback: {
+            "worker_threads": false
+        }
+    }
 
 };

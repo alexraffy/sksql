@@ -109,6 +109,9 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
             case TableColumnType.numeric:
                 columnOffset += 1 + 4 + 2;
                 break;
+            case TableColumnType.date:
+                columnOffset += 1 + 4 + 1 + 1;
+                break;
             default:
                 columnOffset += (1 * c.length);
         }

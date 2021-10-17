@@ -11,6 +11,7 @@ import {instanceOfTString} from "../Query/Guards/instanceOfTString";
 import {instanceOfTBoolValue} from "../Query/Guards/instanceOfTBoolValue";
 import {TTableWalkInfo} from "./TTableWalkInfo";
 import {findTableNameForColumn} from "./findTableNameForColumn";
+import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 
 
 export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColumnType {
@@ -52,11 +53,14 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
             }
 
             let t = tables.find((t) => { return t.alias === table;});
-            let colDef = t.def.columns.find( (col) => { return col.name === name;});
+            let colDef = t.def.columns.find( (col) => { return col.name.toUpperCase() === name.toUpperCase();});
             return colDef.type;
         }
         if (instanceOfTNumber(o)) {
             return TableColumnType.int;
+        }
+        if (instanceOfTDate(o)) {
+            return TableColumnType.date;
         }
         if (instanceOfTString(o)) {
             return TableColumnType.varchar;
@@ -74,6 +78,8 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
     for (let i = 0; i < types.length; i++) {
         let t = types[i];
         switch (t) {
+            case TableColumnType.date:
+                return TableColumnType.date;
             case TableColumnType.numeric:
                 return TableColumnType.numeric;
             case TableColumnType.boolean:

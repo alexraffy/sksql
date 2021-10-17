@@ -10,9 +10,10 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateTNumber} from "./predicateTNumber";
+import {predicateTDate} from "./predicateTDate";
 
 /*
-    tries to parse (FUNCTION | EXPRESSION | STRING | VARIABLE | NUMBER,...)
+    tries to parse (FUNCTION | EXPRESSION | TDATE | STRING | VARIABLE | NUMBER,...)
  */
 export const predicateTArray = function*(callback) {
     let ret: TArray = {
@@ -23,7 +24,7 @@ export const predicateTArray = function*(callback) {
     let gotMore = ",";
     while (gotMore === ",") {
         yield maybe(atLeast1(whitespaceOrNewLine));
-        let value = yield oneOf([predicateTQueryFunctionCall, predicateTQueryExpression, predicateTString, predicateTVariable, predicateTNumber], "");
+        let value = yield oneOf([predicateTQueryFunctionCall, predicateTQueryExpression, predicateTDate, predicateTString, predicateTVariable, predicateTNumber], "");
         ret.array.push(value);
         yield maybe(atLeast1(whitespaceOrNewLine));
         gotMore = yield maybe(str(","));

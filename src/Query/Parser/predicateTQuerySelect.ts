@@ -3,8 +3,6 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
-import {literal} from "../../BaseParser/Predicates/literal";
-import {either} from "../../BaseParser/Predicates/either";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TQuerySelect} from "../Types/TQuerySelect";
 import {kCommandType} from "../Enums/kCommandType";

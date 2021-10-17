@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "scripts": {
     "sksql-00-runall": "npm run sksql-01-build && npm run sksql-02-webpack",
-    "sksql-01-build": "tsc",
-    "sksql-02-webpack": "webpack"
+    "sksql-01-build": "tsc -p tsconfig.json",
+    "sksql-02-webpack": "webpack",
+    "sksql-03-build-tests": "npm run --prefix ./tests sksql-03-build-tests",
+    "sksql-04-run-tests": "npm run --prefix ./tests sksql-04-run-tests"
   },
   "main": "build/main.js",
   "types": "build/main.d.ts",

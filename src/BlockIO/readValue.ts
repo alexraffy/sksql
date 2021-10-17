@@ -4,13 +4,14 @@ import {ITable} from "../Table/ITable";
 import {TableColumnType} from "../Table/TableColumnType";
 import {readStringFromUtf8Array} from "./readStringFromUtf8Array";
 import {numeric} from "../Numeric/numeric";
+import {TDate} from "../Query/Types/TDate";
 
 /*
     read a column value from the row DataView
     offset should be set to 5 if the row DataView contains the 5 bytes row header
  */
-export function readValue(table: ITable, tableDef: ITableDefinition, column: TableColumn, fullRow: DataView, offset: number = 5): string | number | boolean | bigint | numeric {
-    let value: number | string | boolean | bigint | numeric;
+export function readValue(table: ITable, tableDef: ITableDefinition, column: TableColumn, fullRow: DataView, offset: number = 5): string | number | boolean | bigint | numeric | TDate {
+    let value: number | string | boolean | bigint | numeric | TDate;
     let isNull = fullRow.getUint8(column.offset + offset);
     if (isNull === 1) {
         return undefined;
@@ -74,6 +75,19 @@ export function readValue(table: ITable, tableDef: ITableDefinition, column: Tab
             value.m = fullRow.getUint32(column.offset + offset + 2);
             value.e = fullRow.getUint16(column.offset + offset + 2 + 4);
             value.approx = 0;
+        }
+        case TableColumnType.date:
+        {
+            value = {
+                kind: "TDate",
+                year: 0,
+                month: 0,
+                day: 0
+            } as TDate;
+            let dateFlag = fullRow.getUint8(column.offset + offset + 1)
+            value.year = fullRow.getUint32(column.offset + offset + 2);
+            value.month = fullRow.getUint8(column.offset + offset + 2 + 4);
+            value.day = fullRow.getUint8(column.offset + offset + 2 + 4 + 1);
         }
     }
 

@@ -21,6 +21,8 @@ import {TBoolValue} from "../Types/TBoolValue";
 import {predicateTVariable} from "./predicateTVariable";
 import {predicateTBoolValue} from "./predicateTBoolValue";
 import {TVariable} from "../Types/TVariable";
+import {TDate} from "../Types/TDate";
+import {predicateTDate} from "./predicateTDate";
 
 /*
     tries to parse a function call
@@ -32,19 +34,19 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
         return;
     }
     const fnName = yield literal;
-    let parameters: (TQueryExpression | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber)[] = [];
+    let parameters: (TQueryExpression | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber)[] = [];
     yield maybe(whitespace);
     yield str("(");
-    const param1: (TQueryExpression | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber) = yield oneOf(
-        [predicateTQueryExpression, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters");
+    const param1: (TQueryExpression | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber) = yield oneOf(
+        [predicateTQueryExpression, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters");
     parameters.push(param1);
     yield maybe(whitespace);
 
     let extraParamOrEnd = yield either(str(")"), str(","));
     while (extraParamOrEnd===",") {
         yield maybe(whitespace);
-        const extraParam: (TQueryExpression | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber) = yield oneOf(
-            [predicateTQueryExpression, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters");
+        const extraParam: (TQueryExpression | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber) = yield oneOf(
+            [predicateTQueryExpression, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters");
         parameters.push(extraParam);
         yield maybe(whitespace);
         extraParamOrEnd = yield either(str(")"), str(","));

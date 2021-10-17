@@ -67,6 +67,9 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
                 case "NUMERIC":
                     type = TableColumnType.numeric;
                     break;
+                case "DATE":
+                    type = TableColumnType.date;
+                    break;
 
             }
             let length = parseInt(col.type.size.value);

@@ -13,6 +13,7 @@ import {TLiteral} from "./TLiteral";
 import {TQueryFunctionCall} from "./TQueryFunctionCall";
 import {TVariable} from "./TVariable";
 import {TNull} from "./TNull";
+import {TDate} from "./TDate";
 
 
-export type TQueryAnyType = TQueryExpression | TQueryFunctionCall | TQueryComparisonExpression | TQueryComparison | TQueryColumn | TString | TNull | TLiteral | TNumber | TVariable | TBoolValue | TQuerySelect | TQueryUpdate | TQueryDelete | TColumn;
+export type TQueryAnyType = TQueryExpression | TQueryFunctionCall | TQueryComparisonExpression | TQueryComparison | TQueryColumn | TDate | TString | TNull | TLiteral | TNumber | TVariable | TBoolValue | TQuerySelect | TQueryUpdate | TQueryDelete | TColumn;

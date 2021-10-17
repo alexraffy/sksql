@@ -9,8 +9,9 @@ import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {TableColumnType} from "../Table/TableColumnType";
 import {kOrder} from "../Query/Enums/kOrder";
-import {copyBytesToSharedBuffer} from "../BlockIO/copyBytesToSharedBuffer";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
+import {TDateCmp} from "../Date/TDateCmp";
+import {TDate} from "../Query/Types/TDate";
 
 /*
     sort the table rows in place
@@ -32,7 +33,9 @@ export function bubbleSort(table: ITable, def: ITableDefinition, orderBys: TQuer
         }
 
         let colDef = def.columns.find((c) => { return c.name.toUpperCase() === colName; })
-
+        if (colDef === undefined) {
+            throw "Could not find column " + colName;
+        }
         do {
             let idx = 0;
             done_sorting = true;
@@ -59,6 +62,14 @@ export function bubbleSort(table: ITable, def: ITableDefinition, orderBys: TQuer
                     switch (colDef.type) {
                         case TableColumnType.blob:
                             break;
+                        case TableColumnType.date:
+                        {
+                            compareValue = TDateCmp(col1 as TDate, col2 as TDate);
+                            if (o.order === kOrder.desc) {
+                                compareValue = -compareValue;
+                            }
+                        }
+                        break;
                         case TableColumnType.numeric:
                         {
 
@@ -85,7 +96,16 @@ export function bubbleSort(table: ITable, def: ITableDefinition, orderBys: TQuer
                         break;
                         case TableColumnType.boolean:
                         {
-
+                            if (col1 as boolean === true && col2 as boolean == false) {
+                                compareValue = -1;
+                            }  else if (col1 as boolean === false && col2 as boolean === true) {
+                                compareValue = 1
+                            } else {
+                                compareValue = 0;
+                            }
+                            if (o.order === kOrder.desc) {
+                                compareValue = -compareValue;
+                            }
                         }
                         break;
                         case TableColumnType.float:

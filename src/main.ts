@@ -29,6 +29,9 @@ export * from "./BaseParser/Guards/instanceOfParseError";
 
 export * from "./API/CTable";
 export * from "./API/DBInit";
+export * from "./API/kResultType";
+export * from "./API/readTableAsJSON";
+
 export * from "./API/SQLStatement";
 export * from "./API/SQLResult";
 
@@ -78,6 +81,8 @@ export * from "./Cursor/isRowDeleted";
 export * from "./Cursor/ITableCursor";
 export * from "./Cursor/readFirst";
 export * from "./Cursor/readNext";
+
+export * from "./Date/parseDateString";
 
 export * from "./Query/Enums/kCommandType";
 export * from "./Query/Enums/kOrder";

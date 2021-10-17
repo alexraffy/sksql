@@ -13,6 +13,7 @@ import {predicateTNumber} from "./predicateTNumber";
 import {predicateTVariable} from "./predicateTVariable";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TVariableAssignment} from "../Types/TVariableAssignment";
+import {predicateTDate} from "./predicateTDate";
 
 /*
     tries to parse a variable assignment
@@ -31,7 +32,7 @@ export const predicateTVariableAssignment: TFuncGen = function *(callback) {
     yield maybe(whitespace);
     const assign = yield str("=");
     yield maybe(whitespace);
-    const value = yield oneOf([predicateTQueryExpression, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "An expression");
+    const value = yield oneOf([predicateTQueryExpression, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "An expression");
     yield maybe(whitespace);
     // exit on , or FROM without consuming the characters
     yield exitIf(oneOf([str(","), str("FROM"), str("AS")], ""));

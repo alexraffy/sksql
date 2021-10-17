@@ -20,6 +20,8 @@ import {TBoolValue} from "../Types/TBoolValue";
 import {predicateTBoolValue} from "./predicateTBoolValue";
 import {TVariable} from "../Types/TVariable";
 import {predicateTVariable} from "./predicateTVariable";
+import {TDate} from "../Types/TDate";
+import {predicateTDate} from "./predicateTDate";
 
 /*
     tries to parse an expression
@@ -38,9 +40,9 @@ export const predicateTQueryExpression: TFuncGen = function*(callback) {
         return;
     }
 
-    const left: TQueryFunctionCall | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber = yield oneOf(
+    const left: TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber = yield oneOf(
         [predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue,
-            predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "a function call, a literal or a number");
+            predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a function call, a literal or a number");
 
 
     yield maybe(whitespace);
@@ -62,9 +64,9 @@ export const predicateTQueryExpression: TFuncGen = function*(callback) {
     yield maybe(whitespace);
 
 
-    const right: TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber = yield oneOf([
+    const right: TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber = yield oneOf([
         predicateTQueryFunctionCall, predicateTQueryExpression, predicateTVariable, predicateTBoolValue,
-        predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "a function call, an expression, a literal or a number");
+        predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a function call, an expression, a literal or a number");
 
     yield returnPred(
         {

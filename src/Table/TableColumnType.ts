@@ -14,5 +14,9 @@ export enum TableColumnType {
     int64 = 11,
     numeric = 12,
     float = 13,
-    blob = 20
+    blob = 20,
+    date = 21,
+    time = 22,
+    datetime = 23
+
 }

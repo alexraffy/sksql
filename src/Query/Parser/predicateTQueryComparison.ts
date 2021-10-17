@@ -14,6 +14,7 @@ import {TQueryComparison} from "../Types/TQueryComparison";
 import {predicateTVariable} from "./predicateTVariable";
 import {predicateTArray} from "./predicateTArray";
 import {instanceOfTComparison} from "../Guards/instanceOfTComparison";
+import {predicateTDate} from "./predicateTDate";
 
 /*
     tries to parse a comparison statement
@@ -25,7 +26,7 @@ export const predicateTQueryComparison = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    const left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "");
+    const left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
     yield maybe(whitespace);
     let comparison = yield predicateTComparison;
     yield maybe(whitespace);
@@ -33,7 +34,7 @@ export const predicateTQueryComparison = function *(callback) {
     if (instanceOfTComparison(comparison) && comparison.value.toUpperCase() === "IN") {
         right = yield predicateTArray;
     } else {
-        right = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "");
+        right = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
     }
 
     yield returnPred(

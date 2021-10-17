@@ -11,6 +11,9 @@ import {readValue} from "../BlockIO/readValue";
 import {numeric} from "../Numeric/numeric";
 import {numericDisplay} from "../Numeric/numericDisplay";
 import {isNumeric} from "../Numeric/isNumeric";
+import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
+import {TDate} from "../Query/Types/TDate";
+import {padLeft} from "../Date/padLeft";
 
 /*
     returns a string representation of all the rows (active AND deleted)  in the table
@@ -34,9 +37,11 @@ export function dumpTable(table: ITable) {
             let type = def.columns[x].type;
             let len = def.columns[x].length;
             let coffset = def.columns[x].offset
-            let value: string | number | bigint | boolean | numeric = readValue(table, def, def.columns[x], dv);
+            let value: string | number | bigint | boolean | numeric | TDate = readValue(table, def, def.columns[x], dv);
             if (isNumeric(value)) {
                 ret += numericDisplay(value) + "\t";
+            } if (instanceOfTDate(value)) {
+                ret += padLeft(value.year.toString(), 4, "0") + "-" + padLeft(value.month.toString(), 2, "0") + "-" + padLeft(value.day.toString(), 2, "0") + "\t";
             } else {
                 ret += value + "\t";
             }

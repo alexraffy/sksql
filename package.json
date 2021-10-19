@@ -1,6 +1,12 @@
 {
   "name": "sksql",
   "version": "1.0.0",
+  "description": "A SQL database for the web and nodejs written in Typescript.",
+  "author": {
+    "name": "ARaffy"
+  },
+  "homepage": "https://github.com/alexraffy/sksql",
+  "keywords": ["sql", "database", "db", "query", "shared array buffer", "thread"],
   "scripts": {
     "sksql-00-runall": "npm run sksql-01-build && npm run sksql-02-webpack",
     "sksql-01-build": "tsc -p tsconfig.json",

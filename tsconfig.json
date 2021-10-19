@@ -14,7 +14,7 @@
     "noImplicitAny": false,
     "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true,
-    "typeRoots": ["node_modules/@types","extra_typings"],
+    "typeRoots": ["node_modules/@types"],
   },
   "exclude": [
     "node_modules", "build", "dist", "resources_master", "tests"

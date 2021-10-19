@@ -27,24 +27,24 @@ pirates.sql
 		bounty numeric(12,0)
 	);
 	INSERT INTO pirates (name, country, dob, death, bounty) VALUES
-	(‘Calico Jack John Rackham’, ‘England’, ‘1682-12-26’, ‘1720-11-18’, 125000),
-	(‘Anne Bonny’, ‘Ireland’, ‘1697-03-08’, ‘1721-04-??’, 80000),
-	(‘Bartholomew Roberts’, ‘Wales’, ‘1682-05-17’, ‘1722-02-10’, 800000),
-	(‘Blackbeard (Edward Teach)’, ‘England’, ‘1680-??-??’, ‘1718-11-22’, ‘900000’);
+	('Calico Jack John Rackham', 'England', '1682-12-26', '1720-11-18', 125000),
+	('Anne Bonny', 'Ireland', '1697-03-08', '1721-04-00', 80000),
+	('Bartholomew Roberts', 'Wales', '1682-05-17', '1722-02-10', 800000),
+	('Blackbeard (Edward Teach)', 'England', '1680-00-00', '1718-11-22', 900000);
 
 
 
 Typescript
 	
-	import * as sksql from “sksql”;
+	import * as sksql from "sksql";
 	
-	let pirates = new sksql.SQLStatement(require(“pirates.sql”));
+	let pirates = new sksql.SQLStatement(require("pirates.sql"));
 	pirates.run();
 	
-	let st = new sksql.SQLStatement(“SELECT name, country FROM pirates WHERE country IN [‘Wales’, ‘Ireland’]”);
+	let st = new sksql.SQLStatement("SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
 	let result = st.run(sksql.kResultType.JSON);
 	
-	// result = [{name: “Anne Bonny”, country: “Ireland”}, {name: “Bartholomew Roberts”, country: “Wales”}]
+	// result = [{name: "Anne Bonny", country: "Ireland"}, {name: "Bartholomew Roberts", country: "Wales"}]
 	
 
 
@@ -52,30 +52,13 @@ Webworker
 
 Example: 
 	
-	let st = new sksql.SQLStatement(“select dept_name, count(ID) from department natural left outer join instructor group by dept_name”);
+	let st = new sksql.SQLStatement("SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
 	st.runOnWebWorker().then((tempTable: string) => {
 		let result = sksql.readTableAsJSON(tempTable);
 		
 	});
 
 
-Connect to server
-
-Example:
-	
-	const user_id = 1511;
-	
-	sksql.db.connect(“wss://sksql.com/server/DjpJoqu24lR1”).then((info) => {
-		sksql.db.onServerMessage(update);
-		let st = sksql.SQLStatement(“INSERT INTO chat(user_id, message) VALUES (@user_id, ‘Hello There’)”);
-		st.setParameter(“@user_id”, user_id);
-		st.run();
-	});
-	
-	function update(r: SQLResult) {
-		let result = sksql.readTableAsJSON(“chat”);
-		console.table(result);
-	}
 
 
 Installation
@@ -86,39 +69,26 @@ NodeJS:
 
 Building from source:
 	
-	git clone https://github.com/alexraffy/sksql sksql
+	git clone https://github.com/alexraffy/sksql.git sksql
 	cd sksql
 	npm run sk-00-runall
 	
-For the browser:
-
-	<script src=”https://cdn.jsdeliver.net/npm/sksql”></script>
-
 
 COLUMN TYPES SUPPORTED
 
 Integers:
-
 	INT, UINT8, UINT16, UINT32, UINT64, INT8, INT16, INT32, INT64
-Reals:
-
-	FLOAT
 Numeric:
-
 	NUMERIC(PRECISION, SCALE)
 Boolean:
-
 	BOOL
 UTF-8 Strings:
-
 	VARCHAR(DIMENSION)
 
 SUPPORTED SQL STATEMENTS
 
 SQL statements supported
-
  - CREATE TABLE:
-   
 	COLUMN_DEF IDENTITY (SEED, INCREMENT),
 	COLUMN_DEF NOT NULL/NULL
 	COLUMN_DEF DEFAULT EXPRESSION
@@ -127,21 +97,17 @@ SQL statements supported
 	CHECK [CONSTRAINT_NAME] (BOOLEAN EXPRESSION)
 
  - INSERT:
-   
 	INSERT INTO {TABLE} (COLUMNS) VALUES (...),...
 	INSERT INTO {TABLE} VALUES(COLUMN...),...
 
  - UPDATE:
-   
 	UPDATE [TOP(EXPRESSION)] SET COLUMN = EXPRESSION FROM {TABLE} [WHERE CLAUSE]
 
  - DELETE:
-   
 	DELETE [TOP(EXPRESSION)] FROM {TABLE} [WHERE CLAUSE]
 
  - SELECT:
-   
-	SELECT [TOP(EXPRESSION)] 
+	SELECT  
 		COLUMN | EXPRESSION [AS ALIAS],...
 	FROM
 		TABLE1, [JOIN | LEFT JOIN | RIGHT JOIN] TABLE2...

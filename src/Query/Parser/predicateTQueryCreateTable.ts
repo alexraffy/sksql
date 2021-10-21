@@ -243,6 +243,7 @@ export const predicateTQueryCreateTable = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("CREATE");
     yield atLeast1(whitespaceOrNewLine);
     yield str("TABLE");
@@ -325,6 +326,9 @@ export const predicateTQueryCreateTable = function *(callback) {
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str(")");
     yield maybe(str(";"));
+
+    yield maybe(atLeast1(whitespaceOrNewLine));
+
     yield returnPred({
         kind: "TQueryCreateTable",
         name: table,

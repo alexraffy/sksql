@@ -27,6 +27,9 @@ import {predicateTVariable} from "./predicateTVariable";
 import {TQueryExpression} from "../Types/TQueryExpression";
 import {TQueryFunctionCall} from "../Types/TQueryFunctionCall";
 import {TVariable} from "../Types/TVariable";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {predicateTQueryComparison} from "./predicateTQueryComparison";
 
 /*
     tries to parse a SELECT statement
@@ -39,39 +42,40 @@ export const predicateTQuerySelect = function *(callback) {
         return;
     }
     let parameters: TQueryColumn[] = [];
+    yield maybe(atLeast1(whitespaceOrNewLine));
     const command = yield str("SELECT");
-    yield whitespace;
+    yield atLeast1(whitespaceOrNewLine);
     const hasTop = yield maybe(str("TOP"));
     let topNumber: TQueryExpression | TQueryFunctionCall | TVariable | TNumber = undefined;
     if (hasTop) {
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         yield str("(");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         topNumber = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTNumber], "");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         yield str(")");
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     let param1: TQueryColumn = yield oneOf([predicateTQueryColumn], "");
     parameters.push(param1);
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     let gotMore = yield maybe(str(","));
     while (gotMore === ",") {
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         const extraParam = yield oneOf([predicateTQueryColumn], "a list of parameters");
         parameters.push(extraParam);
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         let reachedFROM = yield exitIf(str("FROM"));
         if (reachedFROM === "FROM") {
             break;
         }
         gotMore = yield maybe(str(","));
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("FROM");
-    yield whitespace;
+    yield atLeast1(whitespaceOrNewLine);
     const tableName = yield predicateTTableName;
     let tables: TQueryTable[] = [];
     tables.push(
@@ -83,28 +87,53 @@ export const predicateTQuerySelect = function *(callback) {
                 alias: ""
             },
             joinTarget: undefined,
-            joinClauses: [],
+            joinClauses: undefined,
             joinType: kQueryJoin.from
         }
     )
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
+
+    let hasMoreTables = yield maybe(oneOf([str(","), str("LEFT JOIN"), str("RIGHT JOIN"), str("JOIN")], ""));
+    while (hasMoreTables !== undefined) {
+        yield atLeast1(whitespaceOrNewLine);
+        const joinTableName = yield predicateTTableName;
+        yield atLeast1(whitespaceOrNewLine);
+        let hasOnClause = yield maybe(str("ON"));
+        let joinClause = undefined;
+        if (hasOnClause === "ON") {
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            joinClause = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "a comparison expression");
+        }
+        let tbl : TQueryTable = {
+            kind: "TQueryTable",
+            tableName: joinTableName,
+            joinType: kQueryJoin.left,
+            joinTarget: undefined,
+            joinClauses: joinClause
+        }
+        tables.push(tbl);
+        yield maybe(atLeast1(whitespaceOrNewLine));
+        hasMoreTables = yield maybe(oneOf([str(","), str("LEFT JOIN"), str("RIGHT JOIN"), str("JOIN")], ""));
+    }
+
     const where = yield maybe(str("WHERE"));
     let whereClause: TQueryComparisonExpression | TQueryComparison = undefined;
     if (where === "WHERE") {
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
         whereClause = yield predicateTQueryComparisonExpression;
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     const orderBy = yield maybe(str("ORDER BY"));
     let orderByClause: TColumn | TLiteral = {kind: "TLiteral", value: "ROWID"} as TLiteral;
     let orderBySort = "ASC";
     if (orderBy === "ORDER BY") {
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
         orderByClause = yield oneOf([predicateTColumn, predicateTLiteral], "");
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
         orderBySort = yield oneOf([str("ASC"), str("DESC")], "ASC or DESC")
     }
     yield maybe(str(";"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
     return returnPred(
         {
             kind: "TQuerySelect",

@@ -36,8 +36,8 @@ export function test_date() {
         inserts.run();
     }
     console.log(dumpTable(DBData.instance.getTable("date_tests")));
-    let sort = new SQLStatement("SELECT dates FROM date_tests ORDER BY dates DESC");
+    let sort = new SQLStatement("SELECT TOP(4) dates FROM date_tests ORDER BY dates DESC");
     let result = sort.run();
     console.log(dumpTable(DBData.instance.getTable(result[0].resultTableName)));
-    console.log(readTableAsJSON(result[0].resultTableName));
+    //console.log(readTableAsJSON(result[0].resultTableName));
 }

@@ -143,7 +143,7 @@ export class DBData {
                 worker = new Worker(blob, {eval: true});
             }
             worker.on("message",  (e) => {
-                console.log("Received: " + e);
+                //console.log("Received: " + e);
                 if (e !== undefined && e.c !== undefined) {
                     switch (e.c) {
                         case "QS":

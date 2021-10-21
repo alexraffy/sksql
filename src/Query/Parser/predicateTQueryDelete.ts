@@ -30,6 +30,7 @@ export const predicateTQueryDelete = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("DELETE");
     yield atLeast1(whitespaceOrNewLine);
 
@@ -58,7 +59,7 @@ export const predicateTQueryDelete = function *(callback) {
                 alias: ""
             },
             joinTarget: undefined,
-            joinClauses: [],
+            joinClauses: undefined,
             joinType: kQueryJoin.from
         }
     )
@@ -70,6 +71,7 @@ export const predicateTQueryDelete = function *(callback) {
         whereClause = yield predicateTQueryComparisonExpression;
     }
     yield maybe(str(";"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     yield returnPred(
         {

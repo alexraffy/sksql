@@ -1,6 +1,7 @@
 
 
 export * from "./BaseParser/Predicates/atLeast1";
+export * from "./BaseParser/Predicates/checkAhead";
 export * from "./BaseParser/Predicates/digit";
 export * from "./BaseParser/Predicates/either";
 export * from "./BaseParser/Predicates/exitIf";

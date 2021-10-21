@@ -19,6 +19,13 @@ import {ITableDefinition} from "../Table/ITableDefinition";
 import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {readFirst} from "../Cursor/readFirst";
+import {TLiteral} from "../Query/Types/TLiteral";
+import {TTable} from "../Query/Types/TTable";
+import {TAlias} from "../Query/Types/TAlias";
+import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
+import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
+import {numeric} from "../Numeric/numeric";
+import {isNumeric} from "../Numeric/isNumeric";
 
 
 export function processDeleteStatement(parseResult: ParseResult, statement: TQueryDelete, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
@@ -34,26 +41,11 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
     let def: ITableDefinition;
     let rowLength = 0;
     for (let i = 0; i < walk.length; i++) {
-        let name = del.tables[0].tableName.name;
-        if (instanceOfTTable(name)) {
-            if (walk[i].name.toUpperCase() === name.table.toUpperCase()) {
-                tbl = walk[i].table;
-                def = walk[i].def;
-                rowLength = walk[i].rowLength;
-            }
-        }
-        if (instanceOfTLiteral(name)) {
-            if (walk[i].name.toUpperCase() === name.value.toUpperCase()) {
-                tbl = walk[i].table;
-                def = walk[i].def;
-                rowLength = walk[i].rowLength;
-            }
-        } else if (typeof name === "string") {
-            if (walk[i].name.toUpperCase() === name.toUpperCase()) {
-                tbl = walk[i].table;
-                def = walk[i].def;
-                rowLength = walk[i].rowLength;
-            }
+        let name = getValueForAliasTableOrLiteral(del.tables[0].tableName)
+        if (walk[i].name.toUpperCase() === name.table.toUpperCase()) {
+            tbl = walk[i].table;
+            def = walk[i].def;
+            rowLength = walk[i].rowLength;
         }
 
     }
@@ -85,8 +77,10 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
 
             if (del.top !== undefined) {
                 let maxCount = evaluate(del.top, parameters, undefined, undefined);
-                if (maxCount <= numberOfRowsModified) {
-                    done = true;
+                if (isNumeric(maxCount)) {
+                    if (maxCount.m <= numberOfRowsModified) {
+                        done = true;
+                    }
                 }
             }
         }

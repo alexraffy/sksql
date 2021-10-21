@@ -9,6 +9,7 @@ export type TParserCallback = (name, value) => void;
 
 export type TFuncGen = ((value: TParserCallback) => IterableIterator<TParser | TFuncGen>) | TParser[];
 
+let parse_inception: number = 0;
 
 export function parse(callback: TParserCallback,
                       genFunc: TFuncGen
@@ -17,7 +18,7 @@ export function parse(callback: TParserCallback,
     let success: boolean = true;
     let s = input;
 
-
+    parse_inception++;
      if (isGenerator(genFunc)) {
          let gen = (genFunc as (value: TParserCallback) => IterableIterator<TParser | TFuncGen>)(callback);
          let nextParser = gen.next();
@@ -66,6 +67,7 @@ export function parse(callback: TParserCallback,
              }
          }
      }
+     parse_inception--;
      if (results.length > 0) {
          return results[results.length - 1];
      } else {

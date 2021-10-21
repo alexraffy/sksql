@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {SQLStatement, readTableAsJSON, dumpTable, DBData} from "sksql";
+import {SQLStatement, readTableAsJSON, dumpTable, DBData, SQLResult} from "sksql";
 
 
 export function test_db_university() {
@@ -8,7 +8,7 @@ export function test_db_university() {
 
     let createTablesStatement = new SQLStatement(createSQLScript);
     let ret = createTablesStatement.run();
-
+    DBData.instance.tablesInfo();
 
     let fillTablesStatement = new SQLStatement(fillSQLScript);
     let ret2 = fillTablesStatement.run();
@@ -18,8 +18,17 @@ export function test_db_university() {
 
 
     let selectInstructor = new SQLStatement("SELECT ID, name, dept_name, salary from instructor ORDER BY name ASC");
-    let retSelectInstruct = selectInstructor.run();
-    console.log(readTableAsJSON(retSelectInstruct[0].resultTableName));
+    //let retSelectInstruct = selectInstructor.run();
+    //console.log(readTableAsJSON(retSelectInstruct[0].resultTableName));
+
+
+    let selectJOIN = new SQLStatement("SELECT course_id, title, course.dept_name, building FROM course JOIN department ON department.dept_name = course.dept_name");
+    let retSelectJOIN = selectJOIN.run();
+    if ((retSelectJOIN[0] as SQLResult).error) {
+        throw (retSelectJOIN[0] as SQLResult).error
+    }
+    console.log(readTableAsJSON(retSelectJOIN[0].resultTableName));
+
 
 
 }

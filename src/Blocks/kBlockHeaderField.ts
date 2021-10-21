@@ -37,6 +37,7 @@ export enum kBlockHeaderField {
     TableDefColumnFlag1Bit_Nullable = 7,
     TableDefColumnFlag1Bit_HasDefaultExpression = 6,
     TableDefColumnFlag2 = 2,
+    TableDefColumnFlag2Bit_Invisible = 7,
     TableDefColumnFlag3 = 3,
     TableDefColumnLength = 4,
     TableDefColumnOffset = 8,

@@ -36,6 +36,10 @@ import {eof} from "../BaseParser/Predicates/eof";
 import {str} from "../BaseParser/Predicates/str";
 import {kResultType} from "./kResultType";
 import {readTableAsJSON} from "./readTableAsJSON";
+import {atLeast1} from "../BaseParser/Predicates/atLeast1";
+import {maybe} from "../BaseParser/Predicates/maybe";
+import {exitIf} from "../BaseParser/Predicates/exitIf";
+import {checkAhead} from "../BaseParser/Predicates/checkAhead";
 
 
 
@@ -95,13 +99,38 @@ export class SQLStatement {
         this.ast = parse(callback, function *(callback) {
             let ret: (TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string)[] = [];
             let result: TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string | undefined = "";
-            let exit = yield eof;
+            let exit: boolean = yield eof;
             while (!exit) {
-                result = yield oneOf([predicateTQueryCreateTable, predicateTQueryInsert, predicateTQuerySelect, predicateTQueryUpdate, predicateTQueryDelete, whitespaceOrNewLine, str("")],"");
+                yield maybe(atLeast1(whitespaceOrNewLine));
+                let statementType = yield checkAhead([str("CREATE"), str("INSERT"), str("SELECT"), str("UPDATE"), str("DELETE")], "");
+                switch (statementType) {
+                    case "CREATE":
+                        result = yield predicateTQueryCreateTable;
+                        break;
+                    case "INSERT":
+                        result  = yield predicateTQueryInsert;
+                        break;
+                    case "SELECT":
+                        result = yield  predicateTQuerySelect;
+                        break;
+                    case "UPDATE":
+                        result = yield predicateTQueryUpdate;
+                        break;
+                    case "DELETE":
+                        result = yield predicateTQueryDelete;
+                        break;
+                    default:
+                        yield str("a SQL statement")
+                }
+
                 if (result !== undefined && typeof result !== "string") {
                     ret.push(result);
                 }
-                exit = yield eof;
+                if (instanceOfParseError(result)) {
+                    exit = true;
+                } else {
+                    exit = yield eof;
+                }
             }
 
             yield returnPred({

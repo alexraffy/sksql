@@ -29,7 +29,7 @@ import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult"
     This function result should be cached if possible as in the presence of a
     CHECK constraint or DEFAULT expression, the parser will be called to generate an AST
  */
-export function readTableDefinition(tb: ITableData): ITableDefinition {
+export function readTableDefinition(tb: ITableData, showInvisibleColumns = false): ITableDefinition {
     let ret: ITableDefinition = {
         id: 0,
         name: "",
@@ -77,16 +77,18 @@ export function readTableDefinition(tb: ITableData): ITableDefinition {
         const columnOffset = dv.getUint32(offset + kBlockHeaderField.TableDefColumnOffset);
         const name = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefColumnName, 255);
         const defaultValue = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefColumnDefaultExpression, 255);
-        ret.columns.push(
-            {
-                name: name,
-                type: type as TableColumnType,
-                nullable: (flag1 & 1 << kBlockHeaderField.TableDefColumnFlag1Bit_Nullable) === 1,
-                defaultExpression: defaultValue,
-                length: length,
-                offset: columnOffset
-            }
-        );
+        const invisible = (flag2 & 1 << kBlockHeaderField.TableDefColumnFlag2Bit_Invisible) === 1;
+        let col = {
+            name: name,
+            type: type as TableColumnType,
+            nullable: (flag1 & 1 << kBlockHeaderField.TableDefColumnFlag1Bit_Nullable) === 1,
+            defaultExpression: defaultValue,
+            length: length,
+            offset: columnOffset
+        };
+        if (invisible === false || showInvisibleColumns === true) {
+            ret.columns.push(col);
+        }
 
         offset += kBlockHeaderField.TableDefColumnEnd;
     }

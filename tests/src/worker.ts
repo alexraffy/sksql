@@ -15,6 +15,8 @@ export function test_worker() {
     select.setParameter("@id", "user_id");
     select.runOnWebWorker().then((resultTableName) => {
         console.log(readTableAsJSON(resultTableName));
+    }).catch((e) => {
+        console.log("Error ", e);
     })
 
 

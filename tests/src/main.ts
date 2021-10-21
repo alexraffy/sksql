@@ -11,12 +11,12 @@ let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
 
 DBData.instance.initWorkerPool(4, sksqlData);
 
-
+test_db_university();
 test_insert();
 test_date();
 test_numeric();
 test_parser();
-test_db_university();
+
 DBData.instance.updateWorkerDB(0);
 test_worker();
 

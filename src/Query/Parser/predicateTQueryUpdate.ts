@@ -30,6 +30,8 @@ import {TQueryTable} from "../Types/TQueryTable";
 import {kQueryJoin} from "../Enums/kQueryJoin";
 import {TDate} from "../Types/TDate";
 import {predicateTDate} from "./predicateTDate";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 
 /*
     tries to parse an update statement
@@ -40,29 +42,30 @@ export const predicateTQueryUpdate = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("UPDATE");
-    yield whitespace;
+    yield atLeast1(whitespaceOrNewLine);
     const hasTop = yield maybe(str("TOP"));
     let topNumber: TQueryExpression | TQueryFunctionCall | TVariable | TNumber = undefined;
     if (hasTop) {
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         yield str("(");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         topNumber = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTNumber], "");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         yield str(")");
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     let skipTableName = yield exitIf(str("SET"));
     let tableName = undefined;
     if (!skipTableName) {
         tableName = yield maybe(predicateTTableName);
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("SET");
-    yield whitespace;
+    yield atLeast1(whitespaceOrNewLine);
     let gotMore = ",";
     let assignments: {
         column: TColumn,
@@ -71,13 +74,13 @@ export const predicateTQueryUpdate = function *(callback) {
     }[] = [];
 
     while (gotMore === ",") {
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         const col = yield predicateTColumn;
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         yield str("=");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
         const expression = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTDate, predicateTColumn, predicateTString, predicateTLiteral, predicateTNumber], "");
-        yield maybe(whitespace);
+        yield maybe(atLeast1(whitespaceOrNewLine));
 
         assignments.push({
             column: col,
@@ -91,10 +94,10 @@ export const predicateTQueryUpdate = function *(callback) {
         gotMore = yield maybe(str(","))
     }
     let tables: TQueryTable[] = [];
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     let hasFrom = yield maybe(str("FROM"));
     if (hasFrom === "FROM") {
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
         const tableName = yield predicateTTableName;
         tables.push(
             {
@@ -105,19 +108,21 @@ export const predicateTQueryUpdate = function *(callback) {
                     alias: ""
                 },
                 joinTarget: undefined,
-                joinClauses: [],
+                joinClauses: undefined,
                 joinType: kQueryJoin.from
             }
         )
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     let whereClause: TQueryComparisonExpression | TQueryComparison = undefined;
     const where = yield maybe(str("WHERE"));
     if (where === "WHERE") {
-        yield whitespace;
+        yield atLeast1(whitespaceOrNewLine);
         whereClause = yield predicateTQueryComparisonExpression;
     }
+    yield maybe(str(";"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     yield returnPred({
         kind: "TQueryUpdate",

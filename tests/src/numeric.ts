@@ -15,7 +15,7 @@ export function test_numeric() {
     let st2 = new SQLStatement("CREATE TABLE numSum(val NUMERIC(8,2))");
     st2.run();
     let ins = new SQLStatement("INSERT INTO numSum(val) VALUES(@val)");
-    for (let i = 100; i > 0; i--) {
+    for (let i = 10; i > 0; i--) {
         ins.setParameter("@val", i);
         ins.run();
     }
@@ -23,6 +23,11 @@ export function test_numeric() {
     let st3 = new SQLStatement("SELECT val FROM numSum ORDER BY val ASC");
     let st3Ret = st3.run();
     console.log(dumpTable(DBData.instance.getTable(st3Ret[0].resultTableName)));
+
+    let st4 = new SQLStatement("SELECT TOP(3) val FROM numSum");
+    let st4Ret = st4.run();
+    console.log(dumpTable(DBData.instance.getTable(st4Ret[0].resultTableName)));
+
 
 }
 

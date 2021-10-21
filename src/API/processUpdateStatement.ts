@@ -12,6 +12,7 @@ import {evaluate} from "./evaluate";
 import {writeValue} from "../BlockIO/writeValue";
 import {getColumnDefinition} from "./getColumnDefinition";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {isNumeric} from "../Numeric/isNumeric";
 
 
 export function processUpdateStatement(parseResult: ParseResult, statement: TQueryUpdate, parameters: {name: string, value: any}[]): SQLResult {
@@ -61,8 +62,10 @@ export function processUpdateStatement(parseResult: ParseResult, statement: TQue
             }
             if (update.top !== undefined) {
                 let maxCount = evaluate(update.top, parameters, undefined, undefined);
-                if (maxCount <= numberOfRowsModified) {
-                    done = true;
+                if (isNumeric(maxCount)) {
+                    if (maxCount.m <= numberOfRowsModified) {
+                        done = true;
+                    }
                 }
             }
         }

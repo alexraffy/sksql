@@ -42,6 +42,7 @@ export const predicateTQueryInsert = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("INSERT");
     yield atLeast1(whitespaceOrNewLine);
     yield str("INTO");
@@ -99,6 +100,8 @@ export const predicateTQueryInsert = function *(callback) {
         selectStatement = yield predicateTQuerySelect;
     }
     yield maybe(str(";"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
+
     yield returnPred({
         kind: "TQueryInsert",
         table: tableName,

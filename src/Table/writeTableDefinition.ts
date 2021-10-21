@@ -69,15 +69,21 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
         if (c.defaultExpression !== "") {
             columnFlag1 = columnFlag1 | 1 << kBlockHeaderField.TableDefColumnFlag1Bit_HasDefaultExpression;
         }
+        let columnFlag2 = 0;
+        if (c.invisible === true) {
+            columnFlag2 = columnFlag2 | 1 << kBlockHeaderField.TableDefColumnFlag2Bit_Invisible;
+        }
 
         d.setUint8(offset + kBlockHeaderField.TableDefColumnType,c.type);
         d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag1, columnFlag1);
-        d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag2, 0);
+        d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag2, columnFlag2);
         d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag3, 0);
         d.setUint32(offset + kBlockHeaderField.TableDefColumnLength, c.length);
         d.setUint32(offset + kBlockHeaderField.TableDefColumnOffset, columnOffset);
         writeStringToUtf8ByteArray(d, offset + kBlockHeaderField.TableDefColumnName, c.name, 255);
-        writeStringToUtf8ByteArray(d, offset + kBlockHeaderField.TableDefColumnDefaultExpression, c.defaultExpression, 255);
+        if (c.defaultExpression !== undefined && typeof c.defaultExpression === "string" && c.defaultExpression !== "") {
+            writeStringToUtf8ByteArray(d, offset + kBlockHeaderField.TableDefColumnDefaultExpression, c.defaultExpression, 255);
+        }
         // column flag isNull
         columnOffset += 1;
         switch (c.type) {

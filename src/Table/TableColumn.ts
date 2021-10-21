@@ -12,4 +12,5 @@ export interface TableColumn {
     nullable: boolean;
     defaultExpression: string;
     offset?: number
+    invisible?: boolean;
 }

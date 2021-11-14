@@ -1,6 +1,5 @@
 import {str} from "../../BaseParser/Predicates/str";
 import {maybe} from "../../BaseParser/Predicates/maybe";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {returnPred} from "../../BaseParser/Predicates/ret";
@@ -16,8 +15,6 @@ import {kOrder} from "../Enums/kOrder";
 import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
 import {TQueryColumn} from "../Types/TQueryColumn";
 import {predicateTColumn} from "./predicateTColumn";
-import {TLiteral} from "../Types/TLiteral";
-import {TColumn} from "../Types/TColumn";
 import {predicateTTableName} from "./predicateTTableName";
 import {TNumber} from "../Types/TNumber";
 import {predicateTNumber} from "./predicateTNumber";
@@ -30,6 +27,7 @@ import {TVariable} from "../Types/TVariable";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {predicateTQueryComparison} from "./predicateTQueryComparison";
+import {TQueryOrderBy} from "../Types/TQueryOrderBy";
 
 /*
     tries to parse a SELECT statement
@@ -118,20 +116,62 @@ export const predicateTQuerySelect = function *(callback) {
 
     const where = yield maybe(str("WHERE"));
     let whereClause: TQueryComparisonExpression | TQueryComparison = undefined;
-    if (where === "WHERE") {
+    if (where !== undefined && where.toUpperCase() === "WHERE") {
         yield atLeast1(whitespaceOrNewLine);
         whereClause = yield predicateTQueryComparisonExpression;
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
-    const orderBy = yield maybe(str("ORDER BY"));
-    let orderByClause: TColumn | TLiteral = {kind: "TLiteral", value: "ROWID"} as TLiteral;
-    let orderBySort = "ASC";
-    if (orderBy === "ORDER BY") {
+
+    const groupBy = yield maybe(str("GROUP BY"));
+    let groupByClauses: TQueryOrderBy[] = [];
+    let havingClause: TQueryComparisonExpression | TQueryComparison = undefined;
+    if (groupBy !== undefined && groupBy.toUpperCase() === "GROUP BY") {
         yield atLeast1(whitespaceOrNewLine);
-        orderByClause = yield oneOf([predicateTColumn, predicateTLiteral], "");
-        yield atLeast1(whitespaceOrNewLine);
-        orderBySort = yield oneOf([str("ASC"), str("DESC")], "ASC or DESC")
+        let gotMoreGroups = ",";
+        while (gotMoreGroups === ",") {
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            let groupByClause = yield oneOf([predicateTColumn, predicateTLiteral], "");
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            gotMoreGroups = yield maybe(str(","));
+            groupByClauses.push(
+                {
+                    column: groupByClause,
+                    order: kOrder.asc
+                } as TQueryOrderBy
+            );
+        }
+        yield maybe(atLeast1(whitespaceOrNewLine));
+        const having = yield maybe(str("HAVING"));
+        if (having !== undefined && having.toUpperCase() === "HAVING") {
+            yield atLeast1(whitespaceOrNewLine);
+            havingClause = yield predicateTQueryComparisonExpression;
+        }
     }
+
+    yield maybe(atLeast1(whitespaceOrNewLine));
+    const orderBy = yield maybe(str("ORDER BY"));
+    let orderByClauses: TQueryOrderBy[] = [];
+    if (orderBy !== undefined && orderBy.toUpperCase() === "ORDER BY") {
+        yield atLeast1(whitespaceOrNewLine);
+        let gotMoreOrderByClauses = ",";
+        while (gotMoreOrderByClauses === ",") {
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            let orderByClause = yield oneOf([predicateTColumn, predicateTLiteral], "");
+            yield atLeast1(whitespaceOrNewLine);
+            let orderBySort = yield oneOf([str("ASC"), str("DESC")], "ASC or DESC")
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            gotMoreOrderByClauses = yield maybe(str(","));
+            orderByClauses.push(
+                {
+                    column: orderByClause,
+                    order: (orderBySort.toUpperCase() === "ASC") ? kOrder.asc : kOrder.desc
+                }
+            );
+        }
+    }
+
+
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield maybe(str(";"));
     yield maybe(atLeast1(whitespaceOrNewLine));
     return returnPred(
@@ -142,10 +182,9 @@ export const predicateTQuerySelect = function *(callback) {
             tables: tables,
             columns: parameters,
             where: whereClause,
-            orderBy: [{
-                column: orderByClause,
-                order: (orderBySort === "ASC") ? kOrder.asc : kOrder.desc
-            }]
+            orderBy: orderByClauses,
+            groupBy: groupByClauses,
+            having: havingClause
         } as TQuerySelect
     );
 }

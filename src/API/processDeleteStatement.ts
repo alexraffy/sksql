@@ -33,7 +33,10 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
         return {
             error: "Misformed delete query.",
             resultTableName: "",
-            rowCount: 0
+            rowCount: 0,
+            executionPlan: {
+                description: ""
+            }
         } as SQLResult
     }
     let del = statement as TQueryDelete;
@@ -91,7 +94,10 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
 
     return {
         resultTableName: "",
-        rowCount: numberOfRowsModified
+        rowCount: numberOfRowsModified,
+        executionPlan: {
+            description: ""
+        }
     } as SQLResult
 
 }

@@ -14,6 +14,7 @@ export enum kBlockHeaderField {
     TableDefMagic = 25,
     TableDefVersion = 29,
     TableDefFlag1 = 30,
+
     TableDefFlag2 = 31,
     TableDefFlag3 = 32,
     TableDefTableName = 33,
@@ -34,10 +35,10 @@ export enum kBlockHeaderField {
     // Column definition offsets
     TableDefColumnType = 0,
     TableDefColumnFlag1 = 1,
-    TableDefColumnFlag1Bit_Nullable = 7,
-    TableDefColumnFlag1Bit_HasDefaultExpression = 6,
+    TableDefColumnFlag1Bit_Nullable = 1,
+    TableDefColumnFlag1Bit_HasDefaultExpression = 2,
     TableDefColumnFlag2 = 2,
-    TableDefColumnFlag2Bit_Invisible = 7,
+    TableDefColumnFlag2Bit_Invisible = 1,
     TableDefColumnFlag3 = 3,
     TableDefColumnLength = 4,
     TableDefColumnOffset = 8,
@@ -64,6 +65,11 @@ export enum kBlockHeaderField {
     DataRowId = 0,
     DataRowFlag = 4,
     DataRowStart = 5,
+
+    DataRowFlag_BitNothing = 0,
+    DataRowFlag_BitDeleted = 1,
+    DataRowFlag_BitLocked = 2,
+
     // For index
     IndexId = 25,
     IndexType = 29,

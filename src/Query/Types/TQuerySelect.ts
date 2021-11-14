@@ -15,10 +15,12 @@ import {TQueryOrderBy} from "./TQueryOrderBy";
 
 export interface TQuerySelect {
     kind: "TQuerySelect";
-    command: kCommandType,
+    command: kCommandType;
     top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
-    tables: TQueryTable[],
-    columns: TQueryColumn[],
+    tables: TQueryTable[];
+    columns: TQueryColumn[];
     where: TQueryComparisonExpression | TQueryComparison;
-    orderBy: TQueryOrderBy[]
+    groupBy: TQueryOrderBy[];
+    having: TQueryComparisonExpression | TQueryComparison;
+    orderBy: TQueryOrderBy[];
 }

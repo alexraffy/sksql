@@ -32,7 +32,10 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
         return {
             error: "Misformed Insert Query.",
             resultTableName: "",
-            rowCount: 0
+            rowCount: 0,
+            executionPlan: {
+                description: ""
+            }
         } as SQLResult;
     }
     let insert: TQueryInsert = statement;
@@ -103,7 +106,10 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
                         return {
                             error: "Error: Default Value for column " + colDef.name.toUpperCase() + " could not be computed.",
                             rowCount: 0,
-                            resultTableName: ""
+                            resultTableName: "",
+                            executionPlan: {
+                                description: ""
+                            }
                         } as SQLResult;
                     }
                     value = evaluate(res.value, [], [], colDef);
@@ -117,7 +123,10 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
                 return {
                     error: "Error: Column " + colDef.name.toUpperCase() + " must not be NULL.",
                     rowCount: 0,
-                    resultTableName: ""
+                    resultTableName: "",
+                    executionPlan: {
+                        description: ""
+                    }
                 } as SQLResult;
             }
 
@@ -145,7 +154,10 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
                         return {
                             error: "Error: Insert statement does not fulfill constraint " + constraint.constraintName + "\nStatement: " + parseResult.start.input,
                             rowCount: 0,
-                            resultTableName: ""
+                            resultTableName: "",
+                            executionPlan: {
+                                description: ""
+                            }
                         } as SQLResult
                     }
                     break;
@@ -168,7 +180,10 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
 
     return {
         resultTableName: "",
-        rowCount: numberOfRowsAdded
+        rowCount: numberOfRowsAdded,
+        executionPlan: {
+            description: ""
+        }
     } as SQLResult
 
 }

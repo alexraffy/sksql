@@ -19,6 +19,8 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
+import {TEPGroupBy} from "./TEPGroupBy";
+import {runGroupBy} from "./runGroupBy";
 
 
 
@@ -34,18 +36,28 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
             resultWI = walkInfos.find((w) => { return w.name.toUpperCase() === tep.a.result.toUpperCase(); });
         }
         returnTable = resultWI.name;
-        let row = addRow(resultWI.table.data, 4096);
+        let lenNewBuffer = 4096;
+        while (resultWI.rowLength > lenNewBuffer) {
+            lenNewBuffer = lenNewBuffer * 2;
+        }
+        let row = addRow(resultWI.table.data, lenNewBuffer);
         let columns = resultWI.def.columns;
         if (tep.kind === "TEPScan") {
-            for (let i = 0; i < columns.length; i++) {
-                let value = evaluate(tep.output[i].expression, parameters, tables, columns[i]);
-                writeValue(resultWI.table, resultWI.def, columns[i], row, value, 0);
+            for (let i = 0; i < tep.projection.length; i++) {
+                let col = columns.find((t) => { return t.name.toUpperCase() === tep.projection[i].columnName.toUpperCase();});
+                if (col !== undefined) {
+                    let value = evaluate(tep.projection[i].output, parameters, tables, col);
+                    writeValue(resultWI.table, resultWI.def, col, row, value, 0);
+                }
             }
         }
         if (tep.kind === "TEPNestedLoop") {
-            for (let i = 0; i < columns.length; i++) {
-                let value = evaluate(tep.a.output[i].expression, parameters, tables, columns[i]);
-                writeValue(resultWI.table, resultWI.def, columns[i], row, value, 0);
+            for (let i = 0; i < tep.a.projection.length; i++) {
+                let col = columns.find((t) => { return t.name.toUpperCase() === tep.a.projection[i].columnName.toUpperCase();});
+                if (col !== undefined) {
+                    let value = evaluate(tep.a.projection[i].output, parameters, tables, col);
+                    writeValue(resultWI.table, resultWI.def, col, row, value, 0);
+                }
             }
         }
         rowsModified++;
@@ -70,6 +82,13 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
         if (p.kind === "TEPNestedLoop") {
             let ps = p as TEPNestedLoop;
             runNestedLoop(ps, parameters, tables, runCallback);
+        }
+        if (p.kind === "TEPGroupBy") {
+            let ps = p as TEPGroupBy;
+            runGroupBy(ps, parameters, tables, (tep, walkInfos) => {
+
+                return true;
+            })
         }
         if (p.kind === "TEPSortNTop") {
             let ps = p as TEPSortNTop;
@@ -99,7 +118,10 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
             ret = {
                 resultTableName: ps.dest,
                 error: undefined,
-                rowCount: rowsModified
+                rowCount: rowsModified,
+                executionPlan: {
+                    description: ""
+                }
             };
         }
     }

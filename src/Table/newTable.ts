@@ -18,7 +18,7 @@ export function newTable(tb: ITableDefinition): ITable {
     }
     tb.id = DBData.instance.allTables.length + 1;
     writeTableDefinition(ret.data, tb)
-    tb = readTableDefinition(ret.data);
+    //tb = readTableDefinition(ret.data);
 
     DBData.instance.allTables.push(ret);
     return ret;

@@ -20,7 +20,10 @@ export function processUpdateStatement(parseResult: ParseResult, statement: TQue
         return {
             error: "Misformed update query.",
             resultTableName: "",
-            rowCount: 0
+            rowCount: 0,
+            executionPlan: {
+                description: ""
+            }
         } as SQLResult
     }
 
@@ -41,7 +44,7 @@ export function processUpdateStatement(parseResult: ParseResult, statement: TQue
         let dv = new DataView(b, curs.offset, tables[0].rowLength);
 
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = (flag & (1 << 7)) === 0 ? 0 : 1;
+        const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted === 1) {
             tables[0].cursor = readNext(tables[0].table, tables[0].def, tables[0].cursor);
             continue;
@@ -76,7 +79,10 @@ export function processUpdateStatement(parseResult: ParseResult, statement: TQue
 
     return {
         resultTableName: "",
-        rowCount: numberOfRowsModified
+        rowCount: numberOfRowsModified,
+        executionPlan: {
+            description: ""
+        }
     } as SQLResult
 
 }

@@ -18,6 +18,9 @@ import {TQueryFunctionCall} from "../Types/TQueryFunctionCall";
 import {predicateTBoolValue} from "./predicateTBoolValue";
 import {predicateTVariable} from "./predicateTVariable";
 import {predicateTDate} from "./predicateTDate";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {predicateTStar} from "./predicateTStar";
 
 
 /*
@@ -31,11 +34,12 @@ export const predicateTQueryColumn = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    let left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall,  predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "" );
-    yield maybe(whitespace);
+    let left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTStar, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "" );
+    yield maybe(atLeast1(whitespaceOrNewLine));
     let as = yield maybe(str("AS "));
     let columnName = "";
     if (as === "AS ") {
+        yield maybe(atLeast1(whitespaceOrNewLine));
         columnName = yield oneOf([predicateTLiteral, predicateTString], "");
     } else {
         switch (left.kind) {

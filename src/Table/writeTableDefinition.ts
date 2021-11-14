@@ -64,14 +64,14 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
         let c = tbl.columns[i];
         let columnFlag1 = 0;
         if (c.nullable === true) {
-            columnFlag1 = columnFlag1 | 1 << kBlockHeaderField.TableDefColumnFlag1Bit_Nullable;
+            columnFlag1 = columnFlag1 | kBlockHeaderField.TableDefColumnFlag1Bit_Nullable;
         }
         if (c.defaultExpression !== "") {
-            columnFlag1 = columnFlag1 | 1 << kBlockHeaderField.TableDefColumnFlag1Bit_HasDefaultExpression;
+            columnFlag1 = columnFlag1 | kBlockHeaderField.TableDefColumnFlag1Bit_HasDefaultExpression;
         }
         let columnFlag2 = 0;
         if (c.invisible === true) {
-            columnFlag2 = columnFlag2 | 1 << kBlockHeaderField.TableDefColumnFlag2Bit_Invisible;
+            columnFlag2 = columnFlag2 | kBlockHeaderField.TableDefColumnFlag2Bit_Invisible;
         }
 
         d.setUint8(offset + kBlockHeaderField.TableDefColumnType,c.type);

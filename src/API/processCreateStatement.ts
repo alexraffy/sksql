@@ -100,12 +100,18 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
         newTable(tblDef);
         return {
             resultTableName: "",
-            rowCount: 0
+            rowCount: 0,
+            executionPlan: {
+                description: "CREATE"
+            }
         } as SQLResult
     }
     return {
         error: "Misformed CREATE TABLE query.",
         resultTableName: "",
-        rowCount: 0
+        rowCount: 0,
+        executionPlan: {
+            description: ""
+        }
     }
 }

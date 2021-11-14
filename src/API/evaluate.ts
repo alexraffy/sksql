@@ -31,12 +31,30 @@ import {instanceOfTNumeric} from "../Query/Guards/instanceOfTNumeric";
 import {numericFromNumber} from "../Numeric/numericFromNumber";
 import {TDate} from "../Query/Types/TDate";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
+import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
+import {DBData} from "./DBInit";
+import {findExpressionType} from "./findExpressionType";
+import {columnTypeToString} from "../Table/columnTypeToString";
+import {typeCanConvertTo} from "../Table/typeCanConvertTo";
+import {convertToType} from "../Table/convertToType";
+import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
+import {kFunctionType} from "../Functions/kFunctionType";
+
+export interface TEvaluateOptions {
+    aggregateMode: "none" | "init" | "row" | "final",
+    aggregateObjects: { name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any }[],
+    forceTable?: string
+}
 
 
-export function evaluate(struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn | TVariable | TBoolValue | TColumn | TDate | TString |  TLiteral | TNumber,
-        parameters: {name: string, value: any}[],
-        tables: TTableWalkInfo[],
-        colDef: TableColumn): string | number | boolean | bigint | numeric | TDate {
+export function evaluate(
+    struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn | TVariable | TBoolValue | TColumn | TDate | TString |  TLiteral | TNumber,
+    parameters: {name: string, value: any}[],
+    tables: TTableWalkInfo[],
+    colDef: TableColumn,
+    options: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []}
+): string | number | boolean | bigint | numeric | TDate
+{
 
     if (instanceOfTNull(struct)) {
         return undefined;
@@ -87,7 +105,7 @@ export function evaluate(struct: string | number | bigint | boolean | TQueryExpr
         }
         // look up the column
         if (table === "") {
-            let tablesMatch = findTableNameForColumn(name, tables);
+            let tablesMatch = findTableNameForColumn(name, tables, options.forceTable);
             if (tablesMatch.length !== 1) {
                 if (tables.length === 0) {
                     throw "Unknown column name " + name;
@@ -109,11 +127,11 @@ export function evaluate(struct: string | number | bigint | boolean | TQueryExpr
         return val;
     }
     if (instanceOfTQueryColumn(struct)) {
-        return evaluate(struct.expression, parameters, tables, colDef);
+        return evaluate(struct.expression, parameters, tables, colDef, options);
     }
     if (instanceOfTQueryExpression(struct)) {
-        let left = evaluate(struct.value.left, parameters, tables, undefined);
-        let right = evaluate(struct.value.right, parameters, tables, undefined);
+        let left = evaluate(struct.value.left, parameters, tables, undefined, options);
+        let right = evaluate(struct.value.right, parameters, tables, undefined, options);
         let op = struct.value.op;
         if (typeof left !== typeof right) {
             throw "Incompatible types between " + left + " and " + right;
@@ -155,6 +173,47 @@ export function evaluate(struct: string | number | bigint | boolean | TQueryExpr
         }
         if (typeof left === "boolean" && typeof right === "boolean") {
             return left && right;
+        }
+    }
+    if (instanceOfTQueryFunctionCall(struct)) {
+        let fnName = struct.value.name;
+        let fnData = DBData.instance.getFunctionNamed(fnName);
+        if (fnData === undefined) {
+            throw "Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.";
+        }
+        if (fnData.parameters.length !== struct.value.parameters.length) {
+            throw `Function ${fnName} expects ${fnData.parameters.length} parameters. Instead got ${struct.value.parameters.length}`;
+        }
+        let parameters = [];
+        if (fnData.type === kFunctionType.scalar) {
+            for (let i = 0; i < struct.value.parameters.length; i++) {
+                let param = struct.value.parameters[i];
+                let expType = findExpressionType(param, tables);
+                let paramValue = evaluate(param, parameters, tables, colDef, options);
+                if (expType !== fnData.parameters[i].type) {
+                    if (!typeCanConvertTo(paramValue, expType, fnData.parameters[i].type)) {
+                        throw `Function ${fnName} expected parameter at index ${i} to be of type ${columnTypeToString(fnData.parameters[i].type)}. Instead got ${columnTypeToString(expType)}`;
+                    }
+                    paramValue = convertToType(paramValue, expType, fnData.parameters[i].type);
+                }
+
+                parameters.push(paramValue);
+            }
+
+            let result = fnData.fn(...parameters);
+            return result;
+        } else {
+            if (options.aggregateMode === "final") {
+                // find the aggregate data
+                if (options.aggregateObjects === undefined || options.aggregateObjects.length === 0) {
+                    throw `Function ${fnName} is an aggregate function but no data was computed for previous rows.`;
+                }
+                let ao = options.aggregateObjects.find((a) => {
+                    return a.name.toUpperCase() === fnData.name.toUpperCase();
+                });
+                let result = fnData.fn(ao.data, undefined);
+                return result;
+            }
         }
     }
 }

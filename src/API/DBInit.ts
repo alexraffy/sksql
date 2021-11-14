@@ -3,7 +3,10 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
-import { ITableDefinition } from "../main";
+import {ITableDefinition, TableColumnType} from "../main";
+import {kFunctionType} from "../Functions/kFunctionType";
+import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
+import {registerFunctions} from "../Functions/registerFunctions";
 
 
 let workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
@@ -43,12 +46,15 @@ export class DBData {
     private workers: Worker[] = [];
     private pendingQueries: {id: string, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
 
+    private functions: TRegisteredFunction[] = [];
+
+
     constructor() {
         this.allTables = [];
         DBData._instance = this;
         let dual = new SQLStatement("CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');");
         dual.run();
-
+        registerFunctions();
     }
     static get instance(): DBData {
         if (DBData._instance === undefined) {
@@ -77,7 +83,7 @@ export class DBData {
         let at = this.allTables;
         for (let i = 0; i < at.length; i++ ) {
             let tb = readTableDefinition(at[i].data);
-            if (tb.name.localeCompare(tableName) === 0) {
+            if (tb.name.toUpperCase().localeCompare(tableName.toUpperCase()) === 0) {
                 return at[i];
             }
         }
@@ -87,11 +93,20 @@ export class DBData {
         let at = this.allTables;
         for (let i = 0; i < at.length; i++ ) {
             let tb = readTableDefinition(at[i].data);
-            if (tb.name.localeCompare(tableName) === 0) {
+            if (tb.name.toUpperCase().localeCompare(tableName.toUpperCase()) === 0) {
                 return {index: i, table: at[i]};
             }
         }
         return undefined;
+    }
+    dropTable(tableName: string) {
+        let idx = this.allTables.findIndex((t) => {
+            let tb = readTableDefinition(t.data);
+            return (tb.name.toUpperCase() === tableName.toUpperCase());
+        });
+        if (idx > -1) {
+            this.allTables.splice(idx, 1);
+        }
     }
 
     updateWorkerDB(idx: number) {
@@ -176,6 +191,23 @@ export class DBData {
         }
 
     }
+
+    declareFunction(type: kFunctionType, name: string, parameters: {name: string, type: TableColumnType}[], returnType: TableColumnType, fn: (...args) => any) {
+        this.functions.push(
+            {
+                type: type,
+                name: name,
+                parameters: JSON.parse(JSON.stringify(parameters)),
+                returnType: returnType,
+                fn: fn
+            }
+        );
+    }
+
+    getFunctionNamed(name: string): TRegisteredFunction {
+        return this.functions.find((f) => { return f.name.toUpperCase() === name.toUpperCase();});
+    }
+
 }
 
 

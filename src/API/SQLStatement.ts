@@ -47,8 +47,8 @@ export class SQLStatement {
 
     query: string = "";
     parameters: {name: string, value: any}[] = [];
-
     ast: ParseResult | ParseError;
+    openedTempTables: string[] = [];
 
     constructor(st: string) {
         this.query = st;
@@ -85,7 +85,11 @@ export class SQLStatement {
         }
         return undefined;
     }
-
+    close() {
+        for (let i = 0; i < this.openedTempTables.length; i++) {
+            DBData.instance.dropTable(this.openedTempTables[i]);
+        }
+    }
     runOnWebWorker(): Promise<string> {
         return new Promise<string>( (resolve, reject) => {
             DBData.instance.updateWorkerDB(0);
@@ -205,7 +209,11 @@ export class SQLStatement {
                 ret.push(processUpdateStatement(this.ast, statement, this.parameters));
             }
             if (instanceOfTQuerySelect(statement)) {
-                ret.push(processSelectStatement(this.ast, statement, this.parameters));
+                let selectStRet = processSelectStatement(this.ast, statement, this.parameters);
+                if (selectStRet.resultTableName !== undefined && selectStRet.resultTableName !== "") {
+                    this.openedTempTables.push(selectStRet.resultTableName);
+                }
+                ret.push(selectStRet);
             }
             if (instanceOfTQueryDelete(statement)) {
                 ret.push(processDeleteStatement(this.ast, statement, this.parameters, walk));

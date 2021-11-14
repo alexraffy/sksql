@@ -4,7 +4,6 @@ import {TQueryComparison} from "../Query/Types/TQueryComparison";
 import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
 import {instanceOfTQueryExpression} from "../Query/Guards/instanceOfTQueryExpression";
 import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
-import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
 import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {instanceOfTNumber} from "../Query/Guards/instanceOfTNumber";
 import {instanceOfTString} from "../Query/Guards/instanceOfTString";
@@ -12,9 +11,17 @@ import {instanceOfTBoolValue} from "../Query/Guards/instanceOfTBoolValue";
 import {TTableWalkInfo} from "./TTableWalkInfo";
 import {findTableNameForColumn} from "./findTableNameForColumn";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
+import {DBData} from "./DBInit";
+import {kFunctionType} from "../Functions/kFunctionType";
 
+export interface TFindExpressionTypeOptions {
+    callbackOnTColumn: boolean;
+}
 
-export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColumnType {
+export function findExpressionType(o: any,
+                                   tables: TTableWalkInfo[],
+                                   callback?: (o: any, key: string, value: string | number | boolean | any, options: TFindExpressionTypeOptions ) => boolean,
+                                   options: TFindExpressionTypeOptions = {callbackOnTColumn: false}): TableColumnType {
     let ret = TableColumnType.int;
 
     let types: TableColumnType[] = [];
@@ -31,12 +38,6 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
             types.push(recursion(o.value.left));
             types.push(recursion(o.value.right));
         }
-        if (instanceOfTQueryFunctionCall(o)) {
-            let fc = o as TQueryFunctionCall;
-            for (let i = 0; i < fc.value.parameters.length; i++) {
-                types.push(recursion(fc.value.parameters[i]));
-            }
-        }
         if (instanceOfTColumn(o)) {
             let name = o.column;
             let table = o.table;
@@ -51,9 +52,18 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
                 }
                 table = tableNames[0];
             }
-
             let t = tables.find((t) => { return t.alias === table;});
+            if (t === undefined) {
+                throw "Could not find table for column " + name + " from TColumn " + JSON.stringify(o);
+            }
             let colDef = t.def.columns.find( (col) => { return col.name.toUpperCase() === name.toUpperCase();});
+
+            if (callback !== undefined) {
+                if (options.callbackOnTColumn === true) {
+                    callback(o, "AGG_COLUMN", { table: table, column: name, def: colDef}, options);
+                }
+            }
+
             return colDef.type;
         }
         if (instanceOfTNumber(o)) {
@@ -70,6 +80,23 @@ export function findExpressionType(o: any, tables: TTableWalkInfo[]): TableColum
         }
         if (instanceOfTBoolValue(o)) {
             return TableColumnType.boolean;
+        }
+        if (instanceOfTQueryFunctionCall(o)) {
+            let fnName = o.value.name;
+            let fnData = DBData.instance.getFunctionNamed(fnName);
+            if (fnData === undefined) {
+                throw "Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.";
+            }
+            if (fnData.type === kFunctionType.aggregate) {
+                if (callback !== undefined) {
+                    callback(o, "AGGREGATE", true, options);
+                }
+            }
+
+            for (let i = 0; i < o.value.parameters.length; i++) {
+                findExpressionType(o.value.parameters[i], tables, callback, {callbackOnTColumn: true});
+            }
+            return fnData.returnType;
         }
     }
     types.push(recursion(o));

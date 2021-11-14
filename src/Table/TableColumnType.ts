@@ -1,6 +1,7 @@
 
 
 export enum TableColumnType {
+    any = 0,
     int = 1,
     varchar = 2,
     boolean = 3,

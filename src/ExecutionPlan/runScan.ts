@@ -23,7 +23,7 @@ export function runScan(tep: TEPScan, parameters: {name: string, value: any}[], 
         let b = tbl.data.blocks[walk.cursor.blockIndex];
         let dv = new DataView(b, walk.cursor.offset, rowLength);
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = (flag & (1 << 7)) === 0 ? 0 : 1;
+        const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted) {
             walk.cursor = readNext(tbl, tblDef, walk.cursor);
             continue;

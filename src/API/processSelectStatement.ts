@@ -17,15 +17,22 @@ import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLi
 import {TEPNestedLoop} from "../ExecutionPlan/TEPNestedLoop";
 import {TEPSortNTop} from "../ExecutionPlan/TEPSortNTop";
 import {TEPSelect} from "../ExecutionPlan/TEPSelect";
+import {TEPGroupBy} from "../ExecutionPlan/TEPGroupBy";
 
 
 function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
     if (table === undefined || table === "") {
         return tables;
     }
+    if (alias === undefined || alias === "") {
+        alias = table;
+    }
     let exists = tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase();});
     if (!exists) {
         let tbl = DBData.instance.getTable(table);
+        if (tbl === undefined) {
+            throw "Could not find table " + table;
+        }
         let def = readTableDefinition(tbl.data, true);
         let cursor = readFirst(tbl, def);
         let rowLength = recordSize(tbl.data) + 5;
@@ -46,7 +53,10 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
         return {
             error: "Misformed Select Query.",
             resultTableName: "",
-            rowCount: 0
+            rowCount: 0,
+            executionPlan: {
+                description: ""
+            }
         } as SQLResult;
     }
     let select: TQuerySelect = statement;
@@ -62,7 +72,11 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
             let tblName = getValueForAliasTableOrLiteral(p.table);
             tables = addTable(tables, tblName.table, tblName.alias);
             tables = addTable(tables, p.result, p.result);
-            planDescription += "[SCAN " + tblName.table + "]";
+            planDescription += "[SCAN " + tblName.table + "";
+            if (p.result !== undefined && p.result !== "" && p.result !== tblName.table) {
+                planDescription += "=>" + p.result;
+            }
+            planDescription += "]";
         }
         if (plan.kind === "TEPNestedLoop") {
             let p = plan as TEPNestedLoop;
@@ -70,6 +84,14 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
             recur(p.a);
             planDescription += "\n";
             recur(p.b);
+        }
+        if (plan.kind === "TEPGroupBy") {
+            let p = plan as TEPGroupBy;
+            let src = getValueForAliasTableOrLiteral(p.source);
+            let dest = getValueForAliasTableOrLiteral(p.dest);
+            tables = addTable(tables, src.table, src.alias);
+            tables = addTable(tables, dest.table, dest.alias);
+            planDescription += "[GroupBy " + src.table + "=>" + dest.table + "]";
         }
         if (plan.kind === "TEPSortNTop") {
             let p = plan as TEPSortNTop;
@@ -88,8 +110,12 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
 
     //console.log(planDescription);
 
+    let returnSQLResult = run(select, plan, parameters, tables);
+    returnSQLResult.executionPlan = {
+        description: planDescription
+    };
 
-    return run(select, plan, parameters, tables);
+    return returnSQLResult;
 
 
 

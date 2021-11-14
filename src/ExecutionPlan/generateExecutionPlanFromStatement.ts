@@ -16,6 +16,70 @@ import {TEPNestedLoop} from "./TEPNestedLoop";
 import {TQueryOrderBy} from "../Query/Types/TQueryOrderBy";
 import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {TQueryColumn} from "../Query/Types/TQueryColumn";
+import {TEPGroupBy} from "./TEPGroupBy";
+import {TTable} from "../Query/Types/TTable";
+import {recordSize} from "../Table/recordSize";
+import {readFirst} from "../Cursor/readFirst";
+import {TableColumn} from "../Table/TableColumn";
+import {TEPProjection} from "./TEPProjection";
+import {TColumn} from "../Query/Types/TColumn";
+
+
+
+function addInvisibleColumnsForSorting(tables: TTableWalkInfo[], select: TQuerySelect, clause: TQueryOrderBy, def: ITableDefinition, projections: TEPProjection[] ): {projections: TEPProjection[], def: ITableDefinition} {
+    let o: TQueryOrderBy = clause;
+    let colname: string;
+    if (instanceOfTLiteral(o.column)) {
+        colname = o.column.value;
+        if (colname === "ROWID") {
+            return;
+        }
+    }
+    if (instanceOfTColumn(o.column)) {
+        if (o.column.table !== undefined && o.column.table !== "") {
+            colname = o.column.table + "." + o.column.column
+        } else {
+            colname = o.column.column;
+        }
+    }
+
+    let found = false;
+    for (let x = 0; x < def.columns.length; x++) {
+        let c = def.columns[x];
+        if (c.name.toUpperCase() === colname.toUpperCase()) {
+            found = true;
+        }
+    }
+    if (found === false) {
+        let type = findExpressionType(o.column, tables);
+        // add the column to the select columns so they are written automatically
+        let tcol: TQueryColumn = {
+            kind: "TQueryColumn",
+            alias: undefined,
+            expression: o.column
+        }
+        select.columns.push(tcol);
+        let length = 1;
+        if (type === TableColumnType.varchar) {
+            length = 255;
+        }
+        def.columns.push({
+            name: colname,
+            type: type,
+            length: length,
+            nullable: true,
+            defaultExpression: undefined,
+            invisible: true
+        });
+
+        projections.push({
+            columnName: colname,
+            output: tcol
+        });
+
+    }
+    return {projections: projections, def: def};
+}
 
 
 export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] {
@@ -30,6 +94,8 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
         returnTableName = "#query" + (++i);
     }
 
+    let projections: TEPProjection[] = [];
+
     let returnTableDefinition = {
         name: returnTableName,
         columns: [],
@@ -40,9 +106,57 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
         constraints: [],
     } as ITableDefinition
 
+    let hasAggregation = false;
+
+    let recursion_callback = (o: any, key: string, value: string | number | boolean | any) => {
+        if (key === "AGGREGATE" && value === true) {
+            hasAggregation = true;
+        }
+        if (key === "AGG_COLUMN") {
+            let table: string = value.table;
+            let column: string = value.column;
+            let coldef: TableColumn = value.def;
+
+            let found = false;
+            for (let x = 0; x < returnTableDefinition.columns.length; x++) {
+                let c = returnTableDefinition.columns[x];
+                if (c.name.toUpperCase() === column.toUpperCase()) {
+                    found = true;
+                }
+            }
+            if (found === false) {
+
+                returnTableDefinition.columns.push(
+                    {
+                        name: column,
+                        type: coldef.type,
+                        length: (coldef.type === TableColumnType.varchar) ? 255 : 1,
+                        nullable: true,
+                        defaultExpression: "",
+                        invisible: true
+                    }
+                );
+
+                projections.push(
+                    {
+                        columnName: column,
+                        output: {
+                            kind: "TQueryColumn",
+                            alias: undefined,
+                            expression: {kind: "TColumn", table: table, column: column} as TColumn
+                        }
+                    }
+                )
+
+
+            }
+        }
+        return true;
+    }
+
     for (let i = 0; i < select.columns.length; i++) {
         let col = select.columns[i];
-        let types = findExpressionType(col.expression, tables);
+        let types = findExpressionType(col.expression, tables, recursion_callback);
         let name = "";
         if (instanceOfTLiteral(col.alias.alias)) {
             name = col.alias.alias.value;
@@ -58,60 +172,53 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
                 defaultExpression: ""
             }
         );
+        projections.push({
+            columnName: name,
+            output: col
+        });
     }
     // add invisible columns for order by clauses
-    if (select.orderBy.length > 0) {
+    if (select.orderBy !== undefined && select.orderBy.length > 0) {
         for (let i = 0; i < select.orderBy.length; i++) {
-            let o: TQueryOrderBy = select.orderBy[i];
-            let colname: string;
-            if (instanceOfTLiteral(o.column)) {
-                colname = o.column.value;
-                if (colname === "ROWID") {
-                    continue;
-                }
-            }
-            if (instanceOfTColumn(o.column)) {
-                if (o.column.table !== undefined && o.column.table !== "") {
-                    colname = o.column.table + "." + o.column.column
-                } else {
-                    colname = o.column.column;
-                }
-            }
-
-            let found = false;
-            for (let x = 0; x < returnTableDefinition.columns.length; x++) {
-                let c = returnTableDefinition.columns[x];
-                if (c.name.toUpperCase() === colname.toUpperCase()) {
-                    found = true;
-                }
-            }
-            if (found === false) {
-                let type = findExpressionType(o.column, tables);
-                // add the column to the select columns so they are written automatically
-                select.columns.push({
-                    kind: "TQueryColumn",
-                    alias: undefined,
-                    expression: o.column
-                });
-                let length = 1;
-                if (type === TableColumnType.varchar) {
-                    length = 255;
-                }
-                returnTableDefinition.columns.push({
-                    name: colname,
-                    type: type,
-                    length: length,
-                    nullable: true,
-                    defaultExpression: undefined,
-                    invisible: true
-                });
+            let temp = addInvisibleColumnsForSorting(tables, select, select.orderBy[i], returnTableDefinition, projections)
+            if (temp !== undefined) {
+                returnTableDefinition = temp.def;
+                projections = temp.projections;
             }
         }
     }
+    if (select.groupBy !== undefined && select.orderBy.length > 0) {
+        for (let i = 0; i < select.groupBy.length; i++) {
+            let temp  = addInvisibleColumnsForSorting(tables, select, select.groupBy[i], returnTableDefinition, projections)
+            if (temp !== undefined) {
+                returnTableDefinition = temp.def;
+                projections = temp.projections;
+            }
+        }
+    }
+
+    if (select.having !== undefined) {
+        findExpressionType(select.having, tables, recursion_callback, {callbackOnTColumn: true});
+    }
+
+
     let returnTable = newTable(returnTableDefinition);
     returnTableDefinition = readTableDefinition(returnTable.data, true);
 
+    tables.push(
+        {
+            name: returnTableName,
+            table: returnTable,
+            def: returnTableDefinition,
+            alias: returnTableName,
+            rowLength: recordSize(returnTable.data),
+            cursor: readFirst(returnTable, returnTableDefinition)
+        }
+    );
 
+    let currentDestName = returnTableName;
+    let currentDestTable = returnTable;
+    let currentDestTableDef = returnTableDefinition;
 
     let current: TEPScan | TEPNestedLoop;
     let idx = select.tables.length -1;
@@ -120,9 +227,9 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
             kind: "TEPScan",
             table: select.tables[idx].tableName,
             range: undefined,
-            output: select.columns,
+            projection: projections,
             predicate: (idx === 0) ? select.where : select.tables[idx].joinClauses,
-            result: returnTableDefinition.name
+            result: currentDestName
         }
 
         if (current !== undefined) {
@@ -142,12 +249,53 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
 
     ret.push(current);
 
+    if (select.groupBy !== undefined && select.groupBy.length > 0) {
+
+        let groupByResultTableName = currentDestName + "_Grouped";
+        let groupByResultTableDef: ITableDefinition = JSON.parse(JSON.stringify(currentDestTableDef));
+        for (let i = groupByResultTableDef.columns.length - 1; i > 0; i--) {
+            if (groupByResultTableDef.columns[i].invisible === true) {
+                groupByResultTableDef.columns.splice(i, 1);
+            }
+        }
+        groupByResultTableDef.name = groupByResultTableName;
+        let groupByResultTable = newTable(groupByResultTableDef);
+        groupByResultTableDef = readTableDefinition(groupByResultTable.data, true);
+
+        tables.push(
+            {
+                name: groupByResultTableName,
+                table: groupByResultTable,
+                def: groupByResultTableDef,
+                alias: groupByResultTableName,
+                rowLength: recordSize(groupByResultTable.data),
+                cursor: readFirst(groupByResultTable, groupByResultTableDef)
+            }
+        );
+
+
+        let stepGroupBy: TEPGroupBy = {
+            kind: "TEPGroupBy",
+            groupBy: select.groupBy,
+            output: select.columns,
+            having: select.having,
+            projections: projections,
+            source: { kind: "TTable", table: currentDestName, schema: "dbo" } as TTable,
+            dest: { kind: "TTable", table: groupByResultTableName, schema: "dbo"} as TTable
+        }
+        ret.push(stepGroupBy);
+
+        currentDestName = groupByResultTableName;
+
+
+    }
+
 
     if (select.orderBy.length > 0) {
         if (!(instanceOfTLiteral(select.orderBy[0].column) && select.orderBy[0].column.value === "ROWID")) {
             let stepSort: TEPSortNTop = {
                 kind: "TEPSortNTop",
-                source: returnTableDefinition.name,
+                source: currentDestName,
                 orderBy: select.orderBy,
                 top: select.top,
                 dest: ""
@@ -160,7 +308,7 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
 
     let stepSelect: TEPSelect = {
         kind: "TEPSelect",
-        dest: returnTableDefinition.name,
+        dest: currentDestName,
     }
     ret.push(stepSelect);
 

@@ -5,6 +5,7 @@ import {TEPRange} from "./TEPRange";
 import {TQueryColumn} from "../Query/Types/TQueryColumn";
 import {TAlias} from "../Query/Types/TAlias";
 import {TTable} from "../Query/Types/TTable";
+import {TEPProjection} from "./TEPProjection";
 
 
 export interface TEPScan extends TEP {
@@ -12,6 +13,6 @@ export interface TEPScan extends TEP {
     table: TAlias | TTable;
     predicate: TQueryComparisonExpression | TQueryComparison;
     range?: TEPRange;
-    output: TQueryColumn[]
+    projection: TEPProjection[];
     result: string;
 }

@@ -17,9 +17,9 @@ export function test_db_university() {
     console.log(readTableAsJSON("instructor"));
 
 
-    let selectInstructor = new SQLStatement("SELECT ID, name, dept_name, salary from instructor ORDER BY name ASC");
-    //let retSelectInstruct = selectInstructor.run();
-    //console.log(readTableAsJSON(retSelectInstruct[0].resultTableName));
+    let selectInstructor = new SQLStatement("SELECT * from instructor ORDER BY name ASC");
+    let retSelectInstruct = selectInstructor.run();
+    console.log(readTableAsJSON(retSelectInstruct[0].resultTableName));
 
 
     let selectJOIN = new SQLStatement("SELECT course_id, title, course.dept_name, building FROM course JOIN department ON department.dept_name = course.dept_name");

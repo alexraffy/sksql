@@ -6,7 +6,14 @@
     "name": "ARaffy"
   },
   "homepage": "https://github.com/alexraffy/sksql",
-  "keywords": ["sql", "database", "db", "query", "shared array buffer", "thread"],
+  "keywords": [
+    "sql",
+    "database",
+    "db",
+    "query",
+    "shared array buffer",
+    "thread"
+  ],
   "scripts": {
     "sksql-00-runall": "npm run sksql-01-build && npm run sksql-02-webpack",
     "sksql-01-build": "tsc -p tsconfig.json",

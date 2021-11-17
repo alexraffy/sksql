@@ -17,7 +17,7 @@ export function test_groupby() {
 
     let sqlGroupBy1 = "SELECT Country, Region, SUM(sales) AS TotalSales " +
         "FROM Sales " +
-        "GROUP BY Country, Region HAVING SUM(sales)>500";
+        "GROUP BY Country, Region HAVING SUM(sales)>=100";
     let st2 = new SQLStatement(sqlGroupBy1);
     let ret = st2.run(kResultType.JSON);
     console.log(ret);

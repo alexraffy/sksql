@@ -23,6 +23,11 @@ import {readFirst} from "../Cursor/readFirst";
 import {TableColumn} from "../Table/TableColumn";
 import {TEPProjection} from "./TEPProjection";
 import {TColumn} from "../Query/Types/TColumn";
+import {instanceOfTStar} from "../Query/Guards/instanceOfTStar";
+import {TStar} from "../Query/Types/TStar";
+import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
+import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
+import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 
 
 
@@ -153,9 +158,22 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
         }
         return true;
     }
-
+    let starsColumns: {table: string, index: number}[] = []
     for (let i = 0; i < select.columns.length; i++) {
         let col = select.columns[i];
+
+        if (instanceOfTStar(col.expression)) {
+            let star = col.expression as TStar;
+            let table = "";
+            if (instanceOfTTable(star.table) && star.table.table !== undefined && star.table.table !== "") {
+                table = star.table.table;
+            } else {
+                table = getValueForAliasTableOrLiteral(select.tables[0].tableName).table;
+            }
+
+            starsColumns.push({table: table, index: i});
+        }
+
         let types = findExpressionType(col.expression, tables, recursion_callback);
         let name = "";
         if (instanceOfTLiteral(col.alias.alias)) {
@@ -177,6 +195,53 @@ export function generateExecutionPlanFromStatement(select: TQuerySelect): TEP[] 
             output: col
         });
     }
+    for (let i = 0; i < starsColumns.length; i ++) {
+        let tblWalk = tables.find((t) => { return t.name.toUpperCase() === starsColumns[i].table.toUpperCase()});
+        if (tblWalk) {
+            let d = tblWalk.def;
+            for (let x = 0; x < d.columns.length; x++) {
+                let col = d.columns[x];
+
+                let found = false;
+                for (let j = 0; j < returnTableDefinition.columns.length; j++) {
+                    let c = returnTableDefinition.columns[j];
+                    if (c.name.toUpperCase() === col.name.toUpperCase()) {
+                        if (c.invisible === true) {
+                            c.invisible = false;
+                        } else {
+                            found = true;
+                        }
+                    }
+                }
+                if (!found) {
+                    returnTableDefinition.columns.push({
+                        name: col.name,
+                        type: col.type,
+                        length: col.length,
+                        nullable: col.nullable,
+                        defaultExpression: col.defaultExpression,
+                        invisible: false,
+                        decimal: col.decimal
+                    });
+                    projections.push(
+                        {
+                            columnName: col.name,
+                            output: {
+                                kind: "TQueryColumn",
+                                expression: {
+                                    kind: "TColumn",
+                                    table: tblWalk.name,
+                                    column: col.name
+                                } as TColumn
+                            } as TQueryColumn
+                        }
+                    )
+                }
+
+            }
+        }
+    }
+
     // add invisible columns for order by clauses
     if (select.orderBy !== undefined && select.orderBy.length > 0) {
         for (let i = 0; i < select.orderBy.length; i++) {

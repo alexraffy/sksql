@@ -8,8 +8,8 @@ import {kFunctionType} from "../Functions/kFunctionType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {registerFunctions} from "../Functions/registerFunctions";
 
-
-let workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
+let workerJavascript = "";
+workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
 workerJavascript += "\n";
 workerJavascript += "function runQuery(id, str, params) {\n";
 //workerJavascript += "   console.log(\"QUERY: \" + str);\n";
@@ -157,36 +157,36 @@ export class DBData {
                 let blob = blob_src;
                 worker = new Worker(blob, {eval: true});
             }
-            worker.on("message",  (e) => {
-                //console.log("Received: " + e);
-                if (e !== undefined && e.c !== undefined) {
-                    switch (e.c) {
-                        case "QS":
-                        {
-                            this.receivedResult(e.d.id, e.d.result);
+            if (worker !== undefined) {
+                worker.on("message", (e) => {
+                    //console.log("Received: " + e);
+                    if (e !== undefined && e.c !== undefined) {
+                        switch (e.c) {
+                            case "QS": {
+                                this.receivedResult(e.d.id, e.d.result);
+                            }
+                                break;
+                            case "DB": {
+                                this.allTables = e.d;
+                            }
+                                break;
                         }
-                        break;
-                        case "DB":
-                        {
-                            this.allTables = e.d;
-                        }
-                        break;
-                    }
 
-                }
-            });
-            worker.on("error", (e) => {
-                console.log("Error: ", e);
-                //resolve(e.message);
-            }),
-            worker.on('exit', (code) => {
-                if (code !== 0) {
-                    //   reject(new Error(`stopped with  ${code} exit code`));
-                }
-            })
-            //worker.postMessage("hello"); // Start the worker.
-            let idx = this.workers.push(worker);
-            this.updateWorkerDB(idx-1);
+                    }
+                });
+                worker.on("error", (e) => {
+                    console.log("Error: ", e);
+                    //resolve(e.message);
+                }),
+                    worker.on('exit', (code) => {
+                        if (code !== 0) {
+                            //   reject(new Error(`stopped with  ${code} exit code`));
+                        }
+                    })
+                //worker.postMessage("hello"); // Start the worker.
+                let idx = this.workers.push(worker);
+                this.updateWorkerDB(idx - 1);
+            }
 
         }
 

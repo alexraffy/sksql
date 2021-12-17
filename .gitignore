@@ -6,3 +6,4 @@
 /tests/package-lock.json
 /tests/build/
 /tests/node_modules/
+*.tgz

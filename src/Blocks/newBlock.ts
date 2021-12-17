@@ -1,12 +1,18 @@
 import {BlockType} from "./BlockType";
 import {kBlockHeaderField} from "./kBlockHeaderField";
+import {DBData} from "../API/DBInit";
 
 
 /*
     Creates a new block of size blockSize
  */
-export function newBlock(blockSize: number = 4096, blockType: BlockType, blockId: number): SharedArrayBuffer {
-    let ret = new SharedArrayBuffer(blockSize);
+export function newBlock(blockSize: number = 4096, blockType: BlockType, blockId: number): ArrayBuffer | SharedArrayBuffer {
+    let ret: ArrayBuffer | SharedArrayBuffer = undefined;
+    if (DBData.supportsSharedArrayBuffers) {
+        ret = new SharedArrayBuffer(blockSize);
+    } else {
+        ret = new ArrayBuffer(blockSize);
+    }
     let dv = new DataView(ret);
     let ofs = 0;
     for (let i = 0; i < blockSize; i++) {

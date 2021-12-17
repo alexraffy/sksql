@@ -226,6 +226,22 @@ export class DBData {
     getFunctionNamed(name: string): TRegisteredFunction {
         return this.functions.find((f) => { return f.name.toUpperCase() === name.toUpperCase();});
     }
+    private static _sharedArrayBufferSupported: boolean = undefined;
+    static get supportsSharedArrayBuffers(): boolean {
+        try {
+            if (DBData._sharedArrayBufferSupported === undefined) {
+                let _ = new SharedArrayBuffer(1);
+                DBData._sharedArrayBufferSupported = true;
+                return true;
+            } else {
+                return DBData._sharedArrayBufferSupported;
+            }
+        } catch (e) {
+            DBData._sharedArrayBufferSupported = false;
+            return false;
+        }
+    }
+
 
 }
 

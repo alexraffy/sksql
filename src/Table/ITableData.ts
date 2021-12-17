@@ -5,6 +5,6 @@
     .blocks contains an array of buffer blocks
  */
 export interface ITableData {
-    tableDef: SharedArrayBuffer;
-    blocks: SharedArrayBuffer[];
+    tableDef: ArrayBuffer | SharedArrayBuffer;
+    blocks: (ArrayBuffer | SharedArrayBuffer)[];
 }

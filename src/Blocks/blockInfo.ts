@@ -6,7 +6,7 @@ import {IBlockInfo} from "./IBlockInfo";
     returns block information of the SharedArrayBuffer
 
  */
-export function blockInfo(b: SharedArrayBuffer): IBlockInfo {
+export function blockInfo(b: ArrayBuffer | SharedArrayBuffer): IBlockInfo {
     let dv = new DataView(b, 0);
     const blockType = dv.getUint8(kBlockHeaderField.BlockType);
     const blockId = dv.getUint32(kBlockHeaderField.BlockId);

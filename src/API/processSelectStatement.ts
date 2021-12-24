@@ -18,6 +18,7 @@ import {TEPNestedLoop} from "../ExecutionPlan/TEPNestedLoop";
 import {TEPSortNTop} from "../ExecutionPlan/TEPSortNTop";
 import {TEPSelect} from "../ExecutionPlan/TEPSelect";
 import {TEPGroupBy} from "../ExecutionPlan/TEPGroupBy";
+import {TParserError} from "./TParserError";
 
 
 function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
@@ -31,7 +32,7 @@ function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
     if (!exists) {
         let tbl = DBData.instance.getTable(table);
         if (tbl === undefined) {
-            throw "Could not find table " + table;
+            throw new TParserError("Table " + table + " not found.");
         }
         let def = readTableDefinition(tbl.data, true);
         let cursor = readFirst(tbl, def);

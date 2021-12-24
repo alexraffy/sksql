@@ -13,6 +13,7 @@ import {findTableNameForColumn} from "./findTableNameForColumn";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 import {DBData} from "./DBInit";
 import {kFunctionType} from "../Functions/kFunctionType";
+import {TParserError} from "./TParserError";
 
 export interface TFindExpressionTypeOptions {
     callbackOnTColumn: boolean;
@@ -45,16 +46,16 @@ export function findExpressionType(o: any,
             if (table === undefined || table === "") {
                 let tableNames = findTableNameForColumn(name, tables);
                 if (tableNames.length > 1) {
-                    throw "Ambiguous column name " + name;
+                    throw new TParserError("Ambiguous column name " + name);
                 }
                 if (tableNames.length === 0) {
-                    throw "Unknown column name " + name;
+                    throw new TParserError("Unknown column name " + name);
                 }
                 table = tableNames[0];
             }
             let t = tables.find((t) => { return t.alias === table;});
             if (t === undefined) {
-                throw "Could not find table for column " + name + " from TColumn " + JSON.stringify(o);
+                throw new TParserError("Could not find table for column " + name + " from TColumn " + JSON.stringify(o));
             }
             let colDef = t.def.columns.find( (col) => { return col.name.toUpperCase() === name.toUpperCase();});
 
@@ -85,7 +86,7 @@ export function findExpressionType(o: any,
             let fnName = o.value.name;
             let fnData = DBData.instance.getFunctionNamed(fnName);
             if (fnData === undefined) {
-                throw "Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.";
+                throw new TParserError("Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.");
             }
             if (fnData.type === kFunctionType.aggregate) {
                 if (callback !== undefined) {

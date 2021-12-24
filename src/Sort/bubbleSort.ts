@@ -126,7 +126,7 @@ export function bubbleSort(table: ITable, def: ITableDefinition, orderBys: TQuer
                     }
                     if (compareValue === 1) {
 
-                        let swap = new SharedArrayBuffer(cursor.rowLength + 5);
+                        let swap = new ArrayBuffer(cursor.rowLength + 5);
                         let dvSwap = new DataView(swap);
                         copyBytesBetweenDV(cursor.rowLength, row1, dvSwap, 5, 5);
                         copyBytesBetweenDV(cursor.rowLength, row2, row1, 5, 5);

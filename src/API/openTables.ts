@@ -14,6 +14,7 @@ import {TQueryDelete} from "../Query/Types/TQueryDelete";
 import {TTableWalkInfo} from "./TTableWalkInfo";
 import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {TAlias} from "../Query/Types/TAlias";
+import {TParserError} from "./TParserError";
 
 
 export function openTables(statement: TQuerySelect | TQueryUpdate | TQueryDelete): TTableWalkInfo[] {
@@ -47,6 +48,9 @@ export function openTables(statement: TQuerySelect | TQueryUpdate | TQueryDelete
 
 
         let tbl = DBData.instance.getTable(tableToOpen);
+        if (tbl === undefined) {
+            throw new TParserError("Table " + tableToOpen + " not found.");
+        }
         let def = readTableDefinition(tbl.data);
         let cursor = readFirst(tbl, def);
         let rowLength = recordSize(tbl.data) + 5;

@@ -11,6 +11,8 @@ import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {ParseResult} from "../BaseParser/ParseResult";
 import {SQLResult} from "./SQLResult";
 import {serializeTQuery} from "./serializeTQuery";
+import {DBData} from "./DBInit";
+import {TParserError} from "./TParserError";
 
 
 export function processCreateStatement(parseResult: ParseResult, statement: TQueryCreateTable): SQLResult {
@@ -96,6 +98,10 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
                 }
             );
         }
+        if (DBData.instance.getTable(tblDef.name) !== undefined) {
+            throw new TParserError("Table " + tblDef.name + " already exists.");
+        }
+
 
         newTable(tblDef);
         return {

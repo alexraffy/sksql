@@ -13,6 +13,7 @@ import {writeValue} from "../BlockIO/writeValue";
 import {getColumnDefinition} from "./getColumnDefinition";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
+import {TParserError} from "./TParserError";
 
 
 export function processUpdateStatement(parseResult: ParseResult, statement: TQueryUpdate, parameters: {name: string, value: any}[]): SQLResult {
@@ -58,7 +59,7 @@ export function processUpdateStatement(parseResult: ParseResult, statement: TQue
 
                 let colDef = getColumnDefinition(col, tables);
                 if (colDef === undefined) {
-                    throw "Unknown column " + col.column;
+                    throw new TParserError("Unknown column " + col.column);
                 }
                 let value = evaluate(update.sets[i].value, parameters, tables, colDef);
                 writeValue(tables[0].table, tables[0].def, colDef, dv, value);

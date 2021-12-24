@@ -32,9 +32,12 @@ export * from "./API/CTable";
 export * from "./API/DBInit";
 export * from "./API/kResultType";
 export * from "./API/readTableAsJSON";
-
 export * from "./API/SQLStatement";
 export * from "./API/SQLResult";
+export * from "./API/TDBEventsDelegate";
+export * from "./API/TError";
+export * from "./API/TParserError";
+
 
 export * from "./Table/addRow";
 export * from "./Table/dumpTable";
@@ -178,3 +181,12 @@ export * from "./Query/Guards/instanceOfTTable";
 export * from "./Query/Guards/instanceOfTVariable";
 export * from "./Query/Guards/instanceOfTVariableAssignment";
 export * from "./Query/Guards/instanceOfTVariableDeclaration";
+
+
+export * from "./WebSocket/CWebSocket";
+export * from "./WebSocket/TAuthSession";
+export * from "./WebSocket/TMessages";
+export * from "./WebSocket/TSocketRequest";
+export * from "./WebSocket/TSocketResponse";
+export * from "./WebSocket/TWebSocketDelegate";
+export * from "./WebSocket/TWebSocketMessageHandlerInfo";

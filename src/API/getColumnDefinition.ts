@@ -3,6 +3,7 @@ import {TTableWalkInfo} from "./TTableWalkInfo";
 import {TColumnDefinition} from "../Query/Types/TColumnDefinition";
 import {findTableNameForColumn} from "./findTableNameForColumn";
 import {TableColumn} from "../Table/TableColumn";
+import {TParserError} from "./TParserError";
 
 
 export function getColumnDefinition(column: TColumn, tables: TTableWalkInfo[]): TableColumn {
@@ -10,10 +11,10 @@ export function getColumnDefinition(column: TColumn, tables: TTableWalkInfo[]): 
     if (table === "") {
         let tablesFound = findTableNameForColumn(column.column, tables);
         if (tablesFound.length === 0) {
-            throw "Unknown column " + column.column;
+            throw new TParserError("Unknown column " + column.column);
         }
         if (tablesFound.length > 1) {
-            throw "Ambiguous column name " + column.column;
+            throw new TParserError("Ambiguous column name " + column.column);
         }
         table = tablesFound[0];
     }

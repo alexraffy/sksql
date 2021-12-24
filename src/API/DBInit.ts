@@ -7,6 +7,17 @@ import {ITableDefinition, TableColumnType} from "../main";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {registerFunctions} from "../Functions/registerFunctions";
+import {CWebSocket} from "../WebSocket/CWebSocket";
+import {TWebSocketDelegate} from "../WebSocket/TWebSocketDelegate";
+import {TSocketResponse} from "../WebSocket/TSocketResponse";
+import {
+    TWSRAuthenticateRequest,
+    TWSRAuthenticateResponse, TWSRDataRequest, TWSRSQL,
+    WSRAuthenticate,
+    WSRAuthenticatePlease, WSRDataRequest, WSRSQL
+} from "../WebSocket/TMessages";
+import {TAuthSession} from "../WebSocket/TAuthSession";
+import {TDBEventsDelegate} from "./TDBEventsDelegate";
 
 let workerJavascript = "";
 workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
@@ -40,21 +51,26 @@ workerJavascript += "       }\n";
 workerJavascript += "   }\n";
 workerJavascript += "});";
 
-export class DBData {
+export class DBData implements TWebSocketDelegate {
     private static _instance:DBData;
+
+    public delegate: TDBEventsDelegate = undefined;
 
     private workers: Worker[] = [];
     private pendingQueries: {id: string, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
-
     private functions: TRegisteredFunction[] = [];
+    private remoteServer: string;
+    private authInfo: TAuthSession;
 
-
-    constructor() {
+    constructor(delegate: TDBEventsDelegate = undefined, remoteServer: string = "") {
         this.allTables = [];
         DBData._instance = this;
         let dual = new SQLStatement("CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');");
         dual.run();
         registerFunctions();
+        this.remoteServer = remoteServer;
+        this.delegate = delegate;
+        this.attemptConnection();
     }
     static get instance(): DBData {
         if (DBData._instance === undefined) {
@@ -62,6 +78,68 @@ export class DBData {
         }
         return DBData._instance;
     }
+
+    attemptConnection() {
+        if (CWebSocket.instance === undefined) {
+            let _ = new CWebSocket();
+        }
+        CWebSocket.instance.delegate = this;
+        CWebSocket.instance.connect(this.remoteServer).then(
+            (value) => {
+
+            }
+        ).catch( (e) => {
+
+        });
+    }
+
+    on(msg: TSocketResponse) {
+        if (msg.message === WSRAuthenticatePlease) {
+            if (this.delegate !== undefined) {
+                this.authInfo = this.delegate.authRequired();
+                CWebSocket.instance.send(WSRAuthenticate, {
+                    id: msg.id,
+                    info: this.authInfo
+                } as TWSRAuthenticateRequest)
+
+            } else {
+              throw new Error("SKSQL: DBData requires a TDBEventsDelegate to access a remote database.")
+            }
+        }
+        if (msg.message === WSRAuthenticate) {
+            let payload = msg.param as TWSRAuthenticateResponse;
+            let connection_id = payload.con_id;
+            // Request data
+            CWebSocket.instance.send(WSRDataRequest, { id: this.authInfo.id } as TWSRDataRequest)
+        }
+        if (msg.message === WSRSQL) {
+            let payload = msg.param as TWSRSQL;
+            try {
+                let statement = new SQLStatement(payload.r, false);
+                let rets = statement.run();
+            } catch (e) {
+                console.warn(e.message);
+            }
+        }
+
+        if (this.delegate !== undefined) {
+            this.delegate.on(msg.message, msg.param);
+        }
+    }
+
+    connectionLost() {
+        if (this.delegate !== undefined) {
+            this.delegate.connectionLost();
+        }
+    }
+
+    connected(): boolean {
+        if (CWebSocket.instance === undefined) {
+            return false;
+        }
+        return CWebSocket.instance.connected;
+    }
+
 
     allTables: ITable[];
 

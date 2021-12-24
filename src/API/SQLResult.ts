@@ -7,4 +7,8 @@ export interface SQLResult {
     executionPlan: {
         description: string;
     }
+    perfs: {
+        parser: number;
+        query: number;
+    }
 }

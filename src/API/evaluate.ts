@@ -39,6 +39,8 @@ import {typeCanConvertTo} from "../Table/typeCanConvertTo";
 import {convertToType} from "../Table/convertToType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {kFunctionType} from "../Functions/kFunctionType";
+import {TParserError} from "./TParserError";
+import {TError} from "./TError";
 
 export interface TEvaluateOptions {
     aggregateMode: "none" | "init" | "row" | "final",
@@ -66,7 +68,7 @@ export function evaluate(
         // look up the parameter
         let exists = parameters.find((p) => { return p.name === struct.name;});
         if (!exists) {
-            throw "Parameter " + struct.name + " expected";
+            throw new TParserError("Parameter " + struct.name + " expected");
         }
         if (colDef !== undefined) {
             if (colDef.type === TableColumnType.numeric) {
@@ -108,10 +110,10 @@ export function evaluate(
             let tablesMatch = findTableNameForColumn(name, tables, options.forceTable);
             if (tablesMatch.length !== 1) {
                 if (tables.length === 0) {
-                    throw "Unknown column name " + name;
+                    throw new TParserError("Unknown column name " + name);
                 }
                 if (tables.length > 1) {
-                    throw "Ambiguous column name " + name;
+                    throw new TParserError("Ambiguous column name " + name);
                 }
             }
             table = tablesMatch[0];
@@ -119,7 +121,7 @@ export function evaluate(
         let tableInfo = tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase() });
         let columnDef = tableInfo.def.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
         if (columnDef === undefined) {
-            throw "Unknown column " + name + ". Could not find column definition in table " + table;
+            throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
         }
         let dv = new DataView(tableInfo.table.data.blocks[tableInfo.cursor.blockIndex], tableInfo.cursor.offset, tableInfo.rowLength);
         let val = readValue(tableInfo.table, tableInfo.def, columnDef, dv);
@@ -134,7 +136,7 @@ export function evaluate(
         let right = evaluate(struct.value.right, parameters, tables, undefined, options);
         let op = struct.value.op;
         if (typeof left !== typeof right) {
-            throw "Incompatible types between " + left + " and " + right;
+            throw new TError("Incompatible types between " + left + " and " + right);
         }
         if (isNumeric(left) && isNumeric(right)) {
             switch (op) {
@@ -167,7 +169,7 @@ export function evaluate(
         }
         if (typeof left === "string" && typeof right === "string") {
             if (op !== kQueryExpressionOp.add) {
-                throw "Incorrect operation between two strings.";
+                throw new TParserError("Incorrect operation between two strings.");
             }
             return left + right;
         }
@@ -179,10 +181,10 @@ export function evaluate(
         let fnName = struct.value.name;
         let fnData = DBData.instance.getFunctionNamed(fnName);
         if (fnData === undefined) {
-            throw "Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.";
+            throw new TParserError("Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.");
         }
         if (fnData.parameters.length !== struct.value.parameters.length) {
-            throw `Function ${fnName} expects ${fnData.parameters.length} parameters. Instead got ${struct.value.parameters.length}`;
+            throw new TParserError(`Function ${fnName} expects ${fnData.parameters.length} parameters. Instead got ${struct.value.parameters.length}`);
         }
         let parameters = [];
         if (fnData.type === kFunctionType.scalar) {
@@ -192,7 +194,7 @@ export function evaluate(
                 let paramValue = evaluate(param, parameters, tables, colDef, options);
                 if (expType !== fnData.parameters[i].type) {
                     if (!typeCanConvertTo(paramValue, expType, fnData.parameters[i].type)) {
-                        throw `Function ${fnName} expected parameter at index ${i} to be of type ${columnTypeToString(fnData.parameters[i].type)}. Instead got ${columnTypeToString(expType)}`;
+                        throw new TParserError(`Function ${fnName} expected parameter at index ${i} to be of type ${columnTypeToString(fnData.parameters[i].type)}. Instead got ${columnTypeToString(expType)}`);
                     }
                     paramValue = convertToType(paramValue, expType, fnData.parameters[i].type);
                 }
@@ -206,7 +208,7 @@ export function evaluate(
             if (options.aggregateMode === "final") {
                 // find the aggregate data
                 if (options.aggregateObjects === undefined || options.aggregateObjects.length === 0) {
-                    throw `Function ${fnName} is an aggregate function but no data was computed for previous rows.`;
+                    throw new TParserError(`Function ${fnName} is an aggregate function but no data was computed for previous rows.`);
                 }
                 let ao = options.aggregateObjects.find((a) => {
                     return a.name.toUpperCase() === fnData.name.toUpperCase();

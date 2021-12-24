@@ -15,12 +15,13 @@ import {ITable} from "../Table/ITable";
 import {TVariable} from "../Query/Types/TVariable";
 import {instanceOfTNull} from "../Query/Guards/instanceOfTNull";
 import {TableColumn} from "../Table/TableColumn";
+import {TParserError} from "./TParserError";
 
 
 export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITableDefinition, colDef: TableColumn, fullRow: DataView, offset: number = 5) {
     if (instanceOfTVariable(struct)) {
         // look up the parameter
-        throw "Parameter " + (struct as TVariable).name + " expected";
+        throw new TParserError("Parameter " + (struct as TVariable).name + " expected");
     }
 
     if (instanceOfTNull(struct)) {
@@ -48,7 +49,7 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
         // look up the column
         let columnDef = def.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
         if (columnDef === undefined) {
-            throw "Unknown column " + name + ". Could not find column definition in table " + table;
+            throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
         }
         let val = readValue(table, def, columnDef, fullRow, offset);
 
@@ -62,7 +63,7 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
         let right = evaluateWithRow(struct.value.right, table, def, colDef, fullRow, offset);
         let op = struct.value.op;
         if (typeof left !== typeof right) {
-            throw "Incompatible types between " + left + " and " + right;
+            throw new TParserError("Incompatible types between " + left + " and " + right);
         }
         if (typeof left === "number" && typeof right === "number") {
             switch (op) {
@@ -78,7 +79,7 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
         }
         if (typeof left === "string" && typeof right === "string") {
             if (op !== kQueryExpressionOp.add) {
-                throw "Incorrect operation between two strings.";
+                throw new TParserError("Incorrect operation between two strings.");
             }
             return left + right;
         }

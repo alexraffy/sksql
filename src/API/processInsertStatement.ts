@@ -25,6 +25,8 @@ import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {numeric} from "../Numeric/numeric";
 import {TDate} from "../Query/Types/TDate";
+import {TParserError} from "./TParserError";
+import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 
 
 export function processInsertStatement(parseResult: ParseResult, statement: TQueryInsert, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
@@ -48,7 +50,9 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
             break;
         }
     }
-
+    if (tbl === undefined) {
+        throw new TParserError("Table " + getValueForAliasTableOrLiteral(insert.table).table + " not found.");
+    }
 
 
     let newKey = 0;

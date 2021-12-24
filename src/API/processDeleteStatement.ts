@@ -26,6 +26,7 @@ import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {numeric} from "../Numeric/numeric";
 import {isNumeric} from "../Numeric/isNumeric";
+import {TParserError} from "./TParserError";
 
 
 export function processDeleteStatement(parseResult: ParseResult, statement: TQueryDelete, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
@@ -51,6 +52,9 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
             rowLength = walk[i].rowLength;
         }
 
+    }
+    if (tbl === undefined) {
+        throw new TParserError("Table " + getValueForAliasTableOrLiteral(del.tables[0].tableName).table + " not found.");
     }
 
     let cursor = readFirst(tbl, def);

@@ -40,19 +40,22 @@ import {atLeast1} from "../BaseParser/Predicates/atLeast1";
 import {maybe} from "../BaseParser/Predicates/maybe";
 import {exitIf} from "../BaseParser/Predicates/exitIf";
 import {checkAhead} from "../BaseParser/Predicates/checkAhead";
+import {CWebSocket} from "../WebSocket/CWebSocket";
+import {TWSRSQL, WSRSQL} from "../WebSocket/TMessages";
 
 
 
 export class SQLStatement {
 
     query: string = "";
+    broadcast: boolean;
     parameters: {name: string, value: any}[] = [];
     ast: ParseResult | ParseError;
     openedTempTables: string[] = [];
 
-    constructor(st: string) {
-        this.query = st;
-
+    constructor(statements: string, broadcast: boolean = true) {
+        this.query = statements;
+        this.broadcast = broadcast;
 
     }
 
@@ -144,16 +147,30 @@ export class SQLStatement {
         }, new Stream(this.query, 0));
     }
     run(type: kResultType = kResultType.SQLResult): SQLResult[] | any[] {
+        let broadcastQuery = false;
+        let perfs = {
+            parser: 0,
+            query: 0
+        }
+        let t0 = performance.now();
         if (this.ast === undefined) {
             this.parse();
         }
+        let t1 = performance.now();
+        perfs.parser = (t1 - t0);
+
+
         let ret: SQLResult[] = [];
         if (this.hasErrors) {
             if (type === kResultType.SQLResult) {
                 return [{
                     error: (this.ast as ParseError).description,
                     rowCount: 0,
-                    resultTableName: ""
+                    resultTableName: "",
+                    perfs: perfs,
+                    executionPlan: {
+                        description: ""
+                    }
                 } as SQLResult];
             } else if (type === kResultType.JSON) {
                 return [];
@@ -181,6 +198,7 @@ export class SQLStatement {
         } else {
             return;
         }
+        let st0 = performance.now();
         for (let i = 0; i < statements.length; i++) {
             let statement = statements[i];
             // console.log(statement);
@@ -201,12 +219,15 @@ export class SQLStatement {
                         }
                     );
                 }
+                broadcastQuery = true;
             }
             if (instanceOfTQueryInsert(statement)) {
                 ret.push(processInsertStatement(this.ast, statement, this.parameters, walk));
+                broadcastQuery = true;
             }
             if (instanceOfTQueryUpdate(statement)) {
                 ret.push(processUpdateStatement(this.ast, statement, this.parameters));
+                broadcastQuery = true;
             }
             if (instanceOfTQuerySelect(statement)) {
                 let selectStRet = processSelectStatement(this.ast, statement, this.parameters);
@@ -217,8 +238,16 @@ export class SQLStatement {
             }
             if (instanceOfTQueryDelete(statement)) {
                 ret.push(processDeleteStatement(this.ast, statement, this.parameters, walk));
+                broadcastQuery = true;
             }
         }
+        let st1 = performance.now();
+        perfs.query = st1 - st0;
+
+        if (this.broadcast && broadcastQuery) {
+            CWebSocket.instance.send(WSRSQL, {id: CWebSocket.instance.con_id, r: this.query} as TWSRSQL)
+        }
+
         if (type === kResultType.SQLResult) {
             return ret;
         } else if (type === kResultType.JSON) {

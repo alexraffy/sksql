@@ -43,8 +43,16 @@ import {checkAhead} from "../BaseParser/Predicates/checkAhead";
 import {CWebSocket} from "../WebSocket/CWebSocket";
 import {TWSRSQL, WSRSQL} from "../WebSocket/TMessages";
 
-
-
+let performance = undefined;
+try {
+    if (window !== undefined) {
+        performance = window.performance;
+    } else {
+        performance = require('perf_hooks').performance;
+    }
+} catch (e) {
+    performance = require('perf_hooks').performance;
+}
 export class SQLStatement {
 
     query: string = "";

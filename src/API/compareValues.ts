@@ -17,6 +17,8 @@ import {parseTimeString} from "../Date/parseTimeString";
 import {parseDateString} from "../Date/parseDateString";
 import {TParserError} from "./TParserError";
 import {parseDateTimeString} from "../Date/parseDateTimeString";
+import {numericFromNumber} from "../Numeric/numericFromNumber";
+import {numericLoad} from "../Numeric/numericLoad";
 
 
 
@@ -43,6 +45,36 @@ export function compareValues(a: string | number | boolean | bigint | numeric | 
     if (isNumeric(a) && isNumeric(b)) {
         return numericCmp(a, b);
     }
+
+    if (isNumeric(a) || isNumeric(b)) {
+        let an: numeric = undefined;
+        let bn: numeric = undefined;
+        if (isNumeric(a)) {
+            an = a;
+        } else if (typeof a === "number") {
+            an = numericFromNumber(a);
+        } else if (typeof a === "string") {
+            try {
+                an = numericLoad(a as string);
+            } catch (errorConversion) {
+                throw new TParserError("Error converting " + a + " to numeric.");
+            }
+        }
+        if (isNumeric(b)) {
+            bn = b;
+        } else if (typeof b === "number") {
+            bn = numericFromNumber(b);
+        } else if (typeof b === "string") {
+            try {
+                bn = numericLoad(b as string);
+            } catch (errorConversion) {
+                throw new TParserError("Error converting " + b + " to numeric.");
+            }
+        }
+        return numericCmp(an, bn);
+
+    }
+
 
     if (instanceOfTDate(a) || instanceOfTDate(b)) {
         let ad: TDate = undefined;

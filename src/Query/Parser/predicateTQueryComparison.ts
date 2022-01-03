@@ -15,6 +15,10 @@ import {predicateTVariable} from "./predicateTVariable";
 import {predicateTArray} from "./predicateTArray";
 import {instanceOfTComparison} from "../Guards/instanceOfTComparison";
 import {predicateTDate} from "./predicateTDate";
+import {predicateTDateTime} from "./predicateTDateTime";
+import {predicateTTime} from "./predicateTTime";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 
 /*
     tries to parse a comparison statement
@@ -26,15 +30,15 @@ export const predicateTQueryComparison = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    const left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
-    yield maybe(whitespace);
+    const left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "");
+    yield maybe(atLeast1(whitespaceOrNewLine));
     let comparison = yield predicateTComparison;
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     let right;
     if (instanceOfTComparison(comparison) && comparison.value.toUpperCase() === "IN") {
         right = yield predicateTArray;
     } else {
-        right = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "");
+        right = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "");
     }
 
     yield returnPred(

@@ -14,6 +14,8 @@ import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 import {DBData} from "./DBInit";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TParserError} from "./TParserError";
+import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
+import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 
 export interface TFindExpressionTypeOptions {
     callbackOnTColumn: boolean;
@@ -76,6 +78,12 @@ export function findExpressionType(o: any,
         if (instanceOfTDate(o)) {
             return TableColumnType.date;
         }
+        if (instanceOfTTime(o)) {
+            return TableColumnType.time;
+        }
+        if (instanceOfTDateTime(o)) {
+            return TableColumnType.datetime;
+        }
         if (instanceOfTString(o)) {
             return TableColumnType.varchar;
         }
@@ -111,6 +119,10 @@ export function findExpressionType(o: any,
         switch (t) {
             case TableColumnType.date:
                 return TableColumnType.date;
+            case TableColumnType.time:
+                return TableColumnType.time;
+            case TableColumnType.datetime:
+                return TableColumnType.datetime;
             case TableColumnType.numeric:
                 return TableColumnType.numeric;
             case TableColumnType.boolean:
@@ -167,3 +179,4 @@ export function findExpressionType(o: any,
 
     return ret;
 }
+

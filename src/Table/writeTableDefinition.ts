@@ -118,6 +118,12 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
             case TableColumnType.date:
                 columnOffset += 1 + 4 + 1 + 1;
                 break;
+            case TableColumnType.time:
+                columnOffset += 1 + 1 + 1 + 2;
+                break;
+            case TableColumnType.datetime:
+                columnOffset += 1 + 4 + 1 + 1 + 1 + 1 + 1 + 2;
+                break;
             default:
                 columnOffset += (1 * c.length);
         }

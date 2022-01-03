@@ -16,6 +16,7 @@ import {TVariable} from "../Query/Types/TVariable";
 import {instanceOfTNull} from "../Query/Guards/instanceOfTNull";
 import {TableColumn} from "../Table/TableColumn";
 import {TParserError} from "./TParserError";
+import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 
 
 export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITableDefinition, colDef: TableColumn, fullRow: DataView, offset: number = 5) {
@@ -27,6 +28,11 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
     if (instanceOfTNull(struct)) {
         return undefined;
     }
+
+    if (instanceOfTDate(struct)) {
+        return struct;
+    }
+
 
     if (instanceOfTString(struct)) {
         return struct.value.substr(1, struct.value.length - 2);
@@ -87,6 +93,6 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
             return left && right;
         }
     }
-
+    return struct;
 
 }

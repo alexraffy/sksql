@@ -10,9 +10,15 @@ import {parseDateString} from "../Date/parseDateString";
 import {numericToNumber} from "../Numeric/numericToNumber";
 import {columnTypeIsString} from "./columnTypeIsString";
 import {columnTypeIsBoolean} from "./columnTypeIsBoolean";
+import {parseTimeString} from "../Date/parseTimeString";
+import {parseDateTimeString} from "../Date/parseDateTimeString";
+import {TTime} from "../Query/Types/TTime";
+import {TDateTime} from "../Query/Types/TDateTime";
+import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
+import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 
 
-export function convertToType(value: number | string | boolean | bigint | numeric | TDate, type: TableColumnType, dest: TableColumnType) {
+export function convertToType(value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime, type: TableColumnType, dest: TableColumnType) {
 
     switch (dest) {
         case TableColumnType.varchar:
@@ -22,6 +28,32 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             }
             if (type === TableColumnType.date && instanceOfTDate(value)) {
                 return `${value.year}-${value.month}-${value.day}`;
+            }
+            if (type === TableColumnType.time && instanceOfTTime(value)) {
+                let ret = `${value.hours}:${value.minutes}`;
+                if (value.seconds !== undefined) {
+                    ret += `:${value.seconds}`;
+                    if (value.millis !== undefined) {
+                        ret += `.${value.millis}`;
+                    }
+                }
+                return ret;
+            }
+            if (type === TableColumnType.datetime && instanceOfTDateTime(value)) {
+                let ret = `${value.date.year}-${value.date.month}-${value.date.day}T`;
+                ret += `${value.time.hours}:${value.time.minutes}`;
+                if (value.time.seconds !== undefined) {
+                    ret += `:${value.time.seconds}`;
+                } else {
+                    ret += ':0';
+                }
+                if (value.time.millis !== undefined) {
+                    ret += `.${value.time.millis}`;
+                } else {
+                    ret += ".000";
+                }
+
+                return ret;
             }
             if (type === TableColumnType.numeric) {
                 return numericDisplay(value as numeric);
@@ -69,6 +101,20 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             }
         }
         break;
+        case TableColumnType.time:
+        {
+            if (type === TableColumnType.varchar) {
+                return parseTimeString(value as string);
+            }
+        }
+        break;
+        case TableColumnType.datetime:
+        {
+            if (type === TableColumnType.varchar) {
+                return parseDateTimeString(value as string);
+            }
+        }
+            break;
 
     }
 

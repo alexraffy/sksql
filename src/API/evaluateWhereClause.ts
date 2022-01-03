@@ -12,9 +12,102 @@ import {isNumeric} from "../Numeric/isNumeric";
 import {numericCmp} from "../Numeric/numericCmp";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 import {TDateCmp} from "../Date/TDateCmp";
+import {TDateTimeCmp} from "../Date/TDateTimeCmp";
+import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
+import {TTimeCmp} from "../Date/TTimeCmp";
+import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
+import {TParserError} from "./TParserError";
 
 
 export function evaluateWhereClause(
+    struct: TQueryComparison | TQueryComparisonExpression ,
+    parameters: {name: string, value: any}[],
+    tables: TTableWalkInfo[],
+    evaluateOptions: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []}
+): boolean {
+    if (struct === undefined) {
+        return true;
+    }
+    if (instanceOfTQueryComparisonExpression(struct)) {
+        let leftValue = evaluateWhereClause(struct.a, parameters, tables, evaluateOptions);
+        let rightValue = evaluateWhereClause(struct.b, parameters, tables, evaluateOptions);
+        switch (struct.bool) {
+            case "AND":
+                return leftValue && rightValue;
+            case "AND NOT":
+                return leftValue && !rightValue;
+            case "OR":
+                return leftValue || rightValue;
+        }
+    }
+    if (instanceOfTQueryComparison(struct)) {
+        let qc = struct as TQueryComparison;
+        let leftValue = evaluate(qc.left, parameters, tables, undefined, evaluateOptions);
+        let rightValue = undefined;
+        if (qc.comp.value === kQueryComparison.in && instanceOfTArray(qc.right)) {
+            let rightArray: TArray = qc.right as TArray;
+            for (let x = 0; x < rightArray.array.length; x++) {
+                // @ts-ignore
+                let rv = evaluate(rightArray.array[x], parameters, tables, undefined, evaluateOptions);
+                if (compareValues(leftValue, rv) === 0) {
+                    if (qc.comp.negative === true) { return false;}
+                    return true;
+                }
+            }
+            if (qc.comp.negative === true) { return true;}
+            return false;
+        }
+        if (!instanceOfTArray(qc.right)) {
+            rightValue = evaluate(qc.right, parameters, tables, undefined, evaluateOptions);
+        }
+        if (rightValue === undefined) {
+            throw new TParserError("Could not evaluate " + JSON.stringify(qc.right));
+        }
+        let cmp = compareValues(leftValue, rightValue);
+
+        switch (qc.comp.value) {
+            case kQueryComparison.equal:
+                return (qc.comp.negative === true) ? cmp !== 0 : cmp === 0;
+            case kQueryComparison.superior:
+                return (qc.comp.negative === true) ? cmp !== 1 : cmp === 1;
+            case kQueryComparison.superiorEqual:
+                return (qc.comp.negative === true) ? cmp === -1 : cmp >= 0;
+            case kQueryComparison.inferior:
+                return (qc.comp.negative === true) ? cmp !== -1 : cmp === -1;
+            case kQueryComparison.inferiorEqual:
+                return (qc.comp.negative === true) ? cmp === 1 : cmp <= 0;
+            case kQueryComparison.different:
+                return (qc.comp.negative === true) ? cmp === 0 : cmp !== 0;
+            case kQueryComparison.like:
+                let template = (rightValue as string).toUpperCase();
+                if (template.startsWith("%")) {
+                    template = "^(.*)" + template.substr(1);
+                } else {
+                    template = "^" + template;
+                }
+                while (template.indexOf("%") > -1) {
+                    template = template.replace("%", "(.*)");
+                }
+                let test = new RegExp(template).test((leftValue as string).toUpperCase());
+                return (qc.comp.negative === true) ? !test : test;
+            case kQueryComparison.between:
+                //TODO
+                return false;
+            case kQueryComparison.in:
+                return false;
+        }
+
+
+    }
+
+
+}
+
+
+
+
+
+function evaluateWhereClauseTOREFACTOR(
     struct: TQueryComparison | TQueryComparisonExpression ,
     parameters: {name: string, value: any}[],
     tables: TTableWalkInfo[],
@@ -67,6 +160,40 @@ export function evaluateWhereClause(
         }
         if (instanceOfTDate(leftValue) && instanceOfTDate(rightValue)) {
             let cmp = TDateCmp(leftValue, rightValue);
+            switch (qc.comp.value) {
+                case kQueryComparison.equal:
+                    return (qc.comp.negative === true) ? cmp !== 0 : cmp === 0;
+                case kQueryComparison.superior:
+                    return (qc.comp.negative === true) ? cmp !== 1 : cmp === 1;
+                case kQueryComparison.superiorEqual:
+                    return (qc.comp.negative === true) ? cmp !>= 0 : cmp >= 0;
+                case kQueryComparison.inferior:
+                    return (qc.comp.negative === true) ? cmp !==-1 : cmp === -1;
+                case kQueryComparison.inferiorEqual:
+                    return (qc.comp.negative === true) ? cmp !<= 0 : cmp <= 0;
+                case kQueryComparison.different:
+                    return (qc.comp.negative === true) ? cmp === 0 : cmp !== 0;
+            }
+        }
+        if (instanceOfTDateTime(leftValue) && instanceOfTDateTime(rightValue)) {
+            let cmp = TDateTimeCmp(leftValue, rightValue);
+            switch (qc.comp.value) {
+                case kQueryComparison.equal:
+                    return (qc.comp.negative === true) ? cmp !== 0 : cmp === 0;
+                case kQueryComparison.superior:
+                    return (qc.comp.negative === true) ? cmp !== 1 : cmp === 1;
+                case kQueryComparison.superiorEqual:
+                    return (qc.comp.negative === true) ? cmp !>= 0 : cmp >= 0;
+                case kQueryComparison.inferior:
+                    return (qc.comp.negative === true) ? cmp !==-1 : cmp === -1;
+                case kQueryComparison.inferiorEqual:
+                    return (qc.comp.negative === true) ? cmp !<= 0 : cmp <= 0;
+                case kQueryComparison.different:
+                    return (qc.comp.negative === true) ? cmp === 0 : cmp !== 0;
+            }
+        }
+        if (instanceOfTTime(leftValue) && instanceOfTTime(rightValue)) {
+            let cmp = TTimeCmp(leftValue, rightValue);
             switch (qc.comp.value) {
                 case kQueryComparison.equal:
                     return (qc.comp.negative === true) ? cmp !== 0 : cmp === 0;

@@ -41,6 +41,10 @@ import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TParserError} from "./TParserError";
 import {TError} from "./TError";
+import {TDateTime} from "../Query/Types/TDateTime";
+import {TTime} from "../Query/Types/TTime";
+import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
+import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 
 export interface TEvaluateOptions {
     aggregateMode: "none" | "init" | "row" | "final",
@@ -50,18 +54,25 @@ export interface TEvaluateOptions {
 
 
 export function evaluate(
-    struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn | TVariable | TBoolValue | TColumn | TDate | TString |  TLiteral | TNumber,
+    struct: string | number | bigint | boolean | TQueryExpression | TQueryFunctionCall | TNull | TQueryColumn |
+        TVariable | TBoolValue | TColumn | TDate | TTime | TDateTime | TString |  TLiteral | TNumber,
     parameters: {name: string, value: any}[],
     tables: TTableWalkInfo[],
     colDef: TableColumn,
     options: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []}
-): string | number | boolean | bigint | numeric | TDate
+): string | number | boolean | bigint | numeric | TDate | TTime | TDateTime
 {
 
     if (instanceOfTNull(struct)) {
         return undefined;
     }
     if (instanceOfTDate(struct)) {
+        return struct;
+    }
+    if (instanceOfTTime(struct)) {
+        return struct;
+    }
+    if (instanceOfTDateTime(struct)) {
         return struct;
     }
     if (instanceOfTVariable(struct)) {

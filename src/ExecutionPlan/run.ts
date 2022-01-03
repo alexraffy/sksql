@@ -121,6 +121,10 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
                 rowCount: rowsModified,
                 executionPlan: {
                     description: ""
+                },
+                perfs: {
+                    parser: 0,
+                    query: 0
                 }
             };
         }

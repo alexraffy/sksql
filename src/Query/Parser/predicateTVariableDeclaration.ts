@@ -12,6 +12,8 @@ import {literal} from "../../BaseParser/Predicates/literal";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TVariableDeclaration} from "../Types/TVariableDeclaration";
 import {predicateTDate} from "./predicateTDate";
+import {predicateTDateTime} from "./predicateTDateTime";
+import {predicateTTime} from "./predicateTTime";
 
 /*
     tries to parse a variable declaration
@@ -29,7 +31,7 @@ export const predicateTVariableDeclaration = function *(callback) {
     yield maybe(whitespace);
     const eq = yield maybe(str("="));
     yield maybe(whitespace);
-    const value = yield maybe(oneOf([predicateTQueryExpression, predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "An expression"));
+    const value = yield maybe(oneOf([predicateTQueryExpression, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "An expression"));
     yield maybe(whitespace);
     yield maybe(str(";"));
     yield returnPred(

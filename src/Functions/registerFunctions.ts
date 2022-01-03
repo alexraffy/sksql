@@ -49,8 +49,8 @@ export function registerFunctions() {
         {name: "DAY", type: TableColumnType.uint8}
     ], TableColumnType.date, date_datefromparts);
     db.declareFunction(kFunctionType.scalar, "DAY", [{name: "DATE", type: TableColumnType.date}], TableColumnType.uint8, date_day);
-    db.declareFunction(kFunctionType.scalar, "GETDATE", [], TableColumnType.date, date_getdate);
-    db.declareFunction(kFunctionType.scalar, "GETUTCDATE", [], TableColumnType.date, date_getutcdate);
+    db.declareFunction(kFunctionType.scalar, "GETDATE", [], TableColumnType.datetime, date_getdate);
+    db.declareFunction(kFunctionType.scalar, "GETUTCDATE", [], TableColumnType.datetime, date_getutcdate);
     db.declareFunction(kFunctionType.scalar, "ISDATE", [{name: "DATE", type: TableColumnType.varchar}], TableColumnType.boolean, date_isdate);
     db.declareFunction(kFunctionType.scalar, "MONTH", [{name: "DATE", type: TableColumnType.date}], TableColumnType.uint8, date_month);
     db.declareFunction(kFunctionType.scalar, "YEAR", [{name: "DATE", type: TableColumnType.date}], TableColumnType.int32, date_year);

@@ -3,7 +3,7 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
-import {ITableDefinition, TableColumnType} from "../main";
+import {ITableDefinition, TableColumnType, TWSRDataResponse} from "../main";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {registerFunctions} from "../Functions/registerFunctions";
@@ -119,6 +119,44 @@ export class DBData implements TWebSocketDelegate {
                 let rets = statement.run();
             } catch (e) {
                 console.warn(e.message);
+            }
+        }
+        if (msg.message === WSRDataRequest) {
+            let payload = msg.param as TWSRDataResponse;
+            if (payload.type === "T") {
+                let buf: SharedArrayBuffer | ArrayBuffer;
+                if (DBData.supportsSharedArrayBuffers) {
+                    buf = new SharedArrayBuffer(payload.size);
+                } else {
+                    buf = new ArrayBuffer(payload.size);
+                }
+                let dv = new DataView(buf)
+                for (let i = 0; i < payload.size; i++) {
+                    dv.setUint8(i, payload.data[i]);
+                }
+                let t: ITable = {
+                    data: {
+                        tableDef: buf,
+                        blocks: []
+                    }
+                }
+                this.allTables.push(t);
+
+            } else if (payload.type === "B") {
+                let t = this.getTable(payload.tableName);
+                if (t !== undefined) {
+                    let buf: SharedArrayBuffer | ArrayBuffer;
+                    if (DBData.supportsSharedArrayBuffers) {
+                        buf = new SharedArrayBuffer(payload.size);
+                    } else {
+                        buf = new ArrayBuffer(payload.size);
+                    }
+                    let dv = new DataView(buf)
+                    for (let i = 0; i < payload.size; i++) {
+                        dv.setUint8(i, payload.data[i]);
+                    }
+                    t.data.blocks.push(buf);
+                }
             }
         }
 

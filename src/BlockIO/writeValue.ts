@@ -6,13 +6,19 @@ import {writeStringToUtf8ByteArray} from "./writeStringToUtf8ByteArray";
 import {numeric} from "../Numeric/numeric";
 import {TDate} from "../Query/Types/TDate";
 import {parseDateString} from "../Date/parseDateString";
+import {TTime} from "../Query/Types/TTime";
+import {TDateTime} from "../Query/Types/TDateTime";
+import {parseTimeString} from "../Date/parseTimeString";
+import {parseDateTimeString} from "../Date/parseDateTimeString";
 
 /*
     write a column value in the DataView fullrow
     offset is calculated from the offset value of the Column Definition in column
     extraOffset should be set to 5 if the row contains a header
  */
-export function writeValue(table: ITable, tableDef: ITableDefinition, column: TableColumn, fullRow: DataView, value: string | number | boolean | bigint | numeric | TDate, extraOffset: number = 5) {
+export function writeValue(table: ITable, tableDef: ITableDefinition,
+                           column: TableColumn, fullRow: DataView,
+                           value: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime, extraOffset: number = 5) {
     fullRow.setUint8(column.offset + extraOffset, (value === undefined) ? 1 : 0);
     if (value === undefined) {
         switch (column.type) {
@@ -77,7 +83,33 @@ export function writeValue(table: ITable, tableDef: ITableDefinition, column: Ta
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4, 0);
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1, 0);
                 break;
-
+            case TableColumnType.time:
+            {
+                fullRow.setUint8(column.offset + extraOffset + 1, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2, 0);
+                fullRow.setUint8(column.offset + extraOffset + 3, 0);
+                fullRow.setUint16(column.offset + extraOffset + 4, 0);
+            }
+            break;
+            case TableColumnType.datetime:
+            {
+                let flagUnknownYear = 1;
+                let flagUnknownMonth = 1;
+                let flagUnknownDay = 1;
+                let flag = 0;
+                flag |= flagUnknownYear << 7;
+                flag |= flagUnknownMonth << 6;
+                flag |= flagUnknownDay << 5;
+                fullRow.setUint8(column.offset + extraOffset + 1, flag);
+                fullRow.setUint32(column.offset + extraOffset + 2, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 1, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 2, 0);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 3, 0);
+                fullRow.setUint16(column.offset + extraOffset + 2 + 4 + 1 + 4, 0);
+            }
+            break;
         }
     } else {
         switch (column.type) {
@@ -147,6 +179,41 @@ export function writeValue(table: ITable, tableDef: ITableDefinition, column: Ta
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4, val.month);
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1, val.day);
                 break;
+            case TableColumnType.time:
+            {
+                let val = value as TTime;
+                if (typeof value === "string") {
+                    val = parseTimeString(value);
+                }
+                fullRow.setUint8(column.offset + extraOffset + 1, val.hours);
+                fullRow.setUint8(column.offset + extraOffset + 2, val.minutes);
+                fullRow.setUint8(column.offset + extraOffset + 3, val.seconds);
+                fullRow.setUint16(column.offset + extraOffset + 4, val.millis);
+            }
+            break;
+            case TableColumnType.datetime:
+            {
+                let val = value as TDateTime;
+                if (typeof value === "string") {
+                    val = parseDateTimeString(value);
+                }
+                let flagUnknownYear = (val.date.year === 0) ? 1 : 0;
+                let flagUnknownMonth = (val.date.month === 0) ? 1 : 0;
+                let flagUnknownDay = (val.date.day === 0) ? 1 : 0;
+                let flag = 0;
+                flag |= flagUnknownYear << 7;
+                flag |= flagUnknownMonth << 6;
+                flag |= flagUnknownDay << 5;
+                fullRow.setUint8(column.offset + extraOffset + 1, flag);
+                fullRow.setUint32(column.offset + extraOffset + 2, val.date.year);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4, val.date.month);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1, val.date.day);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 1, val.time.hours);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 2, val.time.minutes);
+                fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 3, val.time.seconds);
+                fullRow.setUint16(column.offset + extraOffset + 2 + 4 + 1 + 4, val.time.millis);
+            }
+            break;
         }
     }
 

@@ -72,6 +72,12 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
                 case "DATE":
                     type = TableColumnType.date;
                     break;
+                case "TIME":
+                    type = TableColumnType.time;
+                    break;
+                case "DATETIME":
+                    type = TableColumnType.datetime;
+                    break;
 
             }
             let length = parseInt(col.type.size.value);
@@ -109,6 +115,10 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
             rowCount: 0,
             executionPlan: {
                 description: "CREATE"
+            },
+            perfs: {
+                parser: 0,
+                query: 0
             }
         } as SQLResult
     }
@@ -118,6 +128,10 @@ export function processCreateStatement(parseResult: ParseResult, statement: TQue
         rowCount: 0,
         executionPlan: {
             description: ""
+        },
+        perfs: {
+            parser: 0,
+            query: 0
         }
     }
 }

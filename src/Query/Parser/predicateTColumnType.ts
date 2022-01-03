@@ -21,7 +21,8 @@ export const predicateTColumnType = function *(callback) {
     const type = yield oneOf([str("int8"), str("int16"), str("int32"), str("int64"),
         str("uint8"), str("uint16"), str("uint32"), str("uint64"), str("integer"), str("int"),
         str("BOOLEAN"), str("VARCHAR"),
-        str("NUMERIC"), str("DATE")
+        str("NUMERIC"), str("DATETIME"),
+        str("TIME"), str("DATE")
         ], "a column type");
     if (type.toUpperCase() === "NUMERIC") {
         yield maybe(atLeast1(whitespaceOrNewLine));

@@ -1,6 +1,9 @@
 
-import {parseDateString, SQLStatement, dumpTable, DBData, readTableDefinition, readTableAsJSON} from "sksql";
+import {parseDateString, SQLStatement, dumpTable, DBData, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType} from "sksql";
 import * as assert from "assert";
+
+
+
 
 
 
@@ -15,6 +18,14 @@ export function test_date() {
     let str7 = "1780-00-13"; let r7 = parseDateString(str7); assert(r7 !== undefined, str7 + " could not be parsed as date")
     let str8 = "1820/6/12"; let r8 = parseDateString(str8); assert(r8 === undefined, str8 + " should fail to be parsed as a date");
     let str9 = "1830/05/2"; let r9 = parseDateString(str9); assert(r8 === undefined, str8 + " should fail to be parsed as a date");
+    let str10 = "5:15"; let r10 = parseTimeString(str10); assert(r10 !== undefined, str10 + " could not be parsed as time");
+    let str11 = "15:5"; let r11 = parseTimeString(str11); assert(r11 !== undefined, str11 + " could not be parsed as a time");
+    let str12 = "15:04"; let r12 = parseTimeString(str12); assert(r12 !== undefined, str12 + " could not be parsed a time");
+    let str13 = "24:00"; let r13 = parseTimeString(str13); assert(r13 === undefined, str13 + " should fail to be parsed as a time");
+    let str14 = "12:60"; let r14 = parseTimeString(str14); assert(r14 === undefined, str14 + " should fail to be parsed as a time");
+    let str15 = "2021-12-29T22:10:00.000"; let r15 = parseDateTimeString(str15); assert(r15 !== undefined, str15 + " could not be parsed as datetime");
+
+
 
     let padLeft = (str, size, char) => {
         let ret = str;
@@ -40,4 +51,42 @@ export function test_date() {
     let result = sort.run();
     console.log(dumpTable(DBData.instance.getTable(result[0].resultTableName)));
     //console.log(readTableAsJSON(result[0].resultTableName));
+
+    let stTimes = new SQLStatement("CREATE TABLE time_tests(times TIME)");
+    stTimes.run();
+    console.log(readTableDefinition(DBData.instance.getTable("time_tests").data));
+    let timesInserts = new SQLStatement("INSERT INTO time_tests(times) VALUES(@time)");
+    timesInserts.setParameter("@time", "12:05:50");
+    timesInserts.run();
+    timesInserts.setParameter("@time", "04:50");
+    timesInserts.run();
+    timesInserts.setParameter("@time", "10:30:00");
+    timesInserts.run();
+    console.log(dumpTable(DBData.instance.getTable("time_tests")));
+
+    {
+        let sql = "SELECT times FROM time_tests ORDER BY times ASC"
+        console.log("TESTING " + sql);
+        let stTest = new SQLStatement(sql);
+        let ret = stTest.run();
+        console.log(readTableDefinition(DBData.instance.getTable(ret[0].resultTableName).data));
+        console.log(dumpTable(DBData.instance.getTable(ret[0].resultTableName)));
+        stTest.close();
+    }
+
+    {
+        let sql = "SELECT times FROM time_tests WHERE times > '10:00:00'";
+        console.log("TESTING " + sql);
+        let stTest = new SQLStatement(sql);
+        let ret = stTest.run();
+        console.log(readTableDefinition(DBData.instance.getTable(ret[0].resultTableName).data));
+        console.log(dumpTable(DBData.instance.getTable(ret[0].resultTableName)));
+        stTest.close();
+    }
+
+
+
+
+
+
 }

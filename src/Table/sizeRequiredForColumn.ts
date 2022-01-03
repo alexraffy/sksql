@@ -37,7 +37,11 @@ export function sizeRequiredForColumn(column: TableColumn) {
             valueSize += 1 + 4 + 1 + 1;
             break;
         case TableColumnType.time:
-            valueSize += 4
+            valueSize += 1 + 1 + 1 + 2;
+            break;
+        case TableColumnType.datetime:
+            valueSize += 1 + 4 + 1 + 1 + 1 + 1 + 1 + 2;
+            break;
 
     }
     return valueSize;

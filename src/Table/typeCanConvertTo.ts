@@ -9,9 +9,13 @@ import {numericIsNaN} from "../Numeric/numericIsNaN";
 import {numericLoad} from "../Numeric/numericLoad";
 import {parseDateString} from "../Date/parseDateString";
 import {columnTypeIntegerCanStore} from "./columnTypeIntegerCanStore";
+import {parseDateTimeString} from "../Date/parseDateTimeString";
+import {parseTimeString} from "../Date/parseTimeString";
+import {TDateTime} from "../Query/Types/TDateTime";
+import {TTime} from "../Query/Types/TTime";
 
 
-export function typeCanConvertTo(val: string | number | numeric | boolean | TDate | bigint , type: TableColumnType, dest:TableColumnType): boolean {
+export function typeCanConvertTo(val: string | number | numeric | boolean | TDate | TTime | TDateTime | bigint , type: TableColumnType, dest:TableColumnType): boolean {
     if (type === dest) {
         return true;
     }
@@ -32,6 +36,20 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
             if (dest === TableColumnType.uint32) {
                 return true;
             }
+            if (columnTypeIsString(dest)) {
+                return true;
+            }
+            return false;
+        }
+        case TableColumnType.time:
+        {
+            if (columnTypeIsString(dest)) {
+                return true;
+            }
+            return false;
+        }
+        case TableColumnType.datetime:
+        {
             if (columnTypeIsString(dest)) {
                 return true;
             }
@@ -88,6 +106,14 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
                 } catch (e) {
                     return false;
                 }
+            }
+            if (dest === TableColumnType.datetime && typeof val === "string") {
+                let newVal = parseDateTimeString(val);
+                return (newVal !== undefined);
+            }
+            if (dest === TableColumnType.time && typeof val === "string") {
+                let newVal = parseTimeString(val);
+                return (newVal !== undefined);
             }
             if (dest === TableColumnType.date && typeof val === "string") {
                 let newVal = parseDateString(val);

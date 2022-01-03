@@ -22,6 +22,10 @@ import {TVariable} from "../Types/TVariable";
 import {predicateTVariable} from "./predicateTVariable";
 import {TDate} from "../Types/TDate";
 import {predicateTDate} from "./predicateTDate";
+import {TDateTime} from "../Types/TDateTime";
+import {TTime} from "../Types/TTime";
+import {predicateTTime} from "./predicateTTime";
+import {predicateTDateTime} from "./predicateTDateTime";
 
 /*
     tries to parse an expression
@@ -40,9 +44,9 @@ export const predicateTQueryExpression: TFuncGen = function*(callback) {
         return;
     }
 
-    const left: TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber = yield oneOf(
+    const left: TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber = yield oneOf(
         [predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue,
-            predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a function call, a literal or a number");
+            predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a function call, a literal or a number");
 
 
     yield maybe(whitespace);
@@ -64,9 +68,9 @@ export const predicateTQueryExpression: TFuncGen = function*(callback) {
     yield maybe(whitespace);
 
 
-    const right: TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TDate | TString | TLiteral | TNumber = yield oneOf([
+    const right: TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber = yield oneOf([
         predicateTQueryFunctionCall, predicateTQueryExpression, predicateTVariable, predicateTBoolValue,
-        predicateTColumn, predicateTDate, predicateTString, predicateTLiteral, predicateTNumber], "a function call, an expression, a literal or a number");
+        predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a function call, an expression, a literal or a number");
 
     yield returnPred(
         {

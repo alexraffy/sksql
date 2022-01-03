@@ -2,6 +2,8 @@
 
 //// WEB SOCKET MESSAGES
 import {TAuthSession} from "./TAuthSession";
+import {TDate} from "../Query/Types/TDate";
+import {numeric} from "../Numeric/numeric";
 
 export const WSRAuthenticatePlease: string = "WSRAP";
 export interface TWSRAuthenticatePleaseResponse {
@@ -23,6 +25,10 @@ export interface TWSRDataRequest {
 export interface TWSRDataResponse {
     id: number;
     type: "T" | "B";
+    indexTable: number;
+    indexBlock: number;
+    tableName: string;
+    size: number;
     data: Uint8Array
 }
 export const WSRON: string = "ON";
@@ -41,6 +47,7 @@ export const WSRSQL: string = "SQL";
 export interface TWSRSQL {
     r: string;
     id: number;
+    p: { k: string; v: string | number | numeric | TDate | boolean}[]
 }
 
 

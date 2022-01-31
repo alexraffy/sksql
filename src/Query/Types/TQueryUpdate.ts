@@ -12,6 +12,7 @@ import {TLiteral} from "./TLiteral";
 import {TNumber} from "./TNumber";
 import {TQueryTable} from "./TQueryTable";
 import {TTable} from "./TTable";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryUpdate {
@@ -20,5 +21,5 @@ export interface TQueryUpdate {
     top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
     tables: TQueryTable[];
     where: TQueryComparison | TQueryComparisonExpression;
-    sets: {column: TColumn, operator: kQueryAssignOp, value: TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TColumn | TString | TLiteral | TNumber}[];
+    sets: {column: TColumn, operator: kQueryAssignOp, value: TQueryExpression | TValidExpressions}[];
 }

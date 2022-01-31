@@ -1,7 +1,6 @@
 import {TFuncGen} from "../../BaseParser/parse";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {maybe} from "../../BaseParser/Predicates/maybe";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {str} from "../../BaseParser/Predicates/str";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TQueryExpression} from "../Types/TQueryExpression";
@@ -26,6 +25,13 @@ import {TDateTime} from "../Types/TDateTime";
 import {TTime} from "../Types/TTime";
 import {predicateTTime} from "./predicateTTime";
 import {predicateTDateTime} from "./predicateTDateTime";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {TValidExpressions} from "../Types/TValidExpressions";
+import {predicateValidExpressions} from "./predicateValidExpressions";
+import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
+import {predicateTQueryCreateProc} from "./predicateTQueryCreateProc";
+import {exitIf} from "../../BaseParser/Predicates/exitIf";
 
 /*
     tries to parse an expression
@@ -38,20 +44,121 @@ import {predicateTDateTime} from "./predicateTDateTime";
     ...
 
  */
-export const predicateTQueryExpression: TFuncGen = function*(callback) {
+
+export function * predicateTQueryExpression(callback) {
+    //@ts-ignore
+    if (callback as string === "isGenerator") {
+        return;
+    }
+    let chain: (TQueryExpression | TValidExpressions | kQueryExpressionOp)[] = [];
+
+    let gotAtLeastOneTerm = false;
+
+    while (1) {
+        let value = yield maybe(predicateTParenthesisGroup);
+        if (value === undefined) {
+            value = yield predicateValidExpressions;
+        }
+        chain.push(value);
+        yield maybe(atLeast1(whitespaceOrNewLine));
+
+        let hasTerm = yield exitIf(oneOf([str("+"), str("-"), str("*"), str("/"), str("%")], ""));
+        if (hasTerm === true) {
+            gotAtLeastOneTerm = true;
+            const sSign = yield oneOf([
+                str("+"), str("-"), str("*"), str("/"), str("%")
+            ], "a +,-,*,/");
+            let sign: kQueryExpressionOp = kQueryExpressionOp.add;
+            switch (sSign) {
+                case "-":
+                    sign = kQueryExpressionOp.minus;
+                    break;
+                case "*":
+                    sign = kQueryExpressionOp.mul;
+                    break;
+                case "/":
+                    sign = kQueryExpressionOp.div;
+                    break;
+                case "%":
+                    sign = kQueryExpressionOp.modulo;
+                    break;
+            }
+            chain.push(sign);
+            yield maybe(atLeast1(whitespaceOrNewLine));
+
+        } else {
+            if (gotAtLeastOneTerm === false) {
+                // forcefully fail
+                yield oneOf([
+                    str("+"), str("-"), str("*"), str("/"), str("%")
+                ], "a +,-,*,/");
+            }
+            break;
+        }
+    }
+
+    if (chain.length === 1) {
+        yield returnPred(chain[0]);
+        return;
+    }
+
+    // * and / take precedence so we first scan the array and create group for them
+    for (let idx = 0; idx < chain.length - 1; idx++) {
+        if (typeof chain[idx] === "string") {
+            if (chain[idx] === "*" || chain[idx] === "/") {
+                let replaceWith = {
+                    kind: "TQueryExpression",
+                    value: {
+                        left: chain[idx - 1],
+                        op: chain[idx],
+                        right: chain[idx + 1]
+                    }
+                } as TQueryExpression
+                chain.splice(idx + 1, 1);
+                chain.splice(idx, 1);
+                chain.splice(idx - 1, 1, replaceWith);
+                idx--;
+            }
+        }
+    }
+
+    for (let idx = 0; idx < chain.length - 1; idx++) {
+        if (typeof chain[idx] === "string") {
+            let replaceWith = {
+                kind: "TQueryExpression",
+                value: {
+                    left: chain[idx - 1],
+                    op: chain[idx],
+                    right: chain[idx + 1]
+                }
+            } as TQueryExpression
+            chain.splice(idx + 1, 1);
+            chain.splice(idx, 1);
+            chain.splice(idx - 1, 1, replaceWith);
+            idx--;
+        }
+    }
+
+    yield returnPred(chain[0]);
+
+}
+
+
+export const predicateTQueryExpressionFAULTY: TFuncGen = function*(callback) {
     //@ts-ignore
     if (callback as string === "isGenerator") {
         return;
     }
 
-    const left: TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber = yield oneOf(
-        [predicateTQueryFunctionCall, predicateTVariable, predicateTBoolValue,
-            predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a function call, a literal or a number");
+    let left: TValidExpressions | TQueryExpression = yield maybe(predicateTParenthesisGroup);
+    if (left === undefined) {
+        left = yield predicateValidExpressions;
+    }
 
 
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     const sSign = yield oneOf([
-        str("+"), str("-"), str("*"), str("/")
+        str("+"), str("-"), str("*"), str("/"), str("%")
     ], "a +,-,*,/");
     let sign: kQueryExpressionOp = kQueryExpressionOp.add;
     switch (sSign) {
@@ -64,13 +171,16 @@ export const predicateTQueryExpression: TFuncGen = function*(callback) {
         case "/":
             sign = kQueryExpressionOp.div;
             break;
+        case "%":
+            sign = kQueryExpressionOp.modulo;
+            break;
     }
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
 
-    const right: TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber = yield oneOf([
-        predicateTQueryFunctionCall, predicateTQueryExpression, predicateTVariable, predicateTBoolValue,
-        predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a function call, an expression, a literal or a number");
+    const right: TValidExpressions = yield oneOf([predicateTQueryExpression, predicateTParenthesisGroup, predicateValidExpressions], "");
+
+
 
     yield returnPred(
         {

@@ -1,6 +1,6 @@
 import {kFunctionType} from "./kFunctionType";
 import {TableColumnType} from "../Table/TableColumnType";
-import {DBData} from "../API/DBInit";
+import {SKSQL} from "../API/SKSQL";
 import {date_datefromparts} from "./Date/date_datefromparts";
 import {date_day} from "./Date/date_day";
 import {date_getdate} from "./Date/date_getdate";
@@ -32,10 +32,13 @@ import {string_space} from "./String/string_space";
 import {string_str} from "./String/string_str";
 import {string_substring} from "./String/string_substring";
 import {aggregate_sum} from "./Aggregate/aggregate_sum";
+import {string_unicode} from "./String/string_unicode";
+import {tests_IsNull} from "./Tests/IsNull";
+import {scoped_identity} from "./scoped_identity";
 
 
 export function registerFunctions() {
-    let db = DBData.instance;
+    let db = SKSQL.instance;
 
     // AGGREGATE
     db.declareFunction(kFunctionType.aggregate, "SUM", [
@@ -112,5 +115,10 @@ export function registerFunctions() {
         TableColumnType.varchar, string_trim);
     db.declareFunction(kFunctionType.scalar, "UPPER", [{name: "STRING", type: TableColumnType.varchar}],
         TableColumnType.varchar, string_upper);
-
+    db.declareFunction(kFunctionType.scalar, "UNICODE", [{name: "STRING", type: TableColumnType.varchar}],
+        TableColumnType.int32, string_unicode);
+    db.declareFunction(kFunctionType.scalar, "ISNULL", [{name: "check_expression", type: TableColumnType.any},
+            {name: "replacement_value", type: TableColumnType.any}],
+        TableColumnType.any, tests_IsNull);
+    db.declareFunction(kFunctionType.scalar, "SCOPE_IDENTITY", [], TableColumnType.uint32, scoped_identity);
 }

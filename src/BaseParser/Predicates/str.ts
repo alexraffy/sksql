@@ -32,7 +32,7 @@ export function str(equalsTo: string): (input: Stream) => ParseResult | ParseErr
         if (value === equalsTo) {
             return new ParseResult(value, s, input, value);
         } else {
-            return new ParseError(input, "a string equals to " + equalsTo, false);
+            return new ParseError(input, equalsTo, false);
         }
     }
 }

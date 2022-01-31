@@ -1,18 +1,22 @@
 import {TEPNestedLoop} from "./TEPNestedLoop";
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {runScan} from "./runScan";
+import {TableColumnType} from "../Table/TableColumnType";
+import {TExecutionContext} from "./TExecutionContext";
 
 
-export function runNestedLoop(tep: TEPNestedLoop, parameters: {name: string, value: any}[], tables: TTableWalkInfo[], onRowSelected: (tep: TEPNestedLoop, walkInfos: TTableWalkInfo[]) => boolean) {
+export function runNestedLoop(context: TExecutionContext,
+                              tep: TEPNestedLoop,
+                              onRowSelected: (tep: TEPNestedLoop, walkInfos: TTableWalkInfo[]) => boolean) {
 
-    runScan(tep.a, parameters, tables, (scan, walking) => {
+    runScan(context, tep.a, (scan, walking) => {
         if (tep.b.kind === "TEPScan") {
-            runScan(tep.b, parameters, tables, (scanN, walkingN) => {
-                return onRowSelected(tep, tables);
+            runScan(context, tep.b, (scanN, walkingN) => {
+                return onRowSelected(tep, context.openTables);
             });
         } else if (tep.b.kind === "TEPNestedLoop") {
-            runNestedLoop(tep.b, parameters, tables, (tepN, walkInfos: TTableWalkInfo[]) => {
-                return onRowSelected(tep, tables);
+            runNestedLoop(context, tep.b, (tepN, walkInfos: TTableWalkInfo[]) => {
+                return onRowSelected(tep, context.openTables);
             })
         }
         return true;

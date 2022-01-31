@@ -1,4 +1,4 @@
-import {numericLoad, numericAdd, numericDisplay, SQLStatement, kResultType, numericCmp, dumpTable, DBData} from "sksql";
+import {numericLoad, numericAdd, numericDisplay, SQLStatement, kResultType, numericCmp, dumpTable, SKSQL} from "sksql";
 import * as assert from "assert";
 
 export function test_numeric() {
@@ -22,11 +22,11 @@ export function test_numeric() {
 
     let st3 = new SQLStatement("SELECT val FROM numSum ORDER BY val ASC");
     let st3Ret = st3.run();
-    console.log(dumpTable(DBData.instance.getTable(st3Ret[0].resultTableName)));
+    console.log(dumpTable(SKSQL.instance.getTable(st3Ret[0].resultTableName)));
 
     let st4 = new SQLStatement("SELECT TOP(3) val FROM numSum");
     let st4Ret = st4.run();
-    console.log(dumpTable(DBData.instance.getTable(st4Ret[0].resultTableName)));
+    console.log(dumpTable(SKSQL.instance.getTable(st4Ret[0].resultTableName)));
 
 
 }

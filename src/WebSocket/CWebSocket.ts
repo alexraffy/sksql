@@ -14,7 +14,7 @@ const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'u
 
 export class CWebSocket {
 
-    private static _instance: CWebSocket;
+    private databaseHashId: string;
 
     private address: string;
     private _supported: boolean;
@@ -36,18 +36,7 @@ export class CWebSocket {
     }
 
 
-    static get instance(): CWebSocket {
-        if (CWebSocket._instance === undefined) {
-            return new CWebSocket();
-        }
-        if (global !== undefined) {
-            return global["CWebSocket"];
-        } else {
-            return window["CWebSocket"];
-        }
-    }
     constructor() {
-        CWebSocket._instance = this;
         if (isBrowser) {
             // @ts-ignore
             window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -66,6 +55,7 @@ export class CWebSocket {
     get supported(): boolean {
         return this._supported;
     }
+
 
     get delegate(): TWebSocketDelegate {
         return this._delegate;
@@ -98,12 +88,12 @@ export class CWebSocket {
                     console.log("Reconnecting");
                     this._connected = false;
                     if (this.delegate !== undefined && this.delegate.connectionLost !== undefined) {
-                        this.delegate.connectionLost();
+                        this.delegate.connectionLost(this.databaseHashId);
                     }
                     if (this._connection === undefined) {
                         reject({message: "Could not connect to socket"});
                     } else {
-                        CWebSocket.instance.connect(this.address).then((value: boolean) => {
+                        this.connect(this.address).then((value: boolean) => {
                             console.log("Reconnected.");
                         });
                     }
@@ -120,8 +110,8 @@ export class CWebSocket {
                         if (msg === WSRAuthenticatePlease) {
                             this._con_id = (data.param as TWSRAuthenticatePleaseResponse).id;
                         }
-                        if (CWebSocket.instance.delegate !== undefined) {
-                            CWebSocket.instance.delegate.on(data);
+                        if (this.delegate !== undefined) {
+                            this.delegate.on(this.databaseHashId, data);
                         }
 
                     }
@@ -132,6 +122,16 @@ export class CWebSocket {
             }
 
         });
+    }
+
+
+    close() {
+        if (isBrowser) {
+            (this._connection as WebSocket).close();
+        } else {
+            // @ts-ignore
+            this._connection.close();
+        }
     }
 
     send(message: string, param: any) {

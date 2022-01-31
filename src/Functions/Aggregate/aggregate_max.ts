@@ -1,8 +1,9 @@
 import {numericCmp} from "../../Numeric/numericCmp";
 import {numeric} from "../../Numeric/numeric";
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-export function aggregate_max(groupInfo: any, input: numeric) {
+export function aggregate_max(context: TExecutionContext, groupInfo: any, input: numeric) {
     if (groupInfo === undefined) {
         groupInfo = {
             value: undefined

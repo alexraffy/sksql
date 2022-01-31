@@ -20,9 +20,10 @@ import {columnTypeIsBoolean} from "../Table/columnTypeIsBoolean";
 import {TQueryAnyType} from "./Types/TQueryAnyType";
 import {instanceOfTQueryInsert} from "./Guards/instanceOfTQueryInsert";
 import {TQueryInsert} from "./Types/TQueryInsert";
+import {TValidExpressions} from "./Types/TValidExpressions";
 
 
-export function listOfColumnsUsedInExpression(struct: TQueryAnyType, tables: TTableWalkInfo[]): TColumn[] {
+export function listOfColumnsUsedInExpression(struct: TQueryAnyType | TValidExpressions, tables: TTableWalkInfo[]): TColumn[] {
     let ret: TColumn[] = [];
 
     if (instanceOfTVariable(struct)) {

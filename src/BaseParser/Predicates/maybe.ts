@@ -3,7 +3,7 @@ import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
 import {parse, TFuncGen} from "../parse";
 import {TParser} from "../TParser";
-import {isGenerator} from "../isGenerator";
+import {isGeneratorFunction} from "../isGenerator";
 
 
 export function maybe(predicate: TParser | TFuncGen): TParser {
@@ -13,7 +13,7 @@ export function maybe(predicate: TParser | TFuncGen): TParser {
             return;
         }
         let results: ParseResult | ParseError;
-        if (isGenerator(predicate)) {
+        if (isGeneratorFunction(predicate)) {
             results = parse((name, value) => {}, predicate as TFuncGen, input);
         } else {
             results = parse((name, value) => {

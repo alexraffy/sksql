@@ -1,7 +1,7 @@
 import {ITableData} from "./ITableData";
 import {copyBytesToSharedBuffer} from "../BlockIO/copyBytesToSharedBuffer";
 import {ITable} from "./ITable";
-import {DBData} from "../API/DBInit";
+import {SKSQL} from "../API/SKSQL";
 
 
 export function loadTable(header: ArrayBuffer, blocks: ArrayBuffer[]): ITable {
@@ -17,6 +17,6 @@ export function loadTable(header: ArrayBuffer, blocks: ArrayBuffer[]): ITable {
         copyBytesToSharedBuffer(blocks[i], new DataView(s));
         ret.data.blocks.push(s);
     }
-    DBData.instance.allTables.push(ret);
+    SKSQL.instance.allTables.push(ret);
     return ret;
 }

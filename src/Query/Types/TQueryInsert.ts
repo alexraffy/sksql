@@ -9,6 +9,7 @@ import {TLiteral} from "./TLiteral";
 import {TNumber} from "./TNumber";
 import {TTable} from "./TTable";
 import {TNull} from "./TNull";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryInsert {
@@ -16,6 +17,6 @@ export interface TQueryInsert {
     table: TTable,
     columns: TLiteral[];
     hasValues: boolean;
-    values: {values: (TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TNull | TColumn | TString | TLiteral | TNumber)[]}[];
+    values: {values: (TQueryExpression | TValidExpressions)[]}[];
     selectStatement: TQuerySelect;
 }

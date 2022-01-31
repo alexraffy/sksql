@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {SQLStatement, readTableAsJSON, dumpTable, DBData, SQLResult} from "sksql";
+import {SQLStatement, readTableAsJSON, dumpTable, SKSQL, SQLResult} from "sksql";
 
 
 export function test_db_university() {
@@ -8,12 +8,12 @@ export function test_db_university() {
 
     let createTablesStatement = new SQLStatement(createSQLScript);
     let ret = createTablesStatement.run();
-    DBData.instance.tablesInfo();
+    SKSQL.instance.tablesInfo();
 
     let fillTablesStatement = new SQLStatement(fillSQLScript);
     let ret2 = fillTablesStatement.run();
 
-    console.log(dumpTable(DBData.instance.getTable("instructor")));
+    console.log(dumpTable(SKSQL.instance.getTable("instructor")));
     console.log(readTableAsJSON("instructor"));
 
 

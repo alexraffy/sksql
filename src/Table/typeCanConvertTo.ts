@@ -13,6 +13,8 @@ import {parseDateTimeString} from "../Date/parseDateTimeString";
 import {parseTimeString} from "../Date/parseTimeString";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {TTime} from "../Query/Types/TTime";
+import {columnTypeIsDate} from "./columnTypeIsDate";
+import {columnTypeIsNumeric} from "./columnTypeIsNumeric";
 
 
 export function typeCanConvertTo(val: string | number | numeric | boolean | TDate | TTime | TDateTime | bigint , type: TableColumnType, dest:TableColumnType): boolean {
@@ -50,6 +52,9 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
         }
         case TableColumnType.datetime:
         {
+            if (columnTypeIsDate(dest)) {
+                return true;
+            }
             if (columnTypeIsString(dest)) {
                 return true;
             }
@@ -57,7 +62,7 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
         }
         case TableColumnType.numeric:
         {
-            if (columnTypeIsInteger(dest) && isNumeric(val) && val.e === 0) {
+            if (columnTypeIsInteger(dest) && ((typeof val === "number") || (isNumeric(val) && val.e === 0))) {
                 return true;
             }
             if (dest === TableColumnType.float) {
@@ -125,6 +130,9 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
     }
     if (columnTypeIsInteger(type) && columnTypeIsInteger(dest)) {
         return columnTypeIntegerCanStore(val as number, type, dest);
+    }
+    if (columnTypeIsInteger(type) && columnTypeIsNumeric(dest)) {
+        return true;
     }
     return false;
 }

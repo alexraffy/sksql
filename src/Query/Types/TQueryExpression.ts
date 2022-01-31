@@ -3,13 +3,14 @@ import {TLiteral} from "./TLiteral";
 import {TString} from "./TString";
 import {kQueryExpressionOp} from "../Enums/kQueryExpressionOp";
 import {TColumn} from "./TColumn";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryExpression {
     kind: "TQueryExpression";
     value: {
-        left: TQueryExpression | TColumn | TString | TLiteral | TNumber;
+        left: TValidExpressions;
         op: kQueryExpressionOp;
-        right: TQueryExpression | TColumn | TString | TLiteral | TNumber
+        right: TQueryExpression | TValidExpressions;
     }
 }

@@ -1,27 +1,29 @@
 import {ParseResult} from "../BaseParser/ParseResult";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
-import {SQLResult} from "./SQLResult";
+import {SQLResult} from "../API/SQLResult";
 import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
 import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
-import {TTableWalkInfo} from "./TTableWalkInfo";
-import {openTables} from "./openTables";
-import {TEP} from "../ExecutionPlan/TEP";
-import {generateExecutionPlanFromStatement} from "../ExecutionPlan/generateExecutionPlanFromStatement";
-import {run} from "../ExecutionPlan/run";
-import {DBData} from "./DBInit";
+import {TTableWalkInfo} from "../API/TTableWalkInfo";
+import {openTables} from "../API/openTables";
+import {TEP} from "./TEP";
+import {generateExecutionPlanFromStatement} from "./generateExecutionPlanFromStatement";
+import {run} from "./run";
+import {SKSQL} from "../API/SKSQL";
 import {readTableDefinition} from "../Table/readTableDefinition";
 import {readFirst} from "../Cursor/readFirst";
 import {recordSize} from "../Table/recordSize";
-import {TEPScan} from "../ExecutionPlan/TEPScan";
+import {TEPScan} from "./TEPScan";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
-import {TEPNestedLoop} from "../ExecutionPlan/TEPNestedLoop";
-import {TEPSortNTop} from "../ExecutionPlan/TEPSortNTop";
-import {TEPSelect} from "../ExecutionPlan/TEPSelect";
-import {TEPGroupBy} from "../ExecutionPlan/TEPGroupBy";
-import {TParserError} from "./TParserError";
+import {TEPNestedLoop} from "./TEPNestedLoop";
+import {TEPSortNTop} from "./TEPSortNTop";
+import {TEPSelect} from "./TEPSelect";
+import {TEPGroupBy} from "./TEPGroupBy";
+import {TParserError} from "../API/TParserError";
+import {TableColumnType} from "../Table/TableColumnType";
+import {TExecutionContext} from "./TExecutionContext";
 
 
-function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
+export function addTable2Plan(tables: TTableWalkInfo[], table: string, alias: string) {
     if (table === undefined || table === "") {
         return tables;
     }
@@ -30,7 +32,7 @@ function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
     }
     let exists = tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase();});
     if (!exists) {
-        let tbl = DBData.instance.getTable(table);
+        let tbl = SKSQL.instance.getTable(table);
         if (tbl === undefined) {
             throw new TParserError("Table " + table + " not found.");
         }
@@ -49,30 +51,21 @@ function addTable(tables: TTableWalkInfo[], table: string, alias: string) {
     return tables;
 }
 
-export function processSelectStatement(parseResult: ParseResult, statement: TQuerySelect, parameters: {name: string, value: any}[]): SQLResult {
-    if (!instanceOfParseResult(parseResult) || !instanceOfTQuerySelect(statement)) {
-        return {
-            error: "Misformed Select Query.",
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: ""
-            }
-        } as SQLResult;
-    }
+export function processSelectStatement(context: TExecutionContext,
+                                       statement: TQuerySelect) {
     let select: TQuerySelect = statement;
     let columnsNeededForWhereClause: {tableName: string, columnName: string}[] = [];
-    let tables: TTableWalkInfo[] = [];
+
 
     let planDescription = "";
-    let plan: TEP[] = generateExecutionPlanFromStatement(select);
+    let plan: TEP[] = generateExecutionPlanFromStatement(context, select);
     let recur = function (plan: TEP) {
         planDescription += "\t"
         if (plan.kind === "TEPScan") {
             let p = plan as TEPScan;
             let tblName = getValueForAliasTableOrLiteral(p.table);
-            tables = addTable(tables, tblName.table, tblName.alias);
-            tables = addTable(tables, p.result, p.result);
+            context.openTables = addTable2Plan(context.openTables, tblName.table, tblName.alias);
+            context.openTables = addTable2Plan(context.openTables, p.result, p.result);
             planDescription += "[SCAN " + tblName.table + "";
             if (p.result !== undefined && p.result !== "" && p.result !== tblName.table) {
                 planDescription += "=>" + p.result;
@@ -90,15 +83,15 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
             let p = plan as TEPGroupBy;
             let src = getValueForAliasTableOrLiteral(p.source);
             let dest = getValueForAliasTableOrLiteral(p.dest);
-            tables = addTable(tables, src.table, src.alias);
-            tables = addTable(tables, dest.table, dest.alias);
+            context.openTables = addTable2Plan(context.openTables, src.table, src.alias);
+            context.openTables = addTable2Plan(context.openTables, dest.table, dest.alias);
             planDescription += "[GroupBy " + src.table + "=>" + dest.table + "]";
         }
         if (plan.kind === "TEPSortNTop") {
             let p = plan as TEPSortNTop;
             planDescription += "[SortNTop]";
-            tables = addTable(tables, p.source, p.source);
-            tables = addTable(tables, p.dest, p.dest);
+            context.openTables = addTable2Plan(context.openTables, p.source, p.source);
+            context.openTables = addTable2Plan(context.openTables, p.dest, p.dest);
         }
         if (plan.kind === "TEPSelect") {
             let p = plan as TEPSelect;
@@ -111,13 +104,15 @@ export function processSelectStatement(parseResult: ParseResult, statement: TQue
 
     //console.log(planDescription);
 
-    let returnSQLResult = run(select, plan, parameters, tables);
+    let returnSQLResult = run(context, select, plan);
     returnSQLResult.executionPlan = {
         description: planDescription
     };
 
-    return returnSQLResult;
-
+    context.results.push(returnSQLResult);
+    //if (returnSQLResult.resultTableName !== undefined && returnSQLResult.resultTableName !== "") {
+//        context.openedTempTables.push(returnSQLResult.resultTableName);
+//    }
 
 
 }

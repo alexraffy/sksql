@@ -23,6 +23,7 @@ import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {predicateTStar} from "./predicateTStar";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
+import {predicateValidExpressions} from "./predicateValidExpressions";
 
 
 /*
@@ -36,9 +37,8 @@ export const predicateTQueryColumn = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    let left = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTStar,
-        predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDateTime, predicateTDate,
-        predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "" );
+    let left = yield oneOf([predicateTStar,predicateTQueryExpression,
+        predicateValidExpressions], "" );
     yield maybe(atLeast1(whitespaceOrNewLine));
     let as = yield maybe(str("AS "));
     let columnName = "";

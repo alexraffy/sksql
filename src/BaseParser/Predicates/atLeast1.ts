@@ -4,7 +4,7 @@ import {Stream} from "../Stream";
 import {ParseError} from "../ParseError";
 import {ParseResult} from "../ParseResult";
 import {isAlphaNumeric, isLetter, isSpace} from "./types";
-import {isGenerator} from "../isGenerator";
+import {isGeneratorFunction} from "../isGenerator";
 import {instanceOfParseResult} from "../Guards/instanceOfParseResult";
 
 
@@ -20,7 +20,7 @@ export function atLeast1(predicate: TParser | TFuncGen) {
         let next = input;
         let results: ParseResult | ParseError = {start: input, kind: "ParseResult", value: undefined, next: input, matched: ""} as ParseResult;
         while (instanceOfParseResult(results)) {
-            if (isGenerator(predicate)) {
+            if (isGeneratorFunction(predicate)) {
                 results = parse((name, value) => {
                 }, predicate as TFuncGen, next);
             } else {

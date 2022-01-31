@@ -1,5 +1,5 @@
 import {TParser} from "../TParser";
-import {isGenerator} from "../isGenerator";
+import {isGeneratorFunction} from "../isGenerator";
 import {parse, TFuncGen} from "../parse";
 import {ParseResult} from "../ParseResult";
 import {Stream} from "../Stream";
@@ -13,7 +13,7 @@ export const exitIf = function (parser: TFuncGen | TParser): TParser {
             return;
         }
         let results = undefined;
-        if (isGenerator(parse)) {
+        if (isGeneratorFunction(parse)) {
             results = parse((name, value) => {}, parser as TFuncGen, s)
         } else {
             results = parse((name, value) => {}, [parser as TParser], s);

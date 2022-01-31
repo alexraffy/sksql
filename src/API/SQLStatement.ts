@@ -1,36 +1,18 @@
-import {instanceOfTQueryCreateTable} from "../Query/Guards/instanceOfTQueryCreateTable";
+
 import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
 import {parse} from "../BaseParser/parse";
 import {predicateTQueryCreateTable} from "../Query/Parser/predicateTQueryCreateTable";
 import {TQueryCreateTable} from "../Query/Types/TQueryCreateTable";
 import {Stream} from "../BaseParser/Stream";
 import {TQueryInsert} from "../Query/Types/TQueryInsert";
-import {predicateTQueryInsert} from "../Query/Parser/predicateTQueryInsert";
 import {ParseResult} from "../BaseParser/ParseResult";
 import {ParseError} from "../BaseParser/ParseError";
 import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
-import {instanceOfTQueryInsert} from "../Query/Guards/instanceOfTQueryInsert";
-import {DBData} from "./DBInit";
-import {readTableDefinition} from "../Table/readTableDefinition";
-import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
+import {SKSQL} from "./SKSQL";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
-import {recordSize} from "../Table/recordSize";
-import {TTableWalkInfo} from "./TTableWalkInfo";
-import {processCreateStatement} from "./processCreateStatement";
-import {processInsertStatement} from "./processInsertStatement";
-import {processSelectStatement} from "./processSelectStatement";
-import {predicateTQuerySelect} from "../Query/Parser/predicateTQuerySelect";
 import {SQLResult} from "./SQLResult";
-import {predicateTQueryDelete} from "../Query/Parser/predicateTQueryDelete";
-import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
-import {processDeleteStatement} from "./processDeleteStatement";
-import {predicateTQueryUpdate} from "../Query/Parser/predicateTQueryUpdate";
-import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
-import {processUpdateStatement} from "./processUpdateStatement";
 import {whitespaceOrNewLine} from "../BaseParser/Predicates/whitespaceOrNewLine";
 import {returnPred} from "../BaseParser/Predicates/ret";
-import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
-import {TQueryDelete} from "../Query/Types/TQueryDelete";
 import {oneOf} from "../BaseParser/Predicates/oneOf";
 import {eof} from "../BaseParser/Predicates/eof";
 import {str} from "../BaseParser/Predicates/str";
@@ -38,10 +20,36 @@ import {kResultType} from "./kResultType";
 import {readTableAsJSON} from "./readTableAsJSON";
 import {atLeast1} from "../BaseParser/Predicates/atLeast1";
 import {maybe} from "../BaseParser/Predicates/maybe";
-import {exitIf} from "../BaseParser/Predicates/exitIf";
 import {checkAhead} from "../BaseParser/Predicates/checkAhead";
 import {CWebSocket} from "../WebSocket/CWebSocket";
 import {TWSRSQL, WSRSQL} from "../WebSocket/TMessages";
+import {predicateTQueryCreateFunction} from "../Query/Parser/predicateTQueryCreateFunction";
+import {TableColumnType} from "../Table/TableColumnType";
+import {predicateTQueryCreateProcedure} from "../Query/Parser/predicateTQueryCreateProcedure";
+import {TValidStatementsInFunction} from "../Query/Types/TValidStatementsInFunction";
+import {predicateValidStatementsInProcedure} from "../Query/Parser/predicateValidStatementsInProcedure";
+import {processStatement} from "../ExecutionPlan/processStatement";
+import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
+import {TValidStatementsInProcedure} from "../Query/Types/TValidStatementsInProcedure";
+import {TParserError} from "./TParserError";
+import {createNewContext} from "../ExecutionPlan/newContext";
+import {checkSequence} from "../BaseParser/Predicates/checkSequence";
+import {whitespace} from "../BaseParser/Predicates/whitespace";
+import {predicateTComment} from "../Query/Parser/predicateTComment";
+import {predicateTBeginEnd} from "../Query/Parser/predicateTBeginEnd";
+import {predicateTBreak} from "../Query/Parser/predicateTBreak";
+import {predicateTDebugger} from "../Query/Parser/predicateTDebugger";
+import {predicateTQueryDelete} from "../Query/Parser/predicateTQueryDelete";
+import {predicateTQueryDrop} from "../Query/Parser/predicateTQueryDrop";
+import {predicateTExecute} from "../Query/Parser/predicateTExecute";
+import {predicateTIf} from "../Query/Parser/predicateTIf";
+import {predicateTQueryInsert} from "../Query/Parser/predicateTQueryInsert";
+import {predicateReturnValue} from "../Query/Parser/predicateReturnValue";
+import {predicateTVariableAssignment} from "../Query/Parser/predicateTVariableAssignment";
+import {predicateTVariableDeclaration} from "../Query/Parser/predicateTVariableDeclaration";
+import {predicateTQueryUpdate} from "../Query/Parser/predicateTQueryUpdate";
+import {predicateTWhile} from "../Query/Parser/predicateTWhile";
+import {predicateTQuerySelect} from "../Query/Parser/predicateTQuerySelect";
 
 let performance = undefined;
 try {
@@ -57,14 +65,15 @@ export class SQLStatement {
 
     query: string = "";
     broadcast: boolean;
-    parameters: {name: string, value: any}[] = [];
+    databaseHashId: string;
     ast: ParseResult | ParseError;
-    openedTempTables: string[] = [];
+    context: TExecutionContext;
 
-    constructor(statements: string, broadcast: boolean = true) {
+    constructor(statements: string, broadcast: boolean = true, databaseHashId: string = "") {
         this.query = statements;
         this.broadcast = broadcast;
-
+        this.databaseHashId = databaseHashId;
+        this.context = createNewContext("", statements, undefined);
     }
 
     get hasErrors():boolean {
@@ -74,13 +83,28 @@ export class SQLStatement {
         return false;
     }
 
-    setParameter(param: string, value: any) {
-        let exists = this.parameters.find((p) => { return p.name === param;});
+    setParameter(param: string, value: any, type?: TableColumnType) {
+        let t: TableColumnType;
+        if (type !== undefined) {
+            t = type;
+        } else {
+            if (typeof value === "string") {
+                t = TableColumnType.varchar;
+            }
+            if (typeof value === "number") {
+                t = TableColumnType.numeric;
+            }
+            if (typeof value === "boolean") {
+                t = TableColumnType.boolean;
+            }
+        }
+        let exists = this.context.stack.find((p) => { return p.name === param;});
         if (exists) {
             exists.value = value;
         } else {
-            this.parameters.push({
+            this.context.stack.push({
                 name: param,
+                type: t,
                 value: value
             });
         }
@@ -97,14 +121,14 @@ export class SQLStatement {
         return undefined;
     }
     close() {
-        for (let i = 0; i < this.openedTempTables.length; i++) {
-            DBData.instance.dropTable(this.openedTempTables[i]);
+        for (let i = 0; i < this.context.openedTempTables.length; i++) {
+            SKSQL.instance.dropTable(this.context.openedTempTables[i]);
         }
     }
     runOnWebWorker(): Promise<string> {
         return new Promise<string>( (resolve, reject) => {
-            DBData.instance.updateWorkerDB(0);
-            DBData.instance.sendWorkerQuery(0, this, reject, resolve);
+            SKSQL.instance.updateWorkerDB(0);
+            SKSQL.instance.sendWorkerQuery(0, this, reject, resolve);
 
         });
     }
@@ -112,50 +136,188 @@ export class SQLStatement {
         let callback = function () {}
 
         this.ast = parse(callback, function *(callback) {
-            let ret: (TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string)[] = [];
-            let result: TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete | string | undefined = "";
+            let ret: (TValidStatementsInFunction)[] = [];
             let exit: boolean = yield eof;
             while (!exit) {
+
+                let result;
+
                 yield maybe(atLeast1(whitespaceOrNewLine));
-                let statementType = yield checkAhead([str("CREATE"), str("INSERT"), str("SELECT"), str("UPDATE"), str("DELETE")], "");
-                switch (statementType) {
-                    case "CREATE":
-                        result = yield predicateTQueryCreateTable;
+                let stType = yield checkAhead([oneOf([
+                    checkSequence([str("--")]),
+                    checkSequence([str("ALTER"), whitespaceOrNewLine]),
+                    checkSequence([str("BEGIN"), whitespaceOrNewLine]),
+                    checkSequence([str("BREAK"), whitespaceOrNewLine]),
+                    checkSequence([str("CREATE"), whitespaceOrNewLine]),
+                    checkSequence([str("DEBUGGER"), whitespaceOrNewLine]),
+                    checkSequence([str("DECLARE"), whitespaceOrNewLine]),
+                    checkSequence([str("DELETE"), whitespaceOrNewLine]),
+                    checkSequence([str("DROP"), whitespaceOrNewLine]),
+                    checkSequence([str("EXECUTE"), whitespaceOrNewLine]),
+                    checkSequence([str("IF"), whitespaceOrNewLine]),
+                    checkSequence([str("INSERT"), whitespaceOrNewLine]),
+                    checkSequence([str("RETURN"), whitespaceOrNewLine]),
+                    checkSequence([str("SELECT"), whitespaceOrNewLine]),
+                    checkSequence([str("SET"), whitespaceOrNewLine]),
+                    checkSequence([str("TRUNCATE"), whitespaceOrNewLine]),
+                    checkSequence([str("UPDATE"), whitespaceOrNewLine]),
+                    checkSequence([str("WHILE"), whitespaceOrNewLine])
+                ], "")], "");
+                if (stType !== undefined) {
+                    switch ((stType as any[])[0]) {
+                        case "--":
+                            result = yield predicateTComment;
+                            break;
+                        case "ALTER":
+                        {
+                            let stAlter = yield checkAhead([checkSequence([
+                                str("ALTER"),
+                                atLeast1(whitespaceOrNewLine),
+                                oneOf([
+                                    str("TABLE"),
+                                    str("FUNCTION"),
+                                    str("PROCEDURE")
+                                ],"")
+                                ])], "");
+                            if (stAlter === undefined) { yield str("ALTER TABLE, ALTER FUNCTION or ALTER PROCEDURE");}
+                            if ((stAlter as any[])[2] === "TABLE") {
+                                result = yield predicateTQueryCreateTable;
+                            }
+                            if ((stAlter as any[])[2] === "FUNCTION") {
+                                result = yield predicateTQueryCreateFunction;
+                            }
+                            if ((stAlter as any[])[2] === "PROCEDURE") {
+                                result = yield predicateTQueryCreateProcedure;
+                            }
+                        }
                         break;
-                    case "INSERT":
-                        result  = yield predicateTQueryInsert;
+                        case "BEGIN":
+                            result = yield predicateTBeginEnd;
+                            break;
+                        case "BREAK":
+                            result = yield predicateTBreak;
+                            break;
+                        case "CREATE":
+                        {
+                            let stCreate = yield checkAhead([checkSequence([
+                                str("CREATE"),
+                                atLeast1(whitespaceOrNewLine),
+                                oneOf([
+                                    str("TABLE"),
+                                    str("FUNCTION"),
+                                    str("PROCEDURE")
+                                ],"")
+                            ])], "");
+                            if (stCreate === undefined) { yield str("CREATE TABLE, CREATE FUNCTION or CREATE PROCEDURE");}
+                            if ((stCreate as any[])[2] === "TABLE") {
+                                result = yield predicateTQueryCreateTable;
+                            }
+                            if ((stCreate as any[])[2] === "FUNCTION") {
+                                result = yield predicateTQueryCreateFunction;
+                            }
+                            if ((stCreate as any[])[2] === "PROCEDURE") {
+                                result = yield predicateTQueryCreateProcedure;
+                            }
+                        }
                         break;
-                    case "SELECT":
-                        result = yield  predicateTQuerySelect;
+                        case "DEBUGGER":
+                            result = yield predicateTDebugger;
+                            break;
+                        case "DECLARE":
+                            result = yield predicateTVariableDeclaration;
+                            break;
+                        case "DELETE":
+                            result = yield predicateTQueryDelete;
+                            break;
+                        case "DROP":
+                        {
+                            let stDrop = yield checkAhead([checkSequence([
+                                str("DROP"),
+                                atLeast1(whitespaceOrNewLine),
+                                oneOf([
+                                    str("TABLE"),
+                                    str("FUNCTION"),
+                                    str("PROCEDURE")
+                                ],"")
+                            ])], "");
+                            if (stDrop === undefined) { yield str("DROP TABLE, DROP FUNCTION or DROP PROCEDURE");}
+                            if ((stDrop as any[])[2] === "TABLE") {
+                                result = yield predicateTQueryDrop;
+                            }
+                            if ((stDrop as any[])[2] === "FUNCTION") {
+                                result = yield predicateTQueryDrop;
+                            }
+                            if ((stDrop as any[])[2] === "PROCEDURE") {
+                                result = yield predicateTQueryDrop;
+                            }
+                        }
                         break;
-                    case "UPDATE":
-                        result = yield predicateTQueryUpdate;
-                        break;
-                    case "DELETE":
-                        result = yield predicateTQueryDelete;
-                        break;
-                    default:
-                        yield str("a SQL statement")
+                        case "EXECUTE":
+                            result = yield predicateTExecute;
+                            break;
+                        case "IF":
+                            result = yield predicateTIf;
+                            break;
+                        case "INSERT":
+                            result = yield predicateTQueryInsert;
+                            break;
+                        case "RETURN":
+                            result = yield predicateReturnValue;
+                            break;
+                        case "SELECT":
+                            result = yield predicateTQuerySelect;
+                            break;
+                        case "SET":
+                            result = yield predicateTVariableAssignment;
+                            break;
+                        case "TRUNCATE":
+                            result = yield str("TRUNCATE NOT IMPLEMENTED");
+                            break;
+                        case "UPDATE":
+                            result = yield predicateTQueryUpdate;
+                            break;
+                        case "WHILE":
+                            result = yield predicateTWhile;
+                            break;
+                    }
                 }
+
+
+                //let result = yield maybe(predicateValidStatementsInProcedure);
+/*
+                if (result === undefined) {
+                    let statementType = yield checkAhead([str("CREATE"), str("ALTER")], "");
+                    switch (statementType) {
+                        case "CREATE":
+                        case "ALTER":
+                            result = yield oneOf([predicateTQueryCreateTable, predicateTQueryCreateProcedure, predicateTQueryCreateFunction], "");
+                            break;
+                        default:
+                            yield str("a SQL statement")
+                    }
+                }
+
+ */
 
                 if (result !== undefined && typeof result !== "string") {
                     ret.push(result);
                 }
+
+
                 if (instanceOfParseError(result)) {
                     exit = true;
                 } else {
                     exit = yield eof;
                 }
             }
-
             yield returnPred({
                 type: "TSQLStatement",
                 statements: ret
             });
         }, new Stream(this.query, 0));
+        this.context.parseResult = this.ast;
     }
     run(type: kResultType = kResultType.SQLResult): SQLResult[] | any[] {
-        let broadcastQuery = false;
         let perfs = {
             parser: 0,
             query: 0
@@ -167,8 +329,6 @@ export class SQLStatement {
         let t1 = performance.now();
         perfs.parser = (t1 - t0);
 
-
-        let ret: SQLResult[] = [];
         if (this.hasErrors) {
             if (type === kResultType.SQLResult) {
                 return [{
@@ -184,23 +344,8 @@ export class SQLStatement {
                 return [];
             }
         }
-        let walk : TTableWalkInfo[] = [];
-        for (let i = 0; i < DBData.instance.allTables.length; i++) {
-            let t = DBData.instance.allTables[i];
-            let def = readTableDefinition(t.data);
-            walk.push(
-                {
-                    name: def.name,
-                    table: t,
-                    def: def,
-                    rowLength: recordSize(t.data),
-                    cursor: {tableIndex: i, offset: 0, blockIndex: 0, rowLength: 0},
-                    alias: ""
-                }
-            );
-        }
 
-        let statements:  (TQueryCreateTable | TQueryInsert | TQuerySelect | TQueryUpdate | TQueryDelete)[] = [];
+        let statements:  (TValidStatementsInProcedure | TValidStatementsInFunction)[] = [];
         if (instanceOfParseResult(this.ast)) {
             statements = this.ast.value.statements;
         } else {
@@ -209,59 +354,33 @@ export class SQLStatement {
         let st0 = performance.now();
         for (let i = 0; i < statements.length; i++) {
             let statement = statements[i];
-            // console.log(statement);
-            if (instanceOfTQueryCreateTable(statement)) {
-                ret.push(processCreateStatement(this.ast, statement));
-                if (i < statements.length) {
-                    // the next statement may need info about this table
-                    let tt = DBData.instance.getTableDataAndIndex(statement.name.table);
-                    let def = readTableDefinition(tt.table.data);
-                    walk.push(
-                        {
-                            name: def.name,
-                            table: tt.table,
-                            def: def,
-                            rowLength: recordSize(tt.table.data),
-                            cursor: {tableIndex: tt.index, offset: 0, blockIndex: 0, rowLength: 0},
-                            alias: ""
-                        }
-                    );
-                }
-                broadcastQuery = true;
+            processStatement(this.context, statement);
+            if (this.context.rollback === true) {
+                throw new TParserError(this.context.rollbackMessage);
+                break;
             }
-            if (instanceOfTQueryInsert(statement)) {
-                ret.push(processInsertStatement(this.ast, statement, this.parameters, walk));
-                broadcastQuery = true;
-            }
-            if (instanceOfTQueryUpdate(statement)) {
-                ret.push(processUpdateStatement(this.ast, statement, this.parameters));
-                broadcastQuery = true;
-            }
-            if (instanceOfTQuerySelect(statement)) {
-                let selectStRet = processSelectStatement(this.ast, statement, this.parameters);
-                if (selectStRet.resultTableName !== undefined && selectStRet.resultTableName !== "") {
-                    this.openedTempTables.push(selectStRet.resultTableName);
-                }
-                ret.push(selectStRet);
-            }
-            if (instanceOfTQueryDelete(statement)) {
-                ret.push(processDeleteStatement(this.ast, statement, this.parameters, walk));
-                broadcastQuery = true;
+            if (this.context.exitExecution === true) {
+                break;
             }
         }
         let st1 = performance.now();
         perfs.query = st1 - st0;
 
-        if (this.broadcast && broadcastQuery) {
-            CWebSocket.instance.send(WSRSQL, {id: CWebSocket.instance.con_id, r: this.query} as TWSRSQL)
+
+        if (this.broadcast && this.context.broadcastQuery) {
+            let tc = SKSQL.instance.getConnectionInfoForDB(this.databaseHashId);
+            if (tc !== undefined) {
+                tc.socket.send(WSRSQL, {id: tc.socket.con_id, r: this.query} as TWSRSQL );
+            }
+
         }
 
         if (type === kResultType.SQLResult) {
-            return ret;
+            return this.context.results;
         } else if (type === kResultType.JSON) {
-            for (let i = 0; i < ret.length; i++) {
-                if (ret[i].resultTableName !== undefined && ret[i].resultTableName !== "") {
-                    return readTableAsJSON(ret[i].resultTableName);
+            for (let i = 0; i < this.context.results.length; i++) {
+                if (this.context.results[i].resultTableName !== undefined && this.context.results[i].resultTableName !== "") {
+                    return readTableAsJSON(this.context.results[i].resultTableName);
                 }
             }
 

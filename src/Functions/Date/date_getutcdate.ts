@@ -1,8 +1,9 @@
 import {TDate} from "../../Query/Types/TDate";
 import {TTime} from "../../Query/Types/TTime";
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-export function date_getutcdate() {
+export function date_getutcdate(context: TExecutionContext) {
     let now = new Date();
     return {
         kind: "TDateTime",

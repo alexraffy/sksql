@@ -15,24 +15,31 @@ import {numericCmp} from "../Numeric/numericCmp";
 import {numeric} from "../Numeric/numeric";
 import {TDateCmp} from "../Date/TDateCmp";
 import {TDate} from "../Query/Types/TDate";
-import {addRow} from "../Table/addRow";
+import {addRow, rowHeaderSize} from "../Table/addRow";
 import {writeValue} from "../BlockIO/writeValue";
 import {evaluate} from "../API/evaluate";
 import {findExpressionType, TFindExpressionTypeOptions} from "../API/findExpressionType";
 import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
-import {DBData} from "../API/DBInit";
+import {SKSQL} from "../API/SKSQL";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {evaluateWhereClause} from "../API/evaluateWhereClause";
 import {readPrevious} from "../Cursor/readPrevious";
 import {readLast} from "../Cursor/readLast";
+import {instanceOfTQueryCreateFunction} from "../Query/Guards/instanceOfTQueryCreateFunction";
+import {runFunction} from "./runFunction";
+import {TExecutionContext} from "./TExecutionContext";
+import {createNewContext} from "./newContext";
+import {cloneContext} from "./cloneContext";
+import {swapContext} from "./swapContext";
 
 
 
-function writeRow(tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy, parameters: {name: string, value: any}[], aggregateFunctions:{name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] ) {
+function writeRow(context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy,
+                  aggregateFunctions:{name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] ) {
     let writeRecord = true;
 
     if (tep.having !== undefined) {
-        writeRecord = evaluateWhereClause(tep.having, parameters, [tw], {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions});
+        writeRecord = evaluateWhereClause(context, tep.having, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions});
     }
     if (writeRecord) {
         let newRow = addRow(td.table.data, 4096);
@@ -43,13 +50,12 @@ function writeRow(tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy, param
                 return t.name.toUpperCase() === p.columnName.toUpperCase();
             });
             if (col !== undefined) {
-                let value = evaluate(p.output, parameters, [tw], col, {
+                let value = evaluate(context, p.output, col, {
                     forceTable: tw.name,
                     aggregateMode: "final",
                     aggregateObjects: aggregateFunctions
                 });
-                writeValue(td.table, td.def, col, newRow, value, 0);
-                console.log(p.columnName, value);
+                writeValue(td.table, td.def, col, newRow, value, rowHeaderSize);
             }
         }
     }
@@ -57,16 +63,16 @@ function writeRow(tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy, param
 }
 
 
-export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: any}[], tables: TTableWalkInfo[], onRowSelected: (tep: TEPGroupBy, walkInfos: TTableWalkInfo[]) => boolean) {
+export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSelected: (tep: TEPGroupBy, walkInfos: TTableWalkInfo[]) => boolean) {
     let tableToOpen = getValueForAliasTableOrLiteral(tep.source);
-    let tw = tables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
+    let tw = context.openTables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
     if (tw === undefined) {
         throw "GroupBy with unknown table";
     }
     bubbleSort(tw.table, tw.def, tep.groupBy);
 
     let destTable = getValueForAliasTableOrLiteral(tep.dest);
-    let td = tables.find((t) => { return t.name.toUpperCase() === destTable.table.toUpperCase();});
+    let td = context.openTables.find((t) => { return t.name.toUpperCase() === destTable.table.toUpperCase();});
     if (td === undefined) {
         throw "GroupBy with unknown table";
     }
@@ -78,11 +84,14 @@ export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: an
     let cbFindAllAggregateFunctions = (o: any, key: string, value: any, options: TFindExpressionTypeOptions) => {
         if (key === "AGGREGATE") {
             let fnCall = o as TQueryFunctionCall;
-            let fnData = DBData.instance.getFunctionNamed(fnCall.value.name.toUpperCase());
+            let fnData = SKSQL.instance.getFunctionNamed(fnCall.value.name.toUpperCase());
             if (fnData === undefined) {
                 throw "Function " + fnCall.value.name.toUpperCase() + " does not exist. Use DBData.instance.declareFunction before using it.";
             }
-            let fnAggData = fnData.fn(undefined);
+            let fnAggData = undefined;
+            if (!instanceOfTQueryCreateFunction(fnData.fn)) {
+                fnAggData = fnData.fn(context, undefined);
+            }
             aggregateFunctions.push({
                 name: fnCall.value.name.toUpperCase(),
                 fn: fnData,
@@ -96,11 +105,11 @@ export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: an
     // find all aggregate functions
     for (let x = 0; x < tep.projections.length; x++) {
         let proj = tep.projections[x];
-        findExpressionType(proj.output.expression, tables, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
+        findExpressionType(proj.output.expression, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
     }
     // having clause ?
     if (tep.having !== undefined) {
-        findExpressionType(tep.having, tables, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
+        findExpressionType(tep.having, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
     }
 
 
@@ -125,7 +134,7 @@ export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: an
             }
 
             let colDef = tw.def.columns.find((t) => { return t.name.toUpperCase() === colName; })
-            let val = readValue(tw.table, tw.def, colDef, row, 5);
+            let val = readValue(tw.table, tw.def, colDef, row, rowHeaderSize);
             groupValues.push(val);
 
             if (group !== undefined) {
@@ -191,12 +200,15 @@ export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: an
             if (isDifferent) {
                 tw.cursor = readPrevious(tw.table, tw.def, tw.cursor);
                 if (!cursorEOF(tw.cursor)) {
-                    writeRow(tw, td, tep, parameters, aggregateFunctions);
+                    writeRow(context, tw, td, tep, aggregateFunctions);
                 }
                 tw.cursor = readNext(tw.table, tw.def, tw.cursor);
                 // reset data for aggregate functions
                 for (let i = 0; i < aggregateFunctions.length; i++) {
-                    aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(undefined);
+                    if (!instanceOfTQueryCreateFunction(aggregateFunctions[i].fn.fn)) {
+                        //@ts-ignore
+                        aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(undefined);
+                    }
                 }
 
             }
@@ -208,18 +220,24 @@ export function runGroupBy(tep: TEPGroupBy, parameters: {name: string, value: an
             let af = aggregateFunctions[x];
             let params: any[] = [];
             for (let i = 0; i < af.funcCall.value.parameters.length; i++) {
-                let val = evaluate(af.funcCall.value.parameters[i], parameters, [tw], undefined, {aggregateMode: "row", aggregateObjects: aggregateFunctions, forceTable: tw.name});
+                let newContext: TExecutionContext = cloneContext(context, "GroupBy", true, false);
+                newContext.openTables = [tw];
+
+                let val = evaluate(newContext, af.funcCall.value.parameters[i], undefined, {aggregateMode: "row", aggregateObjects: aggregateFunctions, forceTable: tw.name});
+                swapContext(context, newContext);
                 params.push(val);
             }
-            af.data = af.fn.fn(af.data, ...params);
-            console.log(af.data);
+            if (!instanceOfTQueryCreateFunction(af.fn.fn)) {
+                af.data = af.fn.fn(context, af.data, ...params);
+            }
+
         }
 
         tw.cursor = readNext(tw.table, tw.def, tw.cursor);
     }
     tw.cursor = readLast(tw.table, tw.def, tw.cursor);
     if (!cursorEOF(tw.cursor)) {
-        writeRow(tw, td, tep, parameters, aggregateFunctions);
+        writeRow(context, tw, td, tep, aggregateFunctions);
     }
 
 

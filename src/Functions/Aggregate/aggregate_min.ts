@@ -1,9 +1,10 @@
 import {numericLoad} from "../../Numeric/numericLoad";
 import {numeric} from "../../Numeric/numeric";
 import {numericCmp} from "../../Numeric/numericCmp";
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-export function aggregate_min(groupInfo: any, input: numeric) {
+export function aggregate_min(context: TExecutionContext, groupInfo: any, input: numeric) {
     if (groupInfo === undefined) {
         groupInfo = {
             value: undefined

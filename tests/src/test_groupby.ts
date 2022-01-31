@@ -1,4 +1,4 @@
-import {SQLStatement, kResultType} from "sksql";
+import {SKSQL, SQLStatement, kResultType, dumpTable} from "sksql";
 
 
 
@@ -14,6 +14,8 @@ export function test_groupby() {
     let st = new SQLStatement(sql);
     st.run();
     st.close();
+
+    console.log(dumpTable(SKSQL.instance.getTable("Sales")));
 
     let sqlGroupBy1 = "SELECT Country, Region, SUM(sales) AS TotalSales " +
         "FROM Sales " +

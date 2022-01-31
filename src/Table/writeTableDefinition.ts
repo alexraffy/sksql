@@ -8,6 +8,7 @@ import {blockInfo} from "../Blocks/blockInfo";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {TableColumnType} from "./TableColumnType";
 import {serializeTQuery} from "../API/serializeTQuery";
+import {kSysColumns} from "./kSysColumns";
 
 /*
     write a table header
@@ -15,6 +16,20 @@ import {serializeTQuery} from "../API/serializeTQuery";
  */
 export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
     let d: DataView = undefined;
+
+    // add sys columns
+    // last id of the transaction that modified the row
+    const exists = (tbl.columns.find((c) => { return c.name === kSysColumns.change_xdes_id;}));
+    if (exists === undefined) {
+        tbl.columns.push({
+            name: kSysColumns.change_xdes_id,
+            length: 1,
+            type: TableColumnType.uint32,
+            defaultExpression: "",
+            invisible: true,
+            nullable: true
+        });
+    }
 
     let blockSize = 65536;
     const spaceRequired = headerLengthForTableDefinition(tbl);

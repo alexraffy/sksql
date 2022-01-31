@@ -31,16 +31,18 @@ import { numeric } from "../Numeric/numeric";
 import {isNumeric} from "../Numeric/isNumeric";
 import {numericDisplay} from "../Numeric/numericDisplay";
 import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
 
-export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryComparisonExpression | TQueryFunctionCall | TVariable | TNull | TColumn | TQueryColumn | TString | TLiteral | TNumber | TBoolValue | TDate | TArray | numeric | string): string {
+export function serializeTQuery(a: TQueryExpression | TValidExpressions | TQueryComparison | TQueryComparisonExpression | numeric | string): string {
     if (instanceOfTNumber(a)) {
         return a.value;
     }
     if (instanceOfTString(a)) {
         return a.value;
     }
+
     if (instanceOfTLiteral(a)) {
         return a.value;
     }
@@ -58,6 +60,9 @@ export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryC
         for (let i = 0; i < a.array.length; i++) {
             // @ts-ignore
             str += serializeTQuery(a.array[i]);
+            if (i < a.array.length -1) {
+                str += ",";
+            }
         }
         str += ")";
         return str;
@@ -66,7 +71,11 @@ export function serializeTQuery(a: TQueryExpression | TQueryComparison | TQueryC
         return a.year + "-" + padLeft(a.month, 2, "0") + "-" + padLeft(a.day, 2, "0");
     }
     if (instanceOfTColumn(a)) {
-        return `[${a.table}].[${a.column}]`;
+        if (a.table !== undefined && a.table !== "") {
+            return `[${a.table}].[${a.column}]`;
+        } else {
+            return `[${a.column}]`;
+        }
     }
     if (instanceOfTBoolValue(a)) {
         return (a.value === true) ? "true" : "false";

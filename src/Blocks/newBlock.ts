@@ -1,6 +1,6 @@
 import {BlockType} from "./BlockType";
 import {kBlockHeaderField} from "./kBlockHeaderField";
-import {DBData} from "../API/DBInit";
+import {SKSQL} from "../API/SKSQL";
 
 
 /*
@@ -8,7 +8,7 @@ import {DBData} from "../API/DBInit";
  */
 export function newBlock(blockSize: number = 4096, blockType: BlockType, blockId: number): ArrayBuffer | SharedArrayBuffer {
     let ret: ArrayBuffer | SharedArrayBuffer = undefined;
-    if (DBData.supportsSharedArrayBuffers) {
+    if (SKSQL.supportsSharedArrayBuffers) {
         ret = new SharedArrayBuffer(blockSize);
     } else {
         ret = new ArrayBuffer(blockSize);

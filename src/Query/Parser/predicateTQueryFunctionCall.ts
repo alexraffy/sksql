@@ -29,6 +29,9 @@ import {TDateTime} from "../Types/TDateTime";
 import {TTime} from "../Types/TTime";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
+import {TValidExpressions} from "../Types/TValidExpressions";
+import {predicateValidExpressions} from "./predicateValidExpressions";
+import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
 
 /*
     tries to parse a function call
@@ -40,12 +43,12 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
         return;
     }
     const fnName = yield literal;
-    let parameters: (TQueryFunctionCall | TQueryExpression | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber)[] = [];
+    let parameters: (TQueryExpression | TValidExpressions)[] = [];
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("(");
-    const param1: (TQueryExpression | TQueryFunctionCall  | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber) = yield maybe(oneOf(
-        [predicateTQueryExpression, predicateTQueryFunctionCall, predicateTColumn, predicateTDateTime,
-            predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
+    const param1: (TQueryExpression | TValidExpressions) = yield maybe(oneOf(
+        [predicateTQueryExpression, predicateTParenthesisGroup,  predicateValidExpressions], "a list of parameters"));
     if (param1 !== undefined) {
         parameters.push(param1);
     }
@@ -54,9 +57,8 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
     let extraParamOrEnd = yield maybe(str(","));
     while (extraParamOrEnd===",") {
         yield maybe(atLeast1(whitespaceOrNewLine));
-        const extraParam: (TQueryExpression | TQueryFunctionCall | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber) = yield oneOf(
-            [predicateTQueryExpression, predicateTQueryFunctionCall, predicateTColumn,
-                predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "a list of parameters");
+        const extraParam: (TQueryExpression | TValidExpressions) = yield oneOf(
+            [predicateTQueryExpression, predicateTParenthesisGroup, predicateValidExpressions], "a list of parameters");
         parameters.push(extraParam);
         yield maybe(atLeast1(whitespaceOrNewLine));
         extraParamOrEnd = yield maybe(str(","));

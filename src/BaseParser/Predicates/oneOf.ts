@@ -3,7 +3,7 @@ import {TParser} from "../TParser";
 import {Stream} from "../Stream";
 import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
-import {isGenerator} from "../isGenerator";
+import {isGeneratorFunction} from "../isGenerator";
 
 
 
@@ -13,10 +13,10 @@ export function oneOf(params: (TFuncGen | TParser)[], error: string) {
         if (s as string === "isGenerator") {
             return;
         }
+        let results = undefined;
         for (let i = 0; i < params.length; i++) {
-            let results = undefined;
 
-            if (isGenerator(params[i])) {
+            if (isGeneratorFunction(params[i])) {
                 results = parse((name, value) => {}, params[i] as TFuncGen, s)
             } else {
                 results = parse((name, value) => {}, [params[i] as TParser], s);
@@ -25,6 +25,6 @@ export function oneOf(params: (TFuncGen | TParser)[], error: string) {
                 return new ParseResult((results as ParseResult).value, (results as ParseResult).next, s, "");
             }
         }
-        return new ParseError(s, error, false);
+        return new ParseError(s, error + " STACK " + JSON.stringify(results), false);
     }
 }

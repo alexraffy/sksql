@@ -6,6 +6,7 @@ import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TComparison} from "../Types/TComparison";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {predicateTNull} from "./predicateTNull";
 
 /*
     tries to parse a comparison between two expression
@@ -20,9 +21,29 @@ export const predicateTComparison = function *(callback) {
         yield maybe(atLeast1(whitespaceOrNewLine));
     }
 
-    let ret = yield oneOf([str("<>"), str("<="), str("<"), str(">="), str(">"), str("IN"), str("BETWEEN"), str("LIKE"), str("=")], "a test operation: [NOT] =, <>, <=, <, >=, >, IN, BETWEEN, LIKE");
+    let ret = yield oneOf([str("IS"), str("<>"), str("<="), str("<"), str(">="), str(">"), str("IN"), str("BETWEEN"), str("LIKE"), str("=")], "a test operation: [NOT] =, <>, <=, <, >=, >, IN, BETWEEN, LIKE");
+
+    if (ret !== undefined && ret.toUpperCase() === "IS") {
+        yield atLeast1(whitespaceOrNewLine);
+        if (not === undefined) {
+            not = yield maybe(str("NOT"));
+            if (not !== undefined && not.toUpperCase() === "NOT") {
+                yield maybe(atLeast1(whitespaceOrNewLine));
+            }
+        }
+
+        yield returnPred(
+            {
+                kind: "TComparison",
+                negative: (not === undefined) ? false : (not === "NOT"),
+                value: kQueryComparison.equal
+            } as TComparison
+        )
+        return;
+    }
+
     let comp: kQueryComparison;
-    switch (ret) {
+    switch (ret.toUpperCase()) {
         case "=":
             comp = kQueryComparison.equal;
             break;

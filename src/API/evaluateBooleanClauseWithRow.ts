@@ -7,23 +7,23 @@ import {evaluate} from "./evaluate";
 import {kQueryComparison} from "../Query/Enums/kQueryComparison";
 import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
 import {ITable} from "../Table/ITable";
-import {evaluateWithRow} from "./evaluateWithRow";
+import {evaluateWithRowDEPREC} from "./evaluateWithRow";
 import { TArray } from "../Query/Types/TArray";
 import { compareValues } from "./compareValues";
 import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
 
 
-export function evaluateBooleanClauseWithRow(struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
+export function evaluateBooleanClauseWithRowDEPREC(struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
     if (struct === undefined) {
         return true;
     }
 
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
-        let leftValue = evaluateWithRow(qc.left, table, def, undefined, fullRow, offset);
+        let leftValue = evaluateWithRowDEPREC(qc.left, table, def, undefined, fullRow, offset);
         let rightValue = undefined;
         if (!instanceOfTArray(qc.right)) {
-            rightValue = evaluateWithRow(qc.right, table, def, undefined, fullRow, offset);
+            rightValue = evaluateWithRowDEPREC(qc.right, table, def, undefined, fullRow, offset);
         }
         switch (qc.comp.value) {
             case kQueryComparison.equal:
@@ -69,8 +69,8 @@ export function evaluateBooleanClauseWithRow(struct: TQueryComparisonExpression 
         }
     }
     if (instanceOfTQueryComparisonExpression(struct)) {
-        let leftValue = evaluateBooleanClauseWithRow(struct.a, table, def, fullRow, offset);
-        let rightValue = evaluateBooleanClauseWithRow(struct.b, table, def, fullRow, offset);
+        let leftValue = evaluateBooleanClauseWithRowDEPREC(struct.a, table, def, fullRow, offset);
+        let rightValue = evaluateBooleanClauseWithRowDEPREC(struct.b, table, def, fullRow, offset);
         switch (struct.bool) {
             case "AND":
                 return leftValue && rightValue;

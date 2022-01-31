@@ -7,11 +7,12 @@ import {TNumber} from "./TNumber";
 import {TColumn} from "./TColumn";
 import {TNull} from "./TNull";
 import {TBoolValue} from "./TBoolValue";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryColumn {
     kind: "TQueryColumn",
     alias: TAlias;
-    expression: TQueryFunctionCall | TQueryExpression | TNull | TBoolValue | TColumn | TLiteral | TNumber | TString;
+    expression: TQueryExpression | TValidExpressions;
 
 }

@@ -16,6 +16,12 @@ import {TVariableAssignment} from "../Types/TVariableAssignment";
 import {predicateTDate} from "./predicateTDate";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {predicateTBoolValue} from "./predicateTBoolValue";
+import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
+import {predicateValidExpressions} from "./predicateValidExpressions";
+import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
 
 /*
     tries to parse a variable assignment
@@ -28,23 +34,25 @@ export const predicateTVariableAssignment: TFuncGen = function *(callback) {
     if (callback as string === "isGenerator") {
         return "";
     }
-    yield maybe(str("SET"));
-    yield maybe(whitespace);
+    let hasSet = yield maybe(str("SET"));
+    yield maybe(atLeast1(whitespaceOrNewLine));
     const varname = yield predicateTVariable;
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
     const assign = yield str("=");
-    yield maybe(whitespace);
-    const value = yield oneOf([predicateTQueryExpression, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "An expression");
-    yield maybe(whitespace);
+    yield maybe(atLeast1(whitespaceOrNewLine));
+    const value = yield oneOf([predicateTQueryExpression, predicateTParenthesisGroup, predicateValidExpressions], "An expression");
+    yield maybe(atLeast1(whitespaceOrNewLine));
     // exit on , or FROM without consuming the characters
-    yield exitIf(oneOf([str(","), str("FROM"), str("AS")], ""));
+    //yield exitIf(oneOf([str(","), str("FROM"), str("AS")], ""));
+    if (hasSet !== undefined) {
+        yield str(";")
+        yield maybe(atLeast1(whitespaceOrNewLine));
+    }
+
     yield returnPred(
         {
             kind: "TVariableAssignment",
-            name: {
-                kind: "TVariable",
-                name: varname
-            },
+            name: varname,
             value: value
         } as TVariableAssignment
     )

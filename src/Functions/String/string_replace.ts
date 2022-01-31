@@ -1,8 +1,7 @@
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-
-
-export function string_replace(input: string, replace: string, withString: string) {
+export function string_replace(context: TExecutionContext, input: string, replace: string, withString: string) {
     if (input === undefined) { return undefined; }
     let ret = input;
     let occ = ret.indexOf(replace);

@@ -2,7 +2,9 @@ import {Stream} from "./Stream";
 import {TParser} from "./TParser";
 import {ParseResult} from "./ParseResult";
 import {ParseError} from "./ParseError";
-import {isGenerator} from "./isGenerator";
+import {isGeneratorFunction} from "./isGenerator";
+import {TParserError} from "../API/TParserError";
+import {TDebugInfo} from "../Query/Types/TDebugInfo";
 
 
 export type TParserCallback = (name, value) => void;
@@ -17,18 +19,23 @@ export function parse(callback: TParserCallback,
     let results: (ParseResult | ParseError)[] = [];
     let success: boolean = true;
     let s = input;
-
+    let maxChar = 0;
     parse_inception++;
-     if (isGenerator(genFunc)) {
+     if (isGeneratorFunction(genFunc)) {
          let gen = (genFunc as (value: TParserCallback) => IterableIterator<TParser | TFuncGen>)(callback);
          let nextParser = gen.next();
+         let cursorPos = s.cursor;
          while (nextParser.value !== undefined) {
-
-             if (isGenerator(nextParser.value)) {
+             if (s.cursor > maxChar) {
+                 maxChar = s.cursor;
+             }
+             if (isGeneratorFunction(nextParser.value)) {
                 let ret: ParseResult | ParseError = parse(callback, nextParser.value, s);
                 if (ret.kind === "ParseResult" ) {
+                    ((ret as ParseResult).value as TDebugInfo).debug = {start: cursorPos, end: (ret as ParseResult).next.cursor }
                     results.push(ret);
                     s = (ret as ParseResult).next;
+                    cursorPos = s.cursor;
                 } else {
                     results.push(ret);
                     success = false;
@@ -38,6 +45,9 @@ export function parse(callback: TParserCallback,
 
              } else {
                  let p = nextParser.value as TParser;
+                 if (typeof p !== "function") {
+                     throw new TParserError("Error at position " + s.cursor);
+                 }
                  let ret: ParseResult | ParseError = p(s);
                  if (ret.kind === "ParseResult") {
                      results.push(ret);

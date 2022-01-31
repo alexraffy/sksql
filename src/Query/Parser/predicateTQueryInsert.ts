@@ -35,6 +35,8 @@ import {TDateTime} from "../Types/TDateTime";
 import {TTime} from "../Types/TTime";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
+import {TValidExpressions} from "../Types/TValidExpressions";
+import {predicateValidExpressions} from "./predicateValidExpressions";
 
 /*
     tries to parse an insert statement
@@ -57,7 +59,7 @@ export const predicateTQueryInsert = function *(callback) {
     let gotMore = ",";
 
     let columns: TLiteral[] = [];
-    let values: {values: (TQueryExpression | TQueryFunctionCall | TNull | TVariable | TBoolValue | TColumn | TDateTime | TDate | TTime | TString | TLiteral | TNumber)[]}[] = [];
+    let values: {values: (TQueryExpression | TValidExpressions)[]}[] = [];
     let selectStatement: TQuerySelect = undefined;
 
     if (hasColumns === "(") {
@@ -89,7 +91,7 @@ export const predicateTQueryInsert = function *(callback) {
             gotMore = ",";
             while (gotMore === ",") {
                 yield maybe(atLeast1(whitespaceOrNewLine));
-                let value = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTNull, predicateTVariable, predicateTBoolValue, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "");
+                let value = yield oneOf([predicateTQueryExpression, predicateValidExpressions], "");
                 vals.values.push(value);
                 yield maybe(atLeast1(whitespaceOrNewLine));
                 gotMore = yield maybe(str(","));

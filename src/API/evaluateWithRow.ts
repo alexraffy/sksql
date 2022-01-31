@@ -17,9 +17,17 @@ import {instanceOfTNull} from "../Query/Guards/instanceOfTNull";
 import {TableColumn} from "../Table/TableColumn";
 import {TParserError} from "./TParserError";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
+import {TQueryColumn} from "../Query/Types/TQueryColumn";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
 
 
-export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITableDefinition, colDef: TableColumn, fullRow: DataView, offset: number = 5) {
+export function evaluateWithRowDEPREC(struct: TQueryExpression | TValidExpressions | TQueryColumn,
+                                table: ITable,
+                                def: ITableDefinition,
+                                colDef: TableColumn,
+                                fullRow: DataView,
+                                offset: number = 5) {
     if (instanceOfTVariable(struct)) {
         // look up the parameter
         throw new TParserError("Parameter " + (struct as TVariable).name + " expected");
@@ -62,11 +70,11 @@ export function evaluateWithRow(struct: TQueryAnyType, table: ITable, def: ITabl
         return val;
     }
     if (instanceOfTQueryColumn(struct)) {
-        return evaluateWithRow(struct.expression, table, def, colDef, fullRow, offset);
+        return evaluateWithRowDEPREC(struct.expression, table, def, colDef, fullRow, offset);
     }
     if (instanceOfTQueryExpression(struct)) {
-        let left = evaluateWithRow(struct.value.left, table, def, colDef, fullRow, offset);
-        let right = evaluateWithRow(struct.value.right, table, def, colDef, fullRow, offset);
+        let left = evaluateWithRowDEPREC(struct.value.left, table, def, colDef, fullRow, offset);
+        let right = evaluateWithRowDEPREC(struct.value.right, table, def, colDef, fullRow, offset);
         let op = struct.value.op;
         if (typeof left !== typeof right) {
             throw new TParserError("Incompatible types between " + left + " and " + right);

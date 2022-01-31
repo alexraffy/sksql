@@ -1,7 +1,8 @@
 import {numeric} from "../../Numeric/numeric";
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-export function scalar_abs(input: numeric) {
+export function scalar_abs(context: TExecutionContext, input: numeric) {
     if (input.sign === 1) {
         return {
             sign: 0,

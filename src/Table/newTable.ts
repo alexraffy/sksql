@@ -3,7 +3,7 @@ import {ITableData} from "./ITableData";
 import {writeTableDefinition} from "./writeTableDefinition";
 import {ITable} from "./ITable";
 import {readTableDefinition} from "./readTableDefinition";
-import {DBData} from "../API/DBInit";
+import {SKSQL} from "../API/SKSQL";
 
 /*
     generate a new table from the table definition specified.
@@ -16,11 +16,11 @@ export function newTable(tb: ITableDefinition): ITable {
             blocks: []
         }
     }
-    tb.id = DBData.instance.allTables.length + 1;
+    tb.id = SKSQL.instance.allTables.length + 1;
     writeTableDefinition(ret.data, tb)
     //tb = readTableDefinition(ret.data);
 
-    DBData.instance.allTables.push(ret);
+    SKSQL.instance.allTables.push(ret);
     return ret;
 
 }

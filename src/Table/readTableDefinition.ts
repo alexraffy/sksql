@@ -108,11 +108,12 @@ export function readTableDefinition(tb: ITableData, showInvisibleColumns = false
         const foreignKeyTableName = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefConstraintForeignKeyTableName, 255);
         const checkExpression = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefConstraintCheckExpression, 255);
         offset += kBlockHeaderField.TableDefConstraintEnd;
+
         let parseResult: ParseResult | ParseError = parse((name, value) => {}, function *(callback) {
             let ret = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "");
             yield returnPred(ret);
         }, new Stream(checkExpression, 0));
-        let checkExpressionValue: TQueryComparisonExpression | TQueryComparison = undefined;
+        let checkExpressionValue: TQueryComparisonExpression | TQueryComparison;
         if (instanceOfParseResult(parseResult)) {
             checkExpressionValue = parseResult.value;
         }
@@ -141,6 +142,7 @@ export function readTableDefinition(tb: ITableData, showInvisibleColumns = false
             offset += 255;
             constraint.foreignKeyColumnsRef.push(column);
         }
+        ret.constraints.push(constraint);
     }
 
 

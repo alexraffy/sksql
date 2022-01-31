@@ -2,7 +2,9 @@ import {TAuthSession} from "../WebSocket/TAuthSession";
 
 
 export interface TDBEventsDelegate {
-    on?(message: string, payload: any): void;
-    connectionLost?(): void;
-    authRequired(): TAuthSession;
+    on?(databaseHashId: string, message: string, payload: any): void;
+    connectionLost?(databaseHashId: string): void;
+    connectionError?(databaseHashId: string, error: string);
+    authRequired(databaseHashId: string): TAuthSession;
+    ready(databaseHashId: string);
 }

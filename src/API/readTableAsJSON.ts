@@ -1,4 +1,4 @@
-import {DBData} from "./DBInit";
+import {SKSQL} from "./SKSQL";
 import {readTableDefinition} from "../Table/readTableDefinition";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
@@ -13,7 +13,7 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 
 export function readTableAsJSON(table: string): any[] {
     let ret: any[] = [];
-    let tbl = DBData.instance.getTable(table);
+    let tbl = SKSQL.instance.getTable(table);
     if (tbl === undefined) { return ret; }
     let def = readTableDefinition(tbl.data);
     let cursor = readFirst(tbl, def);

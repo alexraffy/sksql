@@ -19,6 +19,12 @@ import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 
 
 export function convertToType(value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime, type: TableColumnType, dest: TableColumnType) {
+    if (type === dest) {
+        return value;
+    }
+    if (dest === TableColumnType.any) {
+        return value;
+    }
 
     switch (dest) {
         case TableColumnType.varchar:
@@ -99,6 +105,9 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             if (type === TableColumnType.varchar) {
                 return parseDateString(value as string);
             }
+            if (type === TableColumnType.datetime) {
+                return (value as TDateTime).date;
+            }
         }
         break;
         case TableColumnType.time:
@@ -121,7 +130,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
     if (columnTypeIsInteger(dest)) {
         if (columnTypeIsInteger(type)) {
             // loss of precision should have been checked with typeCanconvertTo
-            return value as number;
+            return parseInt((value as number).toString());
         }
         if (type === TableColumnType.float) {
             return parseInt((value as number).toString());

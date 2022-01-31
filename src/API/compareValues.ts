@@ -33,13 +33,25 @@ export function compareValues(a: string | number | boolean | bigint | numeric | 
         if (a === b) {
             return 0;
         }
-        return a - b;
+        if (a > b) {
+            return 1;
+        }
+        return -1;
     }
     if (typeof a === "boolean" && typeof b === "boolean") {
-        return a === b;
+        if (a === b) {
+            return 0;
+        }
+        return a && b;
     }
     if (typeof a === "bigint" && typeof b === "bigint") {
-        return a === b;
+        if (a === b) {
+            return 0;
+        }
+        if (a > b) {
+            return 1;
+        }
+        return -1;
     }
 
     if (isNumeric(a) && isNumeric(b)) {

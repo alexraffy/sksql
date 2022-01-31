@@ -2,7 +2,6 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
 import {literal} from "../../BaseParser/Predicates/literal";
 import {predicateTTableName} from "./predicateTTableName";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {TTable} from "../Types/TTable";
 import {predicateTColumnType} from "./predicateTColumnType";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
@@ -19,6 +18,9 @@ import {kForeignKeyOnEvent} from "../../Table/kForeignKeyOnEvent";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
+import {predicateValidExpressions} from "./predicateValidExpressions";
+import {SKSQL} from "../../API/SKSQL";
+import {readTableDefinition} from "../../Table/readTableDefinition";
 
 /*
     tries to parse a constraint
@@ -29,17 +31,20 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
         if (callback as string === "isGenerator") {
             return;
         }
+        let constraintName = undefined;
         let isConstraint = yield maybe(str("CONSTRAINT"));
         if (isConstraint === "CONSTRAINT") {
             yield atLeast1(whitespaceOrNewLine);
+            constraintName = yield maybe(literal);
+            if (constraintName !== undefined) {
+                yield atLeast1(whitespaceOrNewLine);
+            }
         }
 
         const columnNameOrConstraint = yield oneOf([
             str("PRIMARY KEY"), str("UNIQUE"),
             str("FOREIGN KEY"), str("CHECK")], "")
 
-        yield atLeast1(whitespaceOrNewLine);
-        let constraintName = yield maybe(literal);
 
         yield maybe(atLeast1(whitespaceOrNewLine));
         if (columnNameOrConstraint.toUpperCase() === "PRIMARY KEY" || columnNameOrConstraint.toUpperCase() === "UNIQUE") {
@@ -122,9 +127,10 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                 }
                 yield str(")");
             } else {
-                for (let i = 0; i < columns.length; i++) {
-                    fkcolumns.push(columns[i].name);
-                }
+                // WE NEED TO CHECK IF THE REFERENCE COLUMN OMITTED HERE HAS THE SAME NAME OR IF WE WANT TO REFERENCE THE PRIMARY KEY INSTEAD
+                // SINCE THE STATEMENTS FOR THE CREATION OF THE TABLES CAN BE IN THE SAME SCRIPT, WE HAVE TO DO THIS
+                // AT RUN-TIME.
+
             }
 
             yield maybe(atLeast1(whitespaceOrNewLine));
@@ -296,21 +302,22 @@ export const predicateTQueryCreateTable = function *(callback) {
                 yield maybe(atLeast1(whitespaceOrNewLine));
 
             }
-
-            const hasDefault = yield maybe(str("DEFAULT"));
-            let defaultValue = undefined;
-            if (hasDefault === "DEFAULT") {
-                yield atLeast1(whitespaceOrNewLine);
-                defaultValue = yield predicateTQueryExpression;
-                yield maybe(atLeast1(whitespaceOrNewLine))
-            }
-
-
             let hasColumnConstraint = yield exitIf(oneOf([str("UNIQUE"), str("PRIMARY KEY"), str("CHECK")], ""));
             if (hasColumnConstraint === true) {
                 yield maybe(predicateTQueryConstraint(table, constraints, columnNameOrConstraint));
                 yield maybe(atLeast1(whitespaceOrNewLine));
             }
+
+            const hasDefault = yield maybe(str("DEFAULT"));
+            let defaultValue = undefined;
+            if (hasDefault === "DEFAULT") {
+                yield atLeast1(whitespaceOrNewLine);
+                defaultValue = yield oneOf([predicateTQueryExpression, predicateValidExpressions], "");
+                yield maybe(atLeast1(whitespaceOrNewLine))
+            }
+
+
+
 
 
             columns.push({
@@ -325,6 +332,7 @@ export const predicateTQueryCreateTable = function *(callback) {
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str(")");
+    yield maybe(atLeast1(whitespaceOrNewLine));
     yield maybe(str(";"));
 
     yield maybe(atLeast1(whitespaceOrNewLine));

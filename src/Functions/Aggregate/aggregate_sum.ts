@@ -1,9 +1,10 @@
 import {numeric} from "../../Numeric/numeric";
 import {numericLoad} from "../../Numeric/numericLoad";
 import {numericAdd} from "../../Numeric/numericAdd";
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-export function aggregate_sum(groupInfo: any, input: numeric): any {
+export function aggregate_sum(context: TExecutionContext, groupInfo: any, input: numeric): any {
     if (groupInfo === undefined) {
         return {
             sum: numericLoad("0")

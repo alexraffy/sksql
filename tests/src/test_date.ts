@@ -1,5 +1,5 @@
 
-import {parseDateString, SQLStatement, dumpTable, DBData, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType} from "sksql";
+import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType} from "sksql";
 import * as assert from "assert";
 
 
@@ -37,7 +37,7 @@ export function test_date() {
 
     let st = new SQLStatement("CREATE TABLE date_tests(dates DATE)");
     st.run();
-    console.log(readTableDefinition(DBData.instance.getTable("date_tests").data));
+    console.log(readTableDefinition(SKSQL.instance.getTable("date_tests").data));
     let inserts = new SQLStatement("INSERT INTO date_tests(dates) VALUES(@date)");
     for (let i = 0; i < 10; i++) {
         let y = 1920 + parseInt(""+ (Math.random()*100) );
@@ -46,15 +46,15 @@ export function test_date() {
         inserts.setParameter("@date", padLeft(y.toString(), 4, "0") + "-" + padLeft(m.toString(), 2, "0") + "-" + padLeft(d.toString(), 2, "0"));
         inserts.run();
     }
-    console.log(dumpTable(DBData.instance.getTable("date_tests")));
+    console.log(dumpTable(SKSQL.instance.getTable("date_tests")));
     let sort = new SQLStatement("SELECT TOP(4) dates FROM date_tests ORDER BY dates DESC");
     let result = sort.run();
-    console.log(dumpTable(DBData.instance.getTable(result[0].resultTableName)));
+    console.log(dumpTable(SKSQL.instance.getTable(result[0].resultTableName)));
     //console.log(readTableAsJSON(result[0].resultTableName));
 
     let stTimes = new SQLStatement("CREATE TABLE time_tests(times TIME)");
     stTimes.run();
-    console.log(readTableDefinition(DBData.instance.getTable("time_tests").data));
+    console.log(readTableDefinition(SKSQL.instance.getTable("time_tests").data));
     let timesInserts = new SQLStatement("INSERT INTO time_tests(times) VALUES(@time)");
     timesInserts.setParameter("@time", "12:05:50");
     timesInserts.run();
@@ -62,15 +62,15 @@ export function test_date() {
     timesInserts.run();
     timesInserts.setParameter("@time", "10:30:00");
     timesInserts.run();
-    console.log(dumpTable(DBData.instance.getTable("time_tests")));
+    console.log(dumpTable(SKSQL.instance.getTable("time_tests")));
 
     {
         let sql = "SELECT times FROM time_tests ORDER BY times ASC"
         console.log("TESTING " + sql);
         let stTest = new SQLStatement(sql);
         let ret = stTest.run();
-        console.log(readTableDefinition(DBData.instance.getTable(ret[0].resultTableName).data));
-        console.log(dumpTable(DBData.instance.getTable(ret[0].resultTableName)));
+        console.log(readTableDefinition(SKSQL.instance.getTable(ret[0].resultTableName).data));
+        console.log(dumpTable(SKSQL.instance.getTable(ret[0].resultTableName)));
         stTest.close();
     }
 
@@ -79,8 +79,8 @@ export function test_date() {
         console.log("TESTING " + sql);
         let stTest = new SQLStatement(sql);
         let ret = stTest.run();
-        console.log(readTableDefinition(DBData.instance.getTable(ret[0].resultTableName).data));
-        console.log(dumpTable(DBData.instance.getTable(ret[0].resultTableName)));
+        console.log(readTableDefinition(SKSQL.instance.getTable(ret[0].resultTableName).data));
+        console.log(dumpTable(SKSQL.instance.getTable(ret[0].resultTableName)));
         stTest.close();
     }
 

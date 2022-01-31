@@ -2,6 +2,8 @@ import {TSocketResponse} from "./TSocketResponse";
 
 
 export interface TWebSocketDelegate {
-    on(msg: TSocketResponse);
-    connectionLost?();
+    databaseHashId: string;
+    on(databaseHashId: string, msg: TSocketResponse);
+    connectionLost?(databaseHashId: string);
+    connectionError?(databaseHashId: string, error: string);
 }

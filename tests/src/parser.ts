@@ -1,5 +1,5 @@
 import * as assert from "assert";
-import {atLeast1, instanceOfParseResult,
+import {atLeast1, returnPred, oneOf, checkSequence, instanceOfParseResult,
     instanceOfTAlias,
     instanceOfTColumn,
     instanceOfTLiteral,
@@ -19,6 +19,7 @@ import {atLeast1, instanceOfParseResult,
     predicateTQuerySelect,
     predicateTQueryUpdate,
     str, Stream, TNumber, TParserCallback, TQueryFunctionCall, whitespaceOrNewLine} from "sksql";
+
 
 
 export function test_parser() {
@@ -143,5 +144,16 @@ export function test_parser() {
     const result3 = parse(callback, predicateTLiteral, new Stream("TESTING1234", 0));
     const result4 = parse(callback, predicateTQueryExpression, new Stream("x + s(a + 1*mul(t))", 0));
 
+    const seq = parse(callback, function *() {
+        let ret = yield checkSequence([str("CREATE"), whitespaceOrNewLine, str("TABLE")])
+        yield returnPred(ret);
+    }, new Stream("CREATE TABLE A", 0));
+
+    const seq2 = parse(callback, function *() {
+        let ret = yield oneOf([
+            checkSequence([str("DROP"), whitespaceOrNewLine, str("TABLE")]),
+            checkSequence([str("CREATE"), whitespaceOrNewLine, str("TABLE")])], "");
+        yield returnPred(ret);
+    }, new Stream("CREATE TABLE A", 0));
 
 }

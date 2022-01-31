@@ -50,6 +50,7 @@ export interface TWSRSQL {
     p: { k: string; v: string | number | numeric | TDate | boolean}[]
 }
 
+export const WSROK: string = "OK";
 
 
 

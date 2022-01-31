@@ -1,13 +1,13 @@
 import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
-import {SQLResult} from "./SQLResult";
+import {SQLResult} from "../API/SQLResult";
 import {ParseResult} from "../BaseParser/ParseResult";
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
-import {TTableWalkInfo} from "./TTableWalkInfo";
-import {openTables} from "./openTables";
+import {TTableWalkInfo} from "../API/TTableWalkInfo";
+import {openTables} from "../API/openTables";
 import {cursorEOF} from "../Cursor/cursorEOF";
-import {evaluateWhereClause} from "./evaluateWhereClause";
-import {evaluate} from "./evaluate";
-import {getColumnDefinition} from "./getColumnDefinition";
+import {evaluateWhereClause} from "../API/evaluateWhereClause";
+import {evaluate} from "../API/evaluate";
+import {getColumnDefinition} from "../API/getColumnDefinition";
 import {writeValue} from "../BlockIO/writeValue";
 import {readNext} from "../Cursor/readNext";
 import {TQueryDelete} from "../Query/Types/TQueryDelete";
@@ -26,30 +26,22 @@ import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {numeric} from "../Numeric/numeric";
 import {isNumeric} from "../Numeric/isNumeric";
-import {TParserError} from "./TParserError";
+import {TParserError} from "../API/TParserError";
+import {TExecutionContext} from "./TExecutionContext";
 
 
-export function processDeleteStatement(parseResult: ParseResult, statement: TQueryDelete, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
-    if (!instanceOfParseResult(parseResult) || !instanceOfTQueryDelete(statement)) {
-        return {
-            error: "Misformed delete query.",
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: ""
-            }
-        } as SQLResult
-    }
+export function processDeleteStatement(context: TExecutionContext, statement: TQueryDelete) {
+    context.openTables.push(...openTables(statement));
     let del = statement as TQueryDelete;
     let tbl: ITable;
     let def: ITableDefinition;
     let rowLength = 0;
-    for (let i = 0; i < walk.length; i++) {
+    for (let i = 0; i < context.openTables.length; i++) {
         let name = getValueForAliasTableOrLiteral(del.tables[0].tableName)
-        if (walk[i].name.toUpperCase() === name.table.toUpperCase()) {
-            tbl = walk[i].table;
-            def = walk[i].def;
-            rowLength = walk[i].rowLength;
+        if (context.openTables[i].name.toUpperCase() === name.table.toUpperCase()) {
+            tbl = context.openTables[i].table;
+            def = context.openTables[i].def;
+            rowLength = context.openTables[i].rowLength;
         }
 
     }
@@ -77,13 +69,13 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
         }
 
 
-        if (evaluateWhereClause(del.where, parameters, walk) === true) {
+        if (evaluateWhereClause(context, del.where) === true) {
             numberOfRowsModified++;
             flag = flag | (1 << 7);
             dv.setUint8(kBlockHeaderField.DataRowFlag, flag);
 
             if (del.top !== undefined) {
-                let maxCount = evaluate(del.top, parameters, undefined, undefined);
+                let maxCount = evaluate(context, del.top, undefined, undefined);
                 if (isNumeric(maxCount)) {
                     if (maxCount.m <= numberOfRowsModified) {
                         done = true;
@@ -95,13 +87,12 @@ export function processDeleteStatement(parseResult: ParseResult, statement: TQue
 
         cursor = readNext(tbl, def, cursor);
     }
-
-    return {
+    context.results.push({
         resultTableName: "",
         rowCount: numberOfRowsModified,
         executionPlan: {
             description: ""
         }
-    } as SQLResult
+    } as SQLResult);
 
 }

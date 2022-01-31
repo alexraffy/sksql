@@ -1,8 +1,7 @@
+import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
-
-
-export function string_padRight(input: string, padWith: string, length: number ) {
+export function string_padRight(context: TExecutionContext, input: string, padWith: string, length: number ) {
     if (input === undefined) { return undefined; }
     let ret = input;
     while (ret.length < length) {

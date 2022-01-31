@@ -9,11 +9,12 @@ import {TString} from "./TString";
 import {TComparison} from "./TComparison";
 import {TNull} from "./TNull";
 import { TArray } from "./TArray";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryComparison {
     kind: "TQueryComparison";
-    left: TQueryExpression | TNull | TColumn | TString | TLiteral | TNumber | TQueryColumn;
+    left: TQueryExpression | TValidExpressions;
     comp: TComparison;
-    right: TQueryExpression | TNull | TColumn | TString | TLiteral | TNumber | TQueryColumn | TArray;
+    right: TQueryExpression | TValidExpressions;
 }

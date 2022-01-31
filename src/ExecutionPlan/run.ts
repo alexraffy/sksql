@@ -2,7 +2,7 @@ import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {TEP} from "./TEP";
 import {runScan} from "./runScan";
 import {TEPScan} from "./TEPScan";
-import {addRow} from "../Table/addRow";
+import {addRow, rowHeaderSize} from "../Table/addRow";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TEPNestedLoop} from "./TEPNestedLoop";
 import {runNestedLoop} from "./runNestedLoop";
@@ -21,10 +21,13 @@ import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {TEPGroupBy} from "./TEPGroupBy";
 import {runGroupBy} from "./runGroupBy";
+import {TableColumnType} from "../Table/TableColumnType";
+import {TExecutionContext} from "./TExecutionContext";
 
 
 
-export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: string, value: any}[], tables: TTableWalkInfo[]): SQLResult {
+export function run(context: TExecutionContext,
+                    statement: TQuerySelect, ep: TEP[]): SQLResult {
     let returnTable = "";
     let rowsModified = 0;
     let ret: SQLResult = undefined;
@@ -46,8 +49,8 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
             for (let i = 0; i < tep.projection.length; i++) {
                 let col = columns.find((t) => { return t.name.toUpperCase() === tep.projection[i].columnName.toUpperCase();});
                 if (col !== undefined) {
-                    let value = evaluate(tep.projection[i].output, parameters, tables, col);
-                    writeValue(resultWI.table, resultWI.def, col, row, value, 0);
+                    let value = evaluate(context, tep.projection[i].output, col);
+                    writeValue(resultWI.table, resultWI.def, col, row, value, rowHeaderSize);
                 }
             }
         }
@@ -55,15 +58,15 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
             for (let i = 0; i < tep.a.projection.length; i++) {
                 let col = columns.find((t) => { return t.name.toUpperCase() === tep.a.projection[i].columnName.toUpperCase();});
                 if (col !== undefined) {
-                    let value = evaluate(tep.a.projection[i].output, parameters, tables, col);
-                    writeValue(resultWI.table, resultWI.def, col, row, value, 0);
+                    let value = evaluate(context, tep.a.projection[i].output, col);
+                    writeValue(resultWI.table, resultWI.def, col, row, value, rowHeaderSize);
                 }
             }
         }
         rowsModified++;
         if (statement.top !== undefined) {
             if (statement.orderBy === undefined || statement.orderBy.length === 0 || (statement.orderBy.length > 0 && instanceOfTLiteral(statement.orderBy[0].column) && statement.orderBy[0].column.value === "ROWID")) {
-                let topValue = evaluate(statement.top, parameters, tables, undefined);
+                let topValue = evaluate(context, statement.top, undefined);
                 if (isNumeric(topValue) && topValue.m <= rowsModified) {
                     return false;
                 }
@@ -77,25 +80,25 @@ export function run(statement: TQuerySelect, ep: TEP[], parameters: {name: strin
         let p = ep[i];
         if (p.kind === "TEPScan") {
             let ps = p as TEPScan;
-            runScan(ps, parameters, tables, runCallback);
+            runScan(context, ps, runCallback);
         }
         if (p.kind === "TEPNestedLoop") {
             let ps = p as TEPNestedLoop;
-            runNestedLoop(ps, parameters, tables, runCallback);
+            runNestedLoop(context, ps, runCallback);
         }
         if (p.kind === "TEPGroupBy") {
             let ps = p as TEPGroupBy;
-            runGroupBy(ps, parameters, tables, (tep, walkInfos) => {
+            runGroupBy(context, ps, (tep, walkInfos) => {
 
                 return true;
             })
         }
         if (p.kind === "TEPSortNTop") {
             let ps = p as TEPSortNTop;
-            let resultWI = tables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
+            let resultWI = context.openTables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
             bubbleSort(resultWI.table,resultWI.def, ps.orderBy);
             if (ps.top !== undefined) {
-                let topValue = evaluate(ps.top, parameters, tables, undefined);
+                let topValue = evaluate(context, ps.top, undefined);
                 if (isNumeric(topValue)) {
                     let curs = readFirst(resultWI.table, resultWI.def);
                     let num = 0;

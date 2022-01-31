@@ -7,6 +7,11 @@ import {getLastRowId} from "../BlockIO/getLastRowId";
 import {setLastRowId} from "../BlockIO/setLastRowId";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 
+
+export const rowHeaderSize = 4 + // ROWID
+                             1; // FLAG
+
+
 /*
     adds a row to the table and returns the full row DataView
 
@@ -21,7 +26,7 @@ export function addRow(tb: ITableData, growBy: number = 4096): DataView {
         tb.blocks = [d];
     } else {
         d = tb.blocks[tb.blocks.length -1];
-        if (freeSpaceInBlock(d) < length + 5) {
+        if (freeSpaceInBlock(d) < length + rowHeaderSize) {
             d = newBlock(4096, BlockType.rows, tb.blocks.length+1);
             tb.blocks.push(d);
         }
@@ -34,7 +39,7 @@ export function addRow(tb: ITableData, growBy: number = 4096): DataView {
     dv.setUint32(offset, rowId);
     dv.setUint8(offset + 4, 0);
     // update the next offset
-    dv.setUint32(kBlockHeaderField.DataEnd, offset + length + 5);
+    dv.setUint32(kBlockHeaderField.DataEnd, offset + length + rowHeaderSize);
     // return a dataview of the empty record
-    return new DataView(d, offset + 5, length);
+    return new DataView(d, offset, length + rowHeaderSize);
 }

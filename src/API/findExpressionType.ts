@@ -11,11 +11,12 @@ import {instanceOfTBoolValue} from "../Query/Guards/instanceOfTBoolValue";
 import {TTableWalkInfo} from "./TTableWalkInfo";
 import {findTableNameForColumn} from "./findTableNameForColumn";
 import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
-import {DBData} from "./DBInit";
+import {SKSQL} from "./SKSQL";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TParserError} from "./TParserError";
 import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
 import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
+import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 
 export interface TFindExpressionTypeOptions {
     callbackOnTColumn: boolean;
@@ -23,6 +24,7 @@ export interface TFindExpressionTypeOptions {
 
 export function findExpressionType(o: any,
                                    tables: TTableWalkInfo[],
+                                   parameters: {name: string, type: TableColumnType, value: any}[],
                                    callback?: (o: any, key: string, value: string | number | boolean | any, options: TFindExpressionTypeOptions ) => boolean,
                                    options: TFindExpressionTypeOptions = {callbackOnTColumn: false}): TableColumnType {
     let ret = TableColumnType.int;
@@ -40,6 +42,13 @@ export function findExpressionType(o: any,
         if (instanceOfTQueryExpression(o)) {
             types.push(recursion(o.value.left));
             types.push(recursion(o.value.right));
+        }
+        if (instanceOfTVariable(o)) {
+            let param = parameters.find((p) => { return p.name === o.name;});
+
+            if (param.type !== undefined) {
+                return param.type;
+            }
         }
         if (instanceOfTColumn(o)) {
             let name = o.column;
@@ -70,10 +79,10 @@ export function findExpressionType(o: any,
             return colDef.type;
         }
         if (instanceOfTNumber(o)) {
-            if (o.value.indexOf(".")) {
+            if (o.value.indexOf(".") > -1) {
                 return TableColumnType.numeric;
             }
-            return TableColumnType.int;
+            return TableColumnType.int32;
         }
         if (instanceOfTDate(o)) {
             return TableColumnType.date;
@@ -92,7 +101,7 @@ export function findExpressionType(o: any,
         }
         if (instanceOfTQueryFunctionCall(o)) {
             let fnName = o.value.name;
-            let fnData = DBData.instance.getFunctionNamed(fnName);
+            let fnData = SKSQL.instance.getFunctionNamed(fnName);
             if (fnData === undefined) {
                 throw new TParserError("Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.");
             }
@@ -103,7 +112,7 @@ export function findExpressionType(o: any,
             }
 
             for (let i = 0; i < o.value.parameters.length; i++) {
-                findExpressionType(o.value.parameters[i], tables, callback, {callbackOnTColumn: true});
+                findExpressionType(o.value.parameters[i], tables, parameters, callback, {callbackOnTColumn: true});
             }
             return fnData.returnType;
         }

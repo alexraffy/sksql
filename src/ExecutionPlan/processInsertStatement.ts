@@ -1,16 +1,12 @@
-import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
-import {instanceOfTQueryInsert} from "../Query/Guards/instanceOfTQueryInsert";
 import {TQueryInsert} from "../Query/Types/TQueryInsert";
-import {DBData} from "./DBInit";
-import {readTableDefinition} from "../Table/readTableDefinition";
-import {addRow} from "../Table/addRow";
+import {addRow, rowHeaderSize} from "../Table/addRow";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {TColumn} from "../Query/Types/TColumn";
-import {evaluate} from "./evaluate";
+import {evaluate} from "../API/evaluate";
 import {writeValue} from "../BlockIO/writeValue";
 import {ParseResult} from "../BaseParser/ParseResult";
-import {SQLResult} from "./SQLResult";
+import {SQLResult} from "../API/SQLResult";
 import {updateTableIdentityValue} from "../BlockIO/updateTableIdentityValue";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
 import {parse} from "../BaseParser/parse";
@@ -18,37 +14,61 @@ import {predicateTQueryExpression} from "../Query/Parser/predicateTQueryExpressi
 import {ParseError} from "../BaseParser/ParseError";
 import {Stream} from "../BaseParser/Stream";
 import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
-import {evaluateBooleanClauseWithRow} from "./evaluateBooleanClauseWithRow";
+
 import {numberOfRows} from "../Table/numberOfRows";
-import {TTableWalkInfo} from "./TTableWalkInfo";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {numeric} from "../Numeric/numeric";
 import {TDate} from "../Query/Types/TDate";
-import {TParserError} from "./TParserError";
+import {TParserError} from "../API/TParserError";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
+import {convertValue} from "../API/convertValue";
+import {TExecutionContext} from "./TExecutionContext";
+import {openTables} from "../API/openTables";
+import {createNewContext} from "./newContext";
+import {evaluateWhereClause} from "../API/evaluateWhereClause";
+import {readFirst} from "../Cursor/readFirst";
+import {runScan} from "./runScan";
+import {cloneContext} from "./cloneContext";
+import {TEPScan} from "./TEPScan";
+import {TTable} from "../Query/Types/TTable";
+import {TQueryComparison} from "../Query/Types/TQueryComparison";
+import {TNumber} from "../Query/Types/TNumber";
+import {TString} from "../Query/Types/TString";
+import {columnTypeToString} from "../Table/columnTypeToString";
+import {readValue} from "../BlockIO/readValue";
+import {columnTypeIsNumeric} from "../Table/columnTypeIsNumeric";
+import {numericDisplay} from "../Numeric/numericDisplay";
+import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
+import {columnTypeIsBoolean} from "../Table/columnTypeIsBoolean";
+import {TBoolValue} from "../Query/Types/TBoolValue";
+import {columnTypeIsDate} from "../Table/columnTypeIsDate";
+import {TableColumnType} from "../Table/TableColumnType";
+import {TComparison} from "../Query/Types/TComparison";
+import {kQueryComparison} from "../Query/Enums/kQueryComparison";
+import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
+import {instanceOfTQueryComparison} from "../Query/Guards/instanceOfTQueryComparison";
+import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
+import {checkConstraint} from "./checkConstraint";
+import {predicateValidExpressions} from "../Query/Parser/predicateValidExpressions";
+import {returnPred} from "../BaseParser/Predicates/ret";
+import {oneOf} from "../BaseParser/Predicates/oneOf";
 
 
-export function processInsertStatement(parseResult: ParseResult, statement: TQueryInsert, parameters: {name: string, value: any}[], walk: TTableWalkInfo[]): SQLResult {
-    if (!instanceOfParseResult(parseResult) || !instanceOfTQueryInsert(statement)) {
-        return {
-            error: "Misformed Insert Query.",
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: ""
-            }
-        } as SQLResult;
-    }
+export function processInsertStatement(context: TExecutionContext, statement: TQueryInsert) {
     let insert: TQueryInsert = statement;
     let tbl: ITable;
     let def: ITableDefinition;
-    for (let i = 0; i < walk.length; i++) {
-        if (walk[i].name.toUpperCase() === insert.table.table.toUpperCase()) {
-            tbl = walk[i].table;
-            def = walk[i].def;
+    let rowLength: number;
+    let newContext = JSON.parse(JSON.stringify(context));
+    newContext.openTables = openTables(statement);
+    for (let i = 0; i < newContext.openTables.length; i++) {
+        if (newContext.openTables[i].name.toUpperCase() === insert.table.table.toUpperCase()) {
+            tbl = newContext.openTables[i].table;
+            def = newContext.openTables[i].def;
+            rowLength = newContext.openTables[i].rowLength;
             break;
         }
     }
@@ -62,7 +82,12 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
     let currentValuesIndex = 0;
     for (let currentValuesIndex = 0; currentValuesIndex < insert.values.length; currentValuesIndex++) {
         numberOfRowsAdded++;
-        let row = addRow(tbl.data, 4096);
+
+        // write to a temp buffer
+        // if no constraint errors happen,
+        // we'll copy the content to a new row
+        let ab = new ArrayBuffer(rowLength);
+        let row = new DataView(ab, 0, rowLength);
 
         for (let i = 0; i < def.columns.length; i++) {
             let colDef = def.columns[i];
@@ -78,7 +103,8 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
                 }
                 newKey = value;
                 def.identityValue = value;
-                writeValue(tbl, def, colDef, row, value, 0);
+                writeValue(tbl, def, colDef, row, value, rowHeaderSize);
+                context.scopedIdentity = value;
                 columnProcessed = true;
             }
 
@@ -94,46 +120,39 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
                     if (colDef.name.toUpperCase() === colName.toUpperCase()) {
                         columnProcessed = true;
                         let val = insert.values[currentValuesIndex].values[x];
-                        value = evaluate(val, parameters, undefined, colDef);
-                        writeValue(tbl, def, colDef, row, value, 0);
+                        value = evaluate(newContext, val, colDef);
+                        let val2Write = convertValue(value, colDef.type);
+                        writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
                     }
                 }
             } else {
                 columnProcessed = true;
                 let val = insert.values[currentValuesIndex].values[i];
-                value = evaluate(val, parameters, undefined, colDef);
-                writeValue(tbl, def, colDef, row, value, 0);
+                value = evaluate(newContext, val, colDef);
+                let val2Write = convertValue(value, colDef.type);
+                writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
             }
             if (!columnProcessed) {
                 if (colDef.defaultExpression !== undefined && colDef.defaultExpression !== "") {
                     let res: ParseResult | ParseError = parse((name, value) => {
-                    }, predicateTQueryExpression, new Stream(colDef.defaultExpression, 0));
+                    }, function *() {
+                        let ret = yield oneOf([predicateTQueryExpression, predicateValidExpressions], "");
+                        yield returnPred(ret);
+                    }, new Stream(colDef.defaultExpression, 0));
                     if (instanceOfParseError(res)) {
-                        return {
-                            error: "Error: Default Value for column " + colDef.name.toUpperCase() + " could not be computed.",
-                            rowCount: 0,
-                            resultTableName: "",
-                            executionPlan: {
-                                description: ""
-                            }
-                        } as SQLResult;
+                        throw new TParserError("Error: Default Value for column " + colDef.name.toUpperCase() + " could not be computed.");
                     }
-                    value = evaluate(res.value, [], [], colDef);
-                    writeValue(tbl, def, colDef, row, value, 0);
+                    let newContext: TExecutionContext = createNewContext("", context.query, undefined);
+                    value = evaluate(newContext, res.value, colDef);
+                    let val2Write = convertValue(value, colDef.type);
+                    writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
                     columnProcessed = true;
                 }
             }
 
             // Check if there's a NOT NULL constraint
             if (colDef.nullable === false && (value === undefined || value === null)) {
-                return {
-                    error: "Error: Column " + colDef.name.toUpperCase() + " must not be NULL.",
-                    rowCount: 0,
-                    resultTableName: "",
-                    executionPlan: {
-                        description: ""
-                    }
-                } as SQLResult;
+                throw new TParserError("Error: Column " + colDef.name.toUpperCase() + " must not be NULL.");
             }
 
             for (let i = 0; i < def.constraints.length; i++) {
@@ -153,28 +172,14 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
 
         for (let i = 0; i < def.constraints.length; i++) {
             let constraint = def.constraints[i];
-            switch (constraint.type) {
-                case kTableConstraintType.check:
-                    let value = evaluateBooleanClauseWithRow(constraint.check, tbl, def, row, 0);
-                    if (value === false) {
-                        return {
-                            error: "Error: Insert statement does not fulfill constraint " + constraint.constraintName + "\nStatement: " + parseResult.start.input,
-                            rowCount: 0,
-                            resultTableName: "",
-                            executionPlan: {
-                                description: ""
-                            }
-                        } as SQLResult
-                    }
-                    break;
-            }
+            checkConstraint(context, tbl, def, constraint, row, rowLength);
         }
 
+        // we write the row to the block
+        let newRow = addRow(tbl.data, 655360);
+        copyBytesBetweenDV(rowLength - rowHeaderSize, row, newRow, rowHeaderSize, rowHeaderSize);
+
     }
-
-
-
-
 
 
     // update the identity if we have it.
@@ -183,13 +188,12 @@ export function processInsertStatement(parseResult: ParseResult, statement: TQue
     }
 
 
-
-    return {
+    context.results.push({
         resultTableName: "",
         rowCount: numberOfRowsAdded,
         executionPlan: {
             description: ""
         }
-    } as SQLResult
+    } as SQLResult);
 
 }

@@ -14,6 +14,13 @@ import {TVariableDeclaration} from "../Types/TVariableDeclaration";
 import {predicateTDate} from "./predicateTDate";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
+import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
+import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {predicateTColumnType} from "./predicateTColumnType";
+import {predicateTBoolValue} from "./predicateTBoolValue";
+import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
+import {predicateValidExpressions} from "./predicateValidExpressions";
+import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
 
 /*
     tries to parse a variable declaration
@@ -23,24 +30,37 @@ export const predicateTVariableDeclaration = function *(callback) {
     if (callback === "isGenerator") {
         return;
     }
+    let ret : TVariableDeclaration = {
+        kind: "TVariableDeclaration",
+        declarations: []
+    };
+
     const declare = yield str("DECLARE");
-    yield whitespace;
-    const varname = yield predicateTVariable;
-    yield whitespace;
-    const vartype = yield literal;
-    yield maybe(whitespace);
-    const eq = yield maybe(str("="));
-    yield maybe(whitespace);
-    const value = yield maybe(oneOf([predicateTQueryExpression, predicateTColumn, predicateTDateTime, predicateTDate, predicateTTime, predicateTString, predicateTLiteral, predicateTNumber], "An expression"));
-    yield maybe(whitespace);
+
+    let gotMore = ",";
+    while (gotMore === ",") {
+        yield atLeast1(whitespaceOrNewLine);
+        const varname = yield predicateTVariable;
+        yield atLeast1(whitespaceOrNewLine);
+        const vartype = yield predicateTColumnType;
+        yield maybe(atLeast1(whitespaceOrNewLine));
+        const eq = yield maybe(str("="));
+        yield maybe(atLeast1(whitespaceOrNewLine));
+        const value = yield maybe(oneOf([predicateTQueryExpression, predicateTParenthesisGroup,  predicateValidExpressions], ""));
+        yield maybe(atLeast1(whitespaceOrNewLine));
+
+        ret.declarations.push(
+            {
+                name: varname,
+                type: vartype,
+                value: value
+            }
+        );
+
+        gotMore = yield maybe(str(","));
+    }
     yield maybe(str(";"));
-    yield returnPred(
-        {
-            kind: "TVariableDeclaration",
-            name: varname,
-            type: vartype,
-            value: value
-        } as TVariableDeclaration
-    )
+    yield maybe(atLeast1(whitespaceOrNewLine));
+    yield returnPred(ret);
 
 }

@@ -3,7 +3,15 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
-import {compileNewRoutines, ITableDefinition, TableColumnType, TWSRDataResponse, WSROK} from "../main";
+import {
+    compileNewRoutines,
+    ITableDefinition,
+    TableColumnType,
+    TWSRDataResponse,
+    TWSRGNIDResponse,
+    WSRGNID,
+    WSROK
+} from "../main";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {registerFunctions} from "../Functions/registerFunctions";
@@ -21,13 +29,15 @@ import {TDBEventsDelegate} from "./TDBEventsDelegate";
 import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
 import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {readTableName} from "../Table/readTableName";
+import {CTableInfoManager} from "./CTableInfoManager";
 
 let workerJavascript = "";
 workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
 workerJavascript += "\n";
+workerJavascript += "let db = new sksql.SKSQL();\n";
 workerJavascript += "function runQuery(id, str, params) {\n";
 //workerJavascript += "   console.log(\"QUERY: \" + str);\n";
-workerJavascript += "   let st = new sksql.SQLStatement(str);\n";
+workerJavascript += "   let st = new sksql.SQLStatement(db, str);\n";
 workerJavascript += "   if (params !== undefined && params.length > 0) {\n"
 workerJavascript += "       for (let i = 0; i < params.length; i++) {\n";
 workerJavascript += "           st.setParameter(params[i].key, params[i].value);\n";
@@ -36,7 +46,7 @@ workerJavascript += "   }\n";
 workerJavascript += "   let result = st.run();\n";
 //workerJavascript += "   console.dir(result);\n";
 workerJavascript += "   if (result.error === undefined && result.resultTableName !== \"\") {\n";
-workerJavascript += "       parentPort.postMessage({c: \"DB\", d: sksql.DBData.instance.allTables});\n";
+workerJavascript += "       parentPort.postMessage({c: \"DB\", d: db.allTables});\n";
 workerJavascript += "   }\n";
 workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, result: result} });\n";
 workerJavascript += "}\n\n";
@@ -45,7 +55,7 @@ workerJavascript += "   if (value !== undefined && value.c !== undefined) {\n";
 // workerJavascript += "       console.log(\"WW Received:\", value.c);\n";
 workerJavascript += "       switch (value.c) {\n";
 workerJavascript += "           case \"DB\":\n";
-workerJavascript += "               sksql.DBData.instance.allTables = value.d;\n";
+workerJavascript += "               db.allTables = value.d;\n";
 workerJavascript += "               break;\n";
 workerJavascript += "           case \"QR\":\n";
 workerJavascript += "               runQuery(value.d.id, value.d.query, value.d.params);\n";
@@ -62,9 +72,8 @@ interface TConnectionData {
     delegate: TDBEventsDelegate;
 }
 
-export class SKSQL {
-    private static _instance: SKSQL;
 
+export class SKSQL {
 
     allTables: ITable[];
     public connections: TConnectionData[] = [];
@@ -74,48 +83,52 @@ export class SKSQL {
     functions: TRegisteredFunction[] = [];
     procedures: TQueryCreateProcedure[] = [];
 
-
+    tableInfo: CTableInfoManager;
 
     constructor() {
         this.allTables = [];
-        SKSQL._instance = this;
-        let dual = new SQLStatement("CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
+        //SKSQL._instance = this;
+        this.tableInfo = new CTableInfoManager(this);
+
+        let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
         dual.run();
-        let routines = new SQLStatement("CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
+        let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
         routines.run();
-        registerFunctions();
+        registerFunctions(this);
     }
 
+    /*
     static get instance(): SKSQL {
         if (SKSQL._instance === undefined) {
             new SKSQL();
         }
         return SKSQL._instance;
     }
+     */
 
 
     connectToDatabase(databaseHashId: string, delegate: TDBEventsDelegate) {
 
         let connectionEntry: TConnectionData = {
             databaseHashId: databaseHashId,
-            socket: new CWebSocket(),
+            socket: new CWebSocket(this, databaseHashId),
             delegate: delegate,
         }
         let socketDelegate: TWebSocketDelegate = {
             databaseHashId: databaseHashId,
-            connectionError(databaseHashId: string, error: string) {
-                let connectionInfo: TConnectionData = SKSQL.instance.getConnectionInfoForDB(this.databaseHashId);
+            connectionError(db: SKSQL, databaseHashId: string, error: string) {
+                let connectionInfo: TConnectionData = db.getConnectionInfoForDB(this.databaseHashId);
                 if (connectionInfo !== undefined) {
                     if (connectionInfo.delegate !== undefined && connectionInfo.delegate.connectionError !== undefined) {
-                        connectionInfo.delegate.connectionError(databaseHashId, error);
+                        connectionInfo.delegate.connectionError(db, databaseHashId, error);
                     }
                 }
             },
-            on(databaseHashId: string, msg: TSocketResponse) {
-                let connectionInfo: TConnectionData = SKSQL.instance.getConnectionInfoForDB(this.databaseHashId);
+            on(db: SKSQL, databaseHashId: string, msg: TSocketResponse) {
+                let connectionInfo: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
                 if (msg.message === WSRAuthenticatePlease) {
                     if (connectionInfo.delegate !== undefined) {
-                        connectionInfo.auth = connectionInfo.delegate.authRequired(this.databaseHashId);
+                        connectionInfo.auth = connectionInfo.delegate.authRequired(db, databaseHashId);
 
                         connectionInfo.socket.send(WSRAuthenticate, {
                             id: msg.id,
@@ -135,15 +148,23 @@ export class SKSQL {
                 if (msg.message === WSRSQL) {
                     let payload = msg.param as TWSRSQL;
                     try {
-                        let statement = new SQLStatement(payload.r, false);
+                        let statement = new SQLStatement(db, payload.r, false);
+                        if (payload.p !== undefined) {
+                            for (let i = 0; i < payload.p.length; i++) {
+                                statement.setParameter(payload.p[i].name, payload.p[i].value, payload.p[i].type);
+                            }
+                        }
                         let rets = statement.run();
                     } catch (e) {
                         console.warn(e.message);
                     }
                 }
                 if (msg.message === WSROK) {
-                    compileNewRoutines();
-
+                    compileNewRoutines(db);
+                    if (connectionInfo.delegate !== undefined && connectionInfo.delegate.ready !== undefined) {
+                        db.tableInfo.syncAll();
+                        connectionInfo.delegate.ready(db, databaseHashId);
+                    }
                 }
                 if (msg.message === WSRDataRequest) {
                     let payload = msg.param as TWSRDataResponse;
@@ -165,13 +186,13 @@ export class SKSQL {
                             }
                         }
                         let tblDef = readTableDefinition(t.data, true);
-                        if (SKSQL.instance.getTable(tblDef.name) !== undefined) {
-                            SKSQL.instance.dropTable(tblDef.name);
+                        if (db.getTable(tblDef.name) !== undefined) {
+                            db.dropTable(tblDef.name);
                         }
-                        SKSQL.instance.allTables.push(t);
+                        db.allTables.push(t);
 
                     } else if (payload.type === "B") {
-                        let t = SKSQL.instance.getTable(payload.tableName);
+                        let t = db.getTable(payload.tableName);
                         if (t !== undefined) {
                             let buf: SharedArrayBuffer | ArrayBuffer;
                             if (SKSQL.supportsSharedArrayBuffers) {
@@ -189,13 +210,13 @@ export class SKSQL {
                 }
 
                 if (connectionInfo.delegate !== undefined) {
-                    connectionInfo.delegate.on(this.databaseHashId, msg.message, msg.param);
+                    connectionInfo.delegate.on(db, databaseHashId, msg.message, msg.param);
                 }
             },
-            connectionLost(databaseHashId: string) {
-                let t: TConnectionData = SKSQL.instance.getConnectionInfoForDB(this.databaseHashId);
+            connectionLost(db: SKSQL, databaseHashId: string) {
+                let t: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
                 if (t.delegate !== undefined) {
-                    t.delegate.connectionLost(this.databaseHashId);
+                    t.delegate.connectionLost(db, databaseHashId);
                 }
             }
         }
@@ -205,12 +226,12 @@ export class SKSQL {
             connectionEntry.socket.connect(connectionEntry.databaseHashId).then( (v) => {
                 if (v === false) {
                     if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
-                        connectionEntry.delegate.connectionError(databaseHashId, "Connection was rejected.");
+                        connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
                     }
                 }
             }).catch((e) => {
                 if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
-                    connectionEntry.delegate.connectionError(databaseHashId, "Connection error: " + e.message);
+                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
                 }
             })
         }
@@ -265,15 +286,36 @@ export class SKSQL {
 
     dropTable(tableName: string) {
         let idx = this.allTables.findIndex((t) => {
-            let tb = readTableDefinition(t.data);
-            return (tb.name.toUpperCase() === tableName.toUpperCase());
+            let tb = readTableName(t.data);
+            return (tb.toUpperCase() === tableName.toUpperCase());
         });
         if (idx > -1) {
             this.allTables.splice(idx, 1);
+            this.tableInfo.remove(tableName);
         }
     }
 
+    getNextId(databaseHashId: string, table: string, count: number = 1): Promise<(number | number[])> {
+        return new Promise<(number | number[])> ( (resolve, reject) => {
+            let ci = this.getConnectionInfoForDB(databaseHashId);
+            if (ci === undefined) {
+                return reject({message: "Unknown connection."});
+            }
+            let uid = generateV4UUID();
+            ci.socket.registerForCallback(uid, WSRGNID, (payload: any) => {
+                let res = payload as TWSRGNIDResponse;
+                ci.socket.deregisterCallback(uid);
+                if (res.ids.length === 1) {
+                    resolve(res.ids[0]);
+                } else if (res.ids.length > 1) {
+                    resolve(res.ids);
+                }
+            });
+            ci.socket.send(WSRGNID, { uid: uid, table: table, count: count });
 
+
+        });
+    }
 
     getConnectionInfoForDB(databaseHashId: string) {
         return this.connections.find((c) => { return c.databaseHashId === databaseHashId;});
@@ -323,13 +365,13 @@ export class SKSQL {
         this.workers[idx].postMessage(msg);
     }
 
-    receivedResult(id: string, result: SQLResult[]) {
+    receivedResult(id: string, result: SQLResult) {
         let idx = this.pendingQueries.findIndex((pq) => { return pq.id === id;});
         if (idx > -1) {
-            if (result[0].error !== undefined) {
-                this.pendingQueries[idx].reject(result[0].error);
+            if (result.error !== undefined) {
+                this.pendingQueries[idx].reject(result.error);
             } else {
-                this.pendingQueries[idx].resolve(result[0].resultTableName);
+                this.pendingQueries[idx].resolve(result.resultTableName);
             }
         }
         this.pendingQueries.splice(idx, 1);

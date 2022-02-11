@@ -10,6 +10,8 @@ export enum kBlockHeaderField {
     DataEnd = 9,
     LastRowId = 13,
     NumRows = 17,
+    BlockDirty = 21,
+
     // Table description
     TableDefMagic = 25,
     TableDefVersion = 29,

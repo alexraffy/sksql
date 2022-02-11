@@ -112,10 +112,10 @@ function buildConstraintComparison(ret: PPP,
 }
 
 
-export function checkConstraint(context: TExecutionContext, tbl: ITable, def: ITableDefinition, constraint: TTableConstraint, row: DataView, rowLength: number) {
+export function checkConstraint(db: SKSQL, context: TExecutionContext, tbl: ITable, def: ITableDefinition, constraint: TTableConstraint, row: DataView, rowLength: number) {
     switch (constraint.type) {
         case kTableConstraintType.check:
-            let value = evaluateWhereClause(context, constraint.check, {forceTable: "", aggregateObjects: [], aggregateMode: "none"},
+            let value = evaluateWhereClause(db, context, constraint.check, {forceTable: "", aggregateObjects: [], aggregateMode: "none"},
                 {
                     table: tbl,
                     def: def,
@@ -157,7 +157,7 @@ export function checkConstraint(context: TExecutionContext, tbl: ITable, def: IT
                     rowLength: rowLength
                 }
             ]
-            runScan(nc, tep, (scan: TEPScan, walking) => {
+            runScan(db, nc, tep, (scan: TEPScan, walking) => {
                 throw new TParserError("Error: Insert statement does not fulfill constraint " + constraint.constraintName + "\nStatement: " +
                     (context.parseResult as ParseResult).start.input);
                 return false;
@@ -171,7 +171,7 @@ export function checkConstraint(context: TExecutionContext, tbl: ITable, def: IT
             let ret: PPP = { exp: undefined, ptr: undefined};
 
             let foreignTableName = constraint.foreignKeyTable;
-            let foreignTable = SKSQL.instance.getTable(foreignTableName);
+            let foreignTable = db.getTable(foreignTableName);
             let foreignTableDef = readTableDefinition(foreignTable.data);
             let foreignTableCursor = readFirst(foreignTable, foreignTableDef);
             let foreignTableRowLength = foreignTableCursor.rowLength + rowHeaderSize;
@@ -203,7 +203,7 @@ export function checkConstraint(context: TExecutionContext, tbl: ITable, def: IT
                 }
             ]
             let foundReference = false;
-            runScan(nc, tep, (scan: TEPScan, walking) => {
+            runScan(db, nc, tep, (scan: TEPScan, walking) => {
                 foundReference = true;
                 return false;
             });

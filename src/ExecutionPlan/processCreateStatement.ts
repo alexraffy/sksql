@@ -19,7 +19,7 @@ import {TTableConstraint} from "../Table/TTableConstraint";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
 
 
-export function processCreateStatement(context: TExecutionContext, statement: TQueryCreateTable): SQLResult {
+export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): SQLResult {
     if (instanceOfTQueryCreateTable(statement)) {
         let c: TQueryCreateTable = statement;
         let tblDef = {
@@ -61,7 +61,7 @@ export function processCreateStatement(context: TExecutionContext, statement: TQ
                 }
             );
         }
-        if (SKSQL.instance.getTable(tblDef.name) !== undefined) {
+        if (db.getTable(tblDef.name) !== undefined) {
             throw new TParserError("Table " + tblDef.name + " already exists.");
         }
 
@@ -77,7 +77,7 @@ export function processCreateStatement(context: TExecutionContext, statement: TQ
                         if (tblDef.name.toUpperCase() === c.foreignKeyTable.toUpperCase()) {
                             ptrConstraint = tblDef.constraints;
                         } else {
-                            let tblFK = SKSQL.instance.getTable(c.foreignKeyTable);
+                            let tblFK = db.getTable(c.foreignKeyTable);
                             let tblFKDef = readTableDefinition(tblFK.data, false);
                             ptrConstraint = tblFKDef.constraints;
                         }
@@ -109,46 +109,33 @@ export function processCreateStatement(context: TExecutionContext, statement: TQ
         }
 
 
-        newTable(tblDef);
+        newTable(db, tblDef);
 
         // the next statement may need info about this table
-        let tt = SKSQL.instance.getTableDataAndIndex(statement.name.table);
-        let def = readTableDefinition(tt.table.data);
+        let tt = db.tableInfo.get(statement.name.table);
+
         context.openTables.push(
             {
-                name: def.name,
-                table: tt.table,
-                def: def,
-                rowLength: recordSize(tt.table.data),
-                cursor: readFirst(tt.table, def),
+                name: tt.name,
+                table: tt.pointer,
+                def: tt.def,
+                rowLength: recordSize(tt.pointer.data),
+                cursor: readFirst(tt.pointer, tt.def),
                 alias: ""
             }
         );
 
+        if (context.result.messages === undefined) {
+            context.result.messages = "CREATE TABLE";
+        } else {
+            context.result.messages += "\r\n" + "CREATE TABLE";
+        }
         context.broadcastQuery = true;
-        context.results.push({
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: "CREATE"
-            },
-            perfs: {
-                parser: 0,
-                query: 0
-            }
-        } as SQLResult);
         return;
     }
-    context.results.push({
-        error: "Misformed CREATE TABLE query.",
-        resultTableName: "",
-        rowCount: 0,
-        executionPlan: {
-            description: ""
-        },
-        perfs: {
-            parser: 0,
-            query: 0
-        }
-    });
+    if (context.result.error === undefined) {
+        context.result.error = "Misformed CREATE TABLE query.";
+    } else {
+        context.result.error += "\r\n" + "Misformed CREATE TABLE query.";
+    }
 }

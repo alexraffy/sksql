@@ -50,6 +50,9 @@ import {conversionMap} from "./conversionMap";
 import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
+import {instanceOfTVariableAssignment} from "../Query/Guards/instanceOfTVariableAssignment";
+import {cloneContext} from "../ExecutionPlan/cloneContext";
+import {swapContext} from "../ExecutionPlan/swapContext";
 
 export interface TEvaluateOptions {
     aggregateMode: "none" | "init" | "row" | "final",
@@ -59,6 +62,7 @@ export interface TEvaluateOptions {
 
 
 export function evaluate(
+    db: SKSQL,
     context: TExecutionContext,
     struct: string | number | bigint | boolean | TQueryExpression | TValidExpressions | TQueryColumn,
     colDef: TableColumn,
@@ -71,6 +75,10 @@ export function evaluate(
     } = undefined
 ): string | number | boolean | bigint | numeric | TDate | TTime | TDateTime
 {
+    if (struct === undefined) {
+        return undefined;
+    }
+
     if (instanceOfTBoolValue(struct)) {
         return struct.value;
     }
@@ -89,7 +97,7 @@ export function evaluate(
     }
     if (instanceOfTCast(struct)) {
         let t = typeString2TableColumnType(struct.cast.type);
-        let exp = evaluate(context, struct.exp, colDef, options, withRow);
+        let exp = evaluate(db, context, struct.exp, colDef, options, withRow);
         return convertValue(exp, t);
     }
 
@@ -146,7 +154,8 @@ export function evaluate(
         // look up the column
         if (withRow === undefined) {
             if (table === "") {
-                let tablesMatch = findTableNameForColumn(name, context.openTables, options.forceTable);
+
+                let tablesMatch = findTableNameForColumn(name, context.openTables, context.currentStatement, options.forceTable);
                 if (tablesMatch.length !== 1) {
                     if (context.openTables.length === 0) {
                         throw new TParserError("Unknown column name " + name);
@@ -180,11 +189,11 @@ export function evaluate(
         }
     }
     if (instanceOfTQueryColumn(struct)) {
-        return evaluate(context, struct.expression, colDef, options, withRow);
+        return evaluate(db, context, struct.expression, colDef, options, withRow);
     }
     if (instanceOfTQueryExpression(struct)) {
-        let left = evaluate(context, struct.value.left, undefined, options, withRow);
-        let right = evaluate(context, struct.value.right, undefined, options, withRow);
+        let left = evaluate(db, context, struct.value.left, undefined, options, withRow);
+        let right = evaluate(db, context, struct.value.right, undefined, options, withRow);
         let op = struct.value.op;
 
         let convertToType = conversionMap(left, right);
@@ -235,11 +244,20 @@ export function evaluate(
             return left && right;
         }
     }
+
+    if (instanceOfTVariableAssignment(struct)) {
+        let value = evaluate(db, context, struct.value, colDef, options, withRow);
+        let param = context.stack.find((p) => { return p.name.toUpperCase() === struct.name.name.toUpperCase();});
+        if (param !== undefined) {
+            param.value = value;
+        }
+    }
+
     if (instanceOfTQueryFunctionCall(struct)) {
         let fnName = struct.value.name;
-        let fnData = SKSQL.instance.getFunctionNamed(fnName);
+        let fnData = db.getFunctionNamed(fnName);
         if (fnData === undefined) {
-            throw new TParserError("Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.");
+            throw new TParserError("Function " + fnName + " does not exist. Use declareFunction on your SKSQL instance before using it.");
         }
         if (fnData.parameters.length !== struct.value.parameters.length) {
             throw new TParserError(`Function ${fnName} expects ${fnData.parameters.length} parameters. Instead got ${struct.value.parameters.length}`);
@@ -249,8 +267,8 @@ export function evaluate(
         if (fnData.type === kFunctionType.scalar) {
             for (let i = 0; i < struct.value.parameters.length; i++) {
                 let param = struct.value.parameters[i];
-                let expType = findExpressionType(param, context.openTables, context.stack);
-                let paramValue = evaluate(context, param, colDef, options, withRow);
+                let expType = findExpressionType(db, param, context.openTables, context.stack);
+                let paramValue = evaluate(db, context, param, colDef, options, withRow);
 
                 //if (expType !== fnData.parameters[i].type) {
 //                    if (!typeCanConvertTo(paramValue, expType, fnData.parameters[i].type)) {
@@ -268,10 +286,14 @@ export function evaluate(
                 }
             }
             if (instanceOfTQueryCreateFunction(fnData.fn)) {
-                let newContext: TExecutionContext = JSON.parse(JSON.stringify(context));
+                let newContext: TExecutionContext = cloneContext(context, "Function call", false, false);
                 newContext.label = fnData.name;
                 newContext.stack = sqlFunctionParams;
-                let result = runFunction(newContext, fnData.fn);
+                newContext.scopedIdentity = context.scopedIdentity;
+                let result = runFunction(db, newContext, fnData.fn);
+                swapContext(context, newContext);
+                context.exitExecution = false;
+                context.breakLoop = false;
                 return result;
             } else {
                 let result = fnData.fn(context, ...fnParameters);

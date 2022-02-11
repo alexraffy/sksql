@@ -11,19 +11,20 @@ import {evaluateWithRowDEPREC} from "./evaluateWithRow";
 import { TArray } from "../Query/Types/TArray";
 import { compareValues } from "./compareValues";
 import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
+import {SKSQL} from "./SKSQL";
 
 
-export function evaluateBooleanClauseWithRowDEPREC(struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
+export function evaluateBooleanClauseWithRowDEPREC(db: SKSQL, struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
     if (struct === undefined) {
         return true;
     }
 
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
-        let leftValue = evaluateWithRowDEPREC(qc.left, table, def, undefined, fullRow, offset);
+        let leftValue = evaluateWithRowDEPREC(db, qc.left, table, def, undefined, fullRow, offset);
         let rightValue = undefined;
         if (!instanceOfTArray(qc.right)) {
-            rightValue = evaluateWithRowDEPREC(qc.right, table, def, undefined, fullRow, offset);
+            rightValue = evaluateWithRowDEPREC(db, qc.right, table, def, undefined, fullRow, offset);
         }
         switch (qc.comp.value) {
             case kQueryComparison.equal:
@@ -58,7 +59,7 @@ export function evaluateBooleanClauseWithRowDEPREC(struct: TQueryComparisonExpre
 
                 for (let x = 0; x < rightArray.array.length; x++) {
                     // @ts-ignore
-                    let rv = evaluate(rightArray.array[x], parameters, tables, undefined);
+                    let rv = evaluate(db, rightArray.array[x], parameters, tables, undefined);
                     if (compareValues(leftValue, rv) === 0) {
                         return true;
                     }
@@ -69,8 +70,8 @@ export function evaluateBooleanClauseWithRowDEPREC(struct: TQueryComparisonExpre
         }
     }
     if (instanceOfTQueryComparisonExpression(struct)) {
-        let leftValue = evaluateBooleanClauseWithRowDEPREC(struct.a, table, def, fullRow, offset);
-        let rightValue = evaluateBooleanClauseWithRowDEPREC(struct.b, table, def, fullRow, offset);
+        let leftValue = evaluateBooleanClauseWithRowDEPREC(db, struct.a, table, def, fullRow, offset);
+        let rightValue = evaluateBooleanClauseWithRowDEPREC(db, struct.b, table, def, fullRow, offset);
         switch (struct.bool) {
             case "AND":
                 return leftValue && rightValue;

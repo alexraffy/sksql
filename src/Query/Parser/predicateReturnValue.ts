@@ -22,8 +22,8 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
 export function * predicateReturnValue(callback) {
 
     yield str("RETURN");
-    yield atLeast1(whitespaceOrNewLine);
-    const value = yield oneOf([predicateTQueryExpression, predicateValidExpressions], "An expression");
+    yield maybe(atLeast1(whitespaceOrNewLine));
+    const value = yield maybe(oneOf([predicateTQueryExpression, predicateValidExpressions], "An expression"));
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield maybe(str(";"));
 

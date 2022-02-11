@@ -9,13 +9,26 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {TableColumnType} from "./TableColumnType";
 import {serializeTQuery} from "../API/serializeTQuery";
 import {kSysColumns} from "./kSysColumns";
+import {TableColumn} from "./TableColumn";
+import {TTableConstraint} from "./TTableConstraint";
 
 /*
     write a table header
 
  */
-export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
+export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition): ITableDefinition {
     let d: DataView = undefined;
+    let ret: ITableDefinition = {
+        name: tbl.name,
+        identityValue: tbl.identityValue,
+        identityIncrement: tbl.identityIncrement,
+        identitySeed: tbl.identitySeed,
+        identityColumnName: tbl.identityColumnName,
+        hasIdentity: tbl.hasIdentity,
+        columns: [],
+        constraints: [],
+        id: tbl.id
+    };
 
     // add sys columns
     // last id of the transaction that modified the row
@@ -99,6 +112,19 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
         if (c.defaultExpression !== undefined && typeof c.defaultExpression === "string" && c.defaultExpression !== "") {
             writeStringToUtf8ByteArray(d, offset + kBlockHeaderField.TableDefColumnDefaultExpression, c.defaultExpression, 255);
         }
+
+        let col: TableColumn = {
+            name: c.name,
+            length: c.length,
+            type: c.type,
+            nullable: c.nullable,
+            invisible: c.invisible,
+            defaultExpression: c.defaultExpression,
+            decimal: c.decimal,
+            offset: columnOffset
+        }
+        ret.columns.push(col);
+
         // column flag isNull
         columnOffset += 1;
         switch (c.type) {
@@ -143,6 +169,7 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
                 columnOffset += (1 * c.length);
         }
 
+
         offset += kBlockHeaderField.TableDefColumnEnd;
     }
     // update the size of a row
@@ -151,6 +178,20 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
     d.setUint32(kBlockHeaderField.TableDefConstraintsStart, offset);
     for (let i = 0; i < tbl.constraints.length; i++) {
         let c = tbl.constraints[i];
+
+        let cr: TTableConstraint = {
+            constraintName: c.constraintName,
+            type: c.type,
+            columns: c.columns,
+            foreignKeyColumnsRef: c.foreignKeyColumnsRef,
+            foreignKeyTable: c.foreignKeyTable,
+            check: c.check,
+            clustered: c.clustered,
+            foreignKeyOnDelete: c.foreignKeyOnDelete,
+            foreignKeyOnUpdate: c.foreignKeyOnUpdate
+        }
+        ret.constraints.push(cr);
+
         d.setUint8(offset + kBlockHeaderField.TableDefConstraintType, c.type);
         d.setUint8(offset + kBlockHeaderField.TableDefConstraintIsClustered, (c.clustered === true) ? 1 : 0);
         d.setUint8(offset + kBlockHeaderField.TableDefConstraintNumberOfColumns, c.columns.length);
@@ -179,6 +220,8 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition) {
 
     d.setUint32(kBlockHeaderField.DataEnd, offset);
 
+
+    return ret;
 }
 
 

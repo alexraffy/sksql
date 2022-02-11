@@ -7,9 +7,9 @@ import {readValue} from "../BlockIO/readValue";
 import {SQLStatement} from "../API/SQLStatement";
 
 
-export function compileNewRoutines() {
+export function compileNewRoutines(db: SKSQL) {
     // routines definitions are 65k, we need to use a cursor
-    let tblRoutines = SKSQL.instance.getTable("routines");
+    let tblRoutines = db.getTable("routines");
     let def = readTableDefinition(tblRoutines.data);
     let cursor = readFirst(tblRoutines, def);
     let colNameDef = def.columns.find((t) => { return t.name === "name";});
@@ -18,7 +18,7 @@ export function compileNewRoutines() {
         let fr = new DataView(tblRoutines.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + 5);
         const name = readValue(tblRoutines, def, colNameDef, fr, 5) as string;
         const fnDef = readValue(tblRoutines, def, colDefinitionDef, fr, 5) as string;
-        let sql = new SQLStatement(fnDef, false);
+        let sql = new SQLStatement(db, fnDef, false);
         sql.run();
 
         cursor = readNext(tblRoutines, def, cursor);

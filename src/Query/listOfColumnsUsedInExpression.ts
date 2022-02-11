@@ -47,7 +47,7 @@ export function listOfColumnsUsedInExpression(struct: TQueryAnyType | TValidExpr
         }
         // look up the column
         if (table === "") {
-            let tablesMatch = findTableNameForColumn(name, tables);
+            let tablesMatch = findTableNameForColumn(name, tables, struct);
             if (tablesMatch.length !== 1) {
                 if (tables.length === 0) {
                     throw "Unknown column name " + name;

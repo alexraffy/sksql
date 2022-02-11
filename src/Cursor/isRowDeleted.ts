@@ -8,7 +8,7 @@ export function isRowDeleted(tableData: ITableData, cursor: ITableCursor) {
 
     let dv = new DataView(tableData.blocks[cursor.blockIndex], cursor.offset, 5);
     let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
+    return ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? true : false;
 
-    return (flag & (1 << 7)) === 0 ? false : true;
 
 }

@@ -11,4 +11,5 @@ export function updateTableIdentityValue(tbl: ITable, newValue: number) {
     }
     let dv = new DataView(tbl.data.tableDef);
     dv.setUint32(kBlockHeaderField.TableDefIdentityValue, newValue);
+    dv.setUint8(kBlockHeaderField.BlockDirty, 1);
 }

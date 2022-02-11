@@ -26,8 +26,10 @@ export function addRow(tb: ITableData, growBy: number = 4096): DataView {
         tb.blocks = [d];
     } else {
         d = tb.blocks[tb.blocks.length -1];
+        let size = tb.blocks[0].byteLength;
+
         if (freeSpaceInBlock(d) < length + rowHeaderSize) {
-            d = newBlock(4096, BlockType.rows, tb.blocks.length+1);
+            d = newBlock(size, BlockType.rows, tb.blocks.length+1);
             tb.blocks.push(d);
         }
     }
@@ -35,6 +37,8 @@ export function addRow(tb: ITableData, growBy: number = 4096): DataView {
     let offset = dv.getUint32(kBlockHeaderField.DataEnd);
     let rowId = getLastRowId(tb) + 1;
     setLastRowId(tb, rowId);
+    // mark block as dirty
+    dv.setUint8(kBlockHeaderField.BlockDirty, 1);
     // set the rowId and flag
     dv.setUint32(offset, rowId);
     dv.setUint8(offset + 4, 0);

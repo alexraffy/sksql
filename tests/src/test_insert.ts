@@ -1,8 +1,8 @@
 
-import {SQLStatement, dumpTable, kResultType} from "sksql";
+import {SQLStatement, dumpTable, kResultType, SKSQL, SQLResult} from "sksql";
 
 
-export function test_insert() {
+export function test_insert(db: SKSQL) {
     let sql = "\
     CREATE TABLE pirates (\
         id uint32 IDENTITY(1,1),\
@@ -19,10 +19,10 @@ export function test_insert() {
     ('Blackbeard (Edward Teach)', 'England', '1680-00-00', '1718-11-22', 900000);";
 
 
-    let st = new SQLStatement(sql);
+    let st = new SQLStatement(db, sql);
     st.run();
 
-    let st2 = new SQLStatement("SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
+    let st2 = new SQLStatement(db, "SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
     let result = st2.run(kResultType.JSON);
     console.log(result);
 

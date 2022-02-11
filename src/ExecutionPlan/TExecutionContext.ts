@@ -7,6 +7,7 @@ import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {ParseResult} from "../BaseParser/ParseResult";
 import {SQLResult} from "../API/SQLResult";
 import {ParseError} from "../BaseParser/ParseError";
+import {TValidStatementsInProcedure} from "../Query/Types/TValidStatementsInProcedure";
 
 
 export interface TExecutionContext {
@@ -22,11 +23,12 @@ export interface TExecutionContext {
     openTables: TTableWalkInfo[];
     parseResult: ParseResult | ParseError;
     broadcastQuery: boolean;
-    results: SQLResult[];
+    result: SQLResult;
     query: string;
     openedTempTables: string[];
     scopedIdentity: number;
     transactionId: number;
     rollback: boolean;
     rollbackMessage: string;
+    currentStatement: TValidStatementsInProcedure;
 }

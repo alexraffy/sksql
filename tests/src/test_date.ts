@@ -1,5 +1,5 @@
 
-import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType} from "sksql";
+import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, SQLResult} from "sksql";
 import * as assert from "assert";
 
 
@@ -7,7 +7,8 @@ import * as assert from "assert";
 
 
 
-export function test_date() {
+
+export function test_date(db: SKSQL) {
 
     let str1 = ""; let r1 = parseDateString(str1); assert(r1 === undefined, "Empty string should be parsed as string");
     let str2 = "1492-12-01"; let r2 = parseDateString(str2); assert(r2 !== undefined, str2 + " could not be parsed as date")
@@ -35,10 +36,10 @@ export function test_date() {
         return ret;
     }
 
-    let st = new SQLStatement("CREATE TABLE date_tests(dates DATE)");
+    let st = new SQLStatement(db, "CREATE TABLE date_tests(dates DATE)");
     st.run();
-    console.log(readTableDefinition(SKSQL.instance.getTable("date_tests").data));
-    let inserts = new SQLStatement("INSERT INTO date_tests(dates) VALUES(@date)");
+    console.log(readTableDefinition(db.getTable("date_tests").data));
+    let inserts = new SQLStatement(db, "INSERT INTO date_tests(dates) VALUES(@date)");
     for (let i = 0; i < 10; i++) {
         let y = 1920 + parseInt(""+ (Math.random()*100) );
         let m = 1 + parseInt("" + (Math.random() * 11) );
@@ -46,41 +47,41 @@ export function test_date() {
         inserts.setParameter("@date", padLeft(y.toString(), 4, "0") + "-" + padLeft(m.toString(), 2, "0") + "-" + padLeft(d.toString(), 2, "0"));
         inserts.run();
     }
-    console.log(dumpTable(SKSQL.instance.getTable("date_tests")));
-    let sort = new SQLStatement("SELECT TOP(4) dates FROM date_tests ORDER BY dates DESC");
-    let result = sort.run();
-    console.log(dumpTable(SKSQL.instance.getTable(result[0].resultTableName)));
+    console.log(dumpTable(db.getTable("date_tests")));
+    let sort = new SQLStatement(db, "SELECT TOP(4) dates FROM date_tests ORDER BY dates DESC");
+    let result = sort.run() as SQLResult;
+    console.log(dumpTable(db.getTable(result.resultTableName)));
     //console.log(readTableAsJSON(result[0].resultTableName));
 
-    let stTimes = new SQLStatement("CREATE TABLE time_tests(times TIME)");
+    let stTimes = new SQLStatement(db, "CREATE TABLE time_tests(times TIME)");
     stTimes.run();
-    console.log(readTableDefinition(SKSQL.instance.getTable("time_tests").data));
-    let timesInserts = new SQLStatement("INSERT INTO time_tests(times) VALUES(@time)");
+    console.log(readTableDefinition(db.getTable("time_tests").data));
+    let timesInserts = new SQLStatement(db, "INSERT INTO time_tests(times) VALUES(@time)");
     timesInserts.setParameter("@time", "12:05:50");
     timesInserts.run();
     timesInserts.setParameter("@time", "04:50");
     timesInserts.run();
     timesInserts.setParameter("@time", "10:30:00");
     timesInserts.run();
-    console.log(dumpTable(SKSQL.instance.getTable("time_tests")));
+    console.log(dumpTable(db.getTable("time_tests")));
 
     {
         let sql = "SELECT times FROM time_tests ORDER BY times ASC"
         console.log("TESTING " + sql);
-        let stTest = new SQLStatement(sql);
-        let ret = stTest.run();
-        console.log(readTableDefinition(SKSQL.instance.getTable(ret[0].resultTableName).data));
-        console.log(dumpTable(SKSQL.instance.getTable(ret[0].resultTableName)));
+        let stTest = new SQLStatement(db, sql);
+        let ret = stTest.run() as SQLResult;
+        console.log(readTableDefinition(db.getTable(ret.resultTableName).data));
+        console.log(dumpTable(db.getTable(ret.resultTableName)));
         stTest.close();
     }
 
     {
         let sql = "SELECT times FROM time_tests WHERE times > '10:00:00'";
         console.log("TESTING " + sql);
-        let stTest = new SQLStatement(sql);
-        let ret = stTest.run();
-        console.log(readTableDefinition(SKSQL.instance.getTable(ret[0].resultTableName).data));
-        console.log(dumpTable(SKSQL.instance.getTable(ret[0].resultTableName)));
+        let stTest = new SQLStatement(db, sql);
+        let ret = stTest.run() as SQLResult;
+        console.log(readTableDefinition(db.getTable(ret.resultTableName).data));
+        console.log(dumpTable(db.getTable(ret.resultTableName)));
         stTest.close();
     }
 

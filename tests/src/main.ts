@@ -12,19 +12,19 @@ import {update1} from "./update1";
 let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
 
 test_parser();
+let db = new SKSQL();
+db.initWorkerPool(4, sksqlData);
 
-SKSQL.instance.initWorkerPool(4, sksqlData);
-
-update1();
-test_functions();
-test_groupby();
-test_db_university();
-test_insert();
-test_date();
-test_numeric();
+update1(db);
+test_functions(db);
+test_groupby(db);
+test_db_university(db);
+test_insert(db);
+test_date(db);
+test_numeric(db);
 
 
-SKSQL.instance.updateWorkerDB(0);
-test_worker();
+db.updateWorkerDB(0);
+test_worker(db);
 
 

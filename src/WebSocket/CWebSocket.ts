@@ -8,12 +8,13 @@ import {
 } from "./TMessages";
 import {TSocketRequest} from "./TSocketRequest";
 import {TWebSocketMessageHandlerInfo} from "./TWebSocketMessageHandlerInfo";
+import {SKSQL} from "../API/SKSQL";
 
 
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
 
 export class CWebSocket {
-
+    private db: SKSQL;
     private databaseHashId: string;
 
     private address: string;
@@ -26,8 +27,8 @@ export class CWebSocket {
     private msg_count: number = 0;
 
     private outGoing: string[] = [];
-
     private _connected: boolean = false;
+
     public get connected(): boolean {
         return this._connected;
     }
@@ -36,7 +37,9 @@ export class CWebSocket {
     }
 
 
-    constructor() {
+    constructor(db: SKSQL, databaseHashId: string) {
+        this.db = db;
+        this.databaseHashId = databaseHashId;
         if (isBrowser) {
             // @ts-ignore
             window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -69,10 +72,30 @@ export class CWebSocket {
         this.address = address;
         return new Promise<boolean>( (resolve, reject) => {
             // open connection
-            if (isBrowser) {
+            var ws;
+            try {
+                if (typeof WebSocket !== 'undefined') {
+                    ws = WebSocket
+                    // @ts-ignore
+                } else if (typeof MozWebSocket !== 'undefined') {
+                    // @ts-ignore
+                    ws = MozWebSocket
+                } else if (typeof global !== 'undefined') {
+                    // @ts-ignore
+                    ws = global.WebSocket || global.MozWebSocket
+                } else if (typeof window !== 'undefined') {
+                    // @ts-ignore
+                    ws = window.WebSocket || window.MozWebSocket
+                } else if (typeof self !== 'undefined') {
+                    // @ts-ignore
+                    ws = self.WebSocket || self.MozWebSocket
+                }
+            } catch (e) {
+                ws = require("ws");
+            }
                 var connection = undefined;
                 try {
-                    connection = new WebSocket(address); // ('ws://127.0.0.1:1041');
+                    connection = new ws(address); // ('ws://127.0.0.1:1041');
                 } catch (errorConnection) {
                     return reject({message: "Could not connect to socket"});
                 }
@@ -88,7 +111,7 @@ export class CWebSocket {
                     console.log("Reconnecting");
                     this._connected = false;
                     if (this.delegate !== undefined && this.delegate.connectionLost !== undefined) {
-                        this.delegate.connectionLost(this.databaseHashId);
+                        this.delegate.connectionLost(this.db, this.databaseHashId);
                     }
                     if (this._connection === undefined) {
                         reject({message: "Could not connect to socket"});
@@ -111,15 +134,25 @@ export class CWebSocket {
                             this._con_id = (data.param as TWSRAuthenticatePleaseResponse).id;
                         }
                         if (this.delegate !== undefined) {
-                            this.delegate.on(this.databaseHashId, data);
+                            this.delegate.on(this.db, this.databaseHashId, data);
+                        }
+
+                        // do we have an external handler
+                        for (let i = 0; i < this.handlers.length; i++) {
+                            const h = this.handlers[i];
+                            if (h.message === msg) {
+                                for (let x = 0; x < h.handlers.length; x++) {
+                                    if (h.handlers[x] !== undefined) {
+                                        h.handlers[x](msg, param);
+                                    }
+                                }
+                            }
                         }
 
                     }
                     return false;
                 }
-            } else {
-                resolve(false);
-            }
+
 
         });
     }
@@ -136,7 +169,7 @@ export class CWebSocket {
 
     send(message: string, param: any) {
 
-        if (isBrowser) {
+        //if (isBrowser) {
             let payload: TSocketRequest = {
                 id: this.con_id,
                 msg_id: ++this.msg_count,
@@ -149,6 +182,30 @@ export class CWebSocket {
                 this.sendOutgoing();
                 (this._connection as WebSocket).send(JSON.stringify(payload));
             }
+       // }
+    }
+
+
+    registerForCallback(uid: string, message: string, callback: (message: string, payload: any) => void) {
+        this.handlers.push(
+            {
+                uid: uid,
+                message: message,
+                handlers: [callback]
+            }
+        );
+    }
+
+    deregisterCallback(uid: string) {
+        let idx = -1;
+        for (let i = 0; i < this.handlers.length; i++) {
+            if (this.handlers[i].uid === uid) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx > -1) {
+            this.handlers.splice(idx, 1);
         }
     }
 

@@ -28,10 +28,21 @@ import {numeric} from "../Numeric/numeric";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TParserError} from "../API/TParserError";
 import {TExecutionContext} from "./TExecutionContext";
+import {runScan} from "./runScan";
+import {TEPScan} from "./TEPScan";
+import {SKSQL} from "../API/SKSQL";
 
 
-export function processDeleteStatement(context: TExecutionContext, statement: TQueryDelete) {
-    context.openTables.push(...openTables(statement));
+export function processDeleteStatement(db: SKSQL, context: TExecutionContext, statement: TQueryDelete) {
+
+    let tables = openTables(db, statement);
+    for (let i = 0; i < tables.length; i++) {
+        let exists = context.openTables.find((ot) => { return ot.name.toUpperCase() === tables[i].name.toUpperCase();});
+        if (exists === undefined) {
+            context.openTables.push(tables[i]);
+        }
+    }
+
     let del = statement as TQueryDelete;
     let tbl: ITable;
     let def: ITableDefinition;
@@ -45,54 +56,61 @@ export function processDeleteStatement(context: TExecutionContext, statement: TQ
         }
 
     }
+    context.currentStatement = del;
     if (tbl === undefined) {
         throw new TParserError("Table " + getValueForAliasTableOrLiteral(del.tables[0].tableName).table + " not found.");
     }
 
-    let cursor = readFirst(tbl, def);
     let numberOfRowsModified: number = 0;
     let done = false;
-    while (!done) {
+    let tep = {
+        kind: "TEPScan",
+        table: {
+            kind: "TTable",
+            table: getValueForAliasTableOrLiteral(del.tables[0].tableName).table,
+            schema: ""
+        } as TTable,
+        result: "",
+        predicate: del.where,
+        projection: [],
+        range: undefined
+    } as TEPScan;
 
-        if (cursorEOF(cursor)) {
-            done = true;
-            break;
+    runScan(db, context, tep, (scan, walking) => {
+        let cont = true;
+        let w = walking.find((w) => { return w.name.toUpperCase() === getValueForAliasTableOrLiteral(tep.table).table.toUpperCase();});
+        if (w === undefined) {
+            throw new TParserError("Could not find table " + getValueForAliasTableOrLiteral(tep.table).table.toUpperCase());
         }
-
-        let b = tbl.data.blocks[cursor.blockIndex];
-        let dv = new DataView(b, cursor.offset, rowLength);
+        let b = tbl.data.blocks[w.cursor.blockIndex];
+        let dv = new DataView(b, w.cursor.offset, w.rowLength);
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = (flag & (1 << 7)) === 0 ? 0 : 1;
-        if (isDeleted === 1) {
-            cursor = readNext(tbl, def, cursor);
-            continue;
-        }
+        flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
+        dv.setUint8(kBlockHeaderField.DataRowFlag, flag);
 
+        // mark the block as dirty
+        let dvBlock = new DataView(b, 0, 25);
+        dvBlock.setUint8(kBlockHeaderField.BlockDirty, 1);
 
-        if (evaluateWhereClause(context, del.where) === true) {
-            numberOfRowsModified++;
-            flag = flag | (1 << 7);
-            dv.setUint8(kBlockHeaderField.DataRowFlag, flag);
-
-            if (del.top !== undefined) {
-                let maxCount = evaluate(context, del.top, undefined, undefined);
-                if (isNumeric(maxCount)) {
-                    if (maxCount.m <= numberOfRowsModified) {
-                        done = true;
-                    }
+        if (del.top !== undefined) {
+            let maxCount = evaluate(db, context, del.top, undefined, undefined);
+            if (isNumeric(maxCount)) {
+                if (maxCount.m <= numberOfRowsModified) {
+                    cont = false;
+                }
+            } else if (typeof maxCount === "number") {
+                if (maxCount <= numberOfRowsModified) {
+                    cont = false;
                 }
             }
         }
 
+        return cont;
+    });
 
-        cursor = readNext(tbl, def, cursor);
-    }
-    context.results.push({
-        resultTableName: "",
-        rowCount: numberOfRowsModified,
-        executionPlan: {
-            description: ""
-        }
-    } as SQLResult);
+    context.broadcastQuery = true;
+    context.result.rowsDeleted += numberOfRowsModified;
+
+
 
 }

@@ -6,13 +6,14 @@ import {TTime} from "../Query/Types/TTime";
 import {numeric} from "../Numeric/numeric";
 import {TExecutionContext} from "./TExecutionContext";
 import {processStatement} from "./processStatement";
+import {SKSQL} from "../API/SKSQL";
 
 
-export function runFunction(context: TExecutionContext, fn: TQueryCreateFunction) {
+export function runFunction(db: SKSQL, context: TExecutionContext, fn: TQueryCreateFunction) {
 
 
     for (let i = 0; i < fn.ops.length; i++) {
-        processStatement(context, fn.ops[i]);
+        processStatement(db, context, fn.ops[i]);
         //@ts-ignore
         if (context.exitExecution === true) {
             return context.returnValue;
@@ -23,7 +24,9 @@ export function runFunction(context: TExecutionContext, fn: TQueryCreateFunction
             break;
         }
     }
-
+    context.result.returnValue = context.returnValue;
+    context.exitExecution = false;
+    context.breakLoop = false;
     return context.returnValue;
 
 }

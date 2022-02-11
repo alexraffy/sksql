@@ -9,18 +9,20 @@ import {SKSQL} from "../API/SKSQL";
     generate a new table from the table definition specified.
 
  */
-export function newTable(tb: ITableDefinition): ITable {
+export function newTable(db: SKSQL, tb: ITableDefinition): ITable {
     let ret: ITable = {
         data: {
             tableDef: undefined,
             blocks: []
         }
     }
-    tb.id = SKSQL.instance.allTables.length + 1;
-    writeTableDefinition(ret.data, tb)
-    //tb = readTableDefinition(ret.data);
+    tb.id = db.allTables.length + 1;
+    let def = writeTableDefinition(ret.data, tb)
 
-    SKSQL.instance.allTables.push(ret);
+    //tb = readTableDefinition(ret.data);
+    db.allTables.push(ret);
+    db.tableInfo.add(ret, def);
+
     return ret;
 
 }

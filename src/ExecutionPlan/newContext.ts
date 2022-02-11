@@ -10,7 +10,17 @@ export function createNewContext(label: string, query: string, parseResult: Pars
         breakLoop: false,
         exitExecution: false,
         parseResult: parseResult,
-        results: [],
+        result: {
+            resultTableName: "",
+            rowCount: 0,
+            rowsModified: 0,
+            rowsInserted: 0,
+            rowsDeleted: 0,
+            parserTime: 0,
+            totalRuntime: 0,
+            messages: "",
+            queries: []
+        },
         query: query,
         rollback: false,
         rollbackMessage: "",
@@ -18,6 +28,7 @@ export function createNewContext(label: string, query: string, parseResult: Pars
         openedTempTables: [],
         stack: [],
         returnValue: undefined,
-        transactionId: 0
+        transactionId: 0,
+        currentStatement: undefined
     }
 }

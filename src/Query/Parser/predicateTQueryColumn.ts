@@ -24,6 +24,7 @@ import {predicateTStar} from "./predicateTStar";
 import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
 import {predicateValidExpressions} from "./predicateValidExpressions";
+import {predicateTVariableAssignment} from "./predicateTVariableAssignment";
 
 
 /*
@@ -37,7 +38,7 @@ export const predicateTQueryColumn = function *(callback) {
     if (callback as string === "isGenerator") {
         return;
     }
-    let left = yield oneOf([predicateTStar,predicateTQueryExpression,
+    let left = yield oneOf([predicateTStar, predicateTVariableAssignment, predicateTQueryExpression,
         predicateValidExpressions], "" );
     yield maybe(atLeast1(whitespaceOrNewLine));
     let as = yield maybe(str("AS "));

@@ -34,12 +34,12 @@ import {swapContext} from "./swapContext";
 
 
 
-function writeRow(context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy,
+function writeRow(db: SKSQL, context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy,
                   aggregateFunctions:{name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] ) {
     let writeRecord = true;
 
     if (tep.having !== undefined) {
-        writeRecord = evaluateWhereClause(context, tep.having, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions});
+        writeRecord = evaluateWhereClause(db, context, tep.having, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions});
     }
     if (writeRecord) {
         let newRow = addRow(td.table.data, 4096);
@@ -50,7 +50,7 @@ function writeRow(context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalk
                 return t.name.toUpperCase() === p.columnName.toUpperCase();
             });
             if (col !== undefined) {
-                let value = evaluate(context, p.output, col, {
+                let value = evaluate(db, context, p.output, col, {
                     forceTable: tw.name,
                     aggregateMode: "final",
                     aggregateObjects: aggregateFunctions
@@ -63,7 +63,7 @@ function writeRow(context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalk
 }
 
 
-export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSelected: (tep: TEPGroupBy, walkInfos: TTableWalkInfo[]) => boolean) {
+export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupBy, onRowSelected: (tep: TEPGroupBy, walkInfos: TTableWalkInfo[]) => boolean) {
     let tableToOpen = getValueForAliasTableOrLiteral(tep.source);
     let tw = context.openTables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
     if (tw === undefined) {
@@ -84,7 +84,7 @@ export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSel
     let cbFindAllAggregateFunctions = (o: any, key: string, value: any, options: TFindExpressionTypeOptions) => {
         if (key === "AGGREGATE") {
             let fnCall = o as TQueryFunctionCall;
-            let fnData = SKSQL.instance.getFunctionNamed(fnCall.value.name.toUpperCase());
+            let fnData = db.getFunctionNamed(fnCall.value.name.toUpperCase());
             if (fnData === undefined) {
                 throw "Function " + fnCall.value.name.toUpperCase() + " does not exist. Use DBData.instance.declareFunction before using it.";
             }
@@ -105,11 +105,11 @@ export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSel
     // find all aggregate functions
     for (let x = 0; x < tep.projections.length; x++) {
         let proj = tep.projections[x];
-        findExpressionType(proj.output.expression, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
+        findExpressionType(db, proj.output.expression, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
     }
     // having clause ?
     if (tep.having !== undefined) {
-        findExpressionType(tep.having, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
+        findExpressionType(db, tep.having, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
     }
 
 
@@ -200,7 +200,7 @@ export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSel
             if (isDifferent) {
                 tw.cursor = readPrevious(tw.table, tw.def, tw.cursor);
                 if (!cursorEOF(tw.cursor)) {
-                    writeRow(context, tw, td, tep, aggregateFunctions);
+                    writeRow(db, context, tw, td, tep, aggregateFunctions);
                 }
                 tw.cursor = readNext(tw.table, tw.def, tw.cursor);
                 // reset data for aggregate functions
@@ -223,7 +223,7 @@ export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSel
                 let newContext: TExecutionContext = cloneContext(context, "GroupBy", true, false);
                 newContext.openTables = [tw];
 
-                let val = evaluate(newContext, af.funcCall.value.parameters[i], undefined, {aggregateMode: "row", aggregateObjects: aggregateFunctions, forceTable: tw.name});
+                let val = evaluate(db, newContext, af.funcCall.value.parameters[i], undefined, {aggregateMode: "row", aggregateObjects: aggregateFunctions, forceTable: tw.name});
                 swapContext(context, newContext);
                 params.push(val);
             }
@@ -237,7 +237,7 @@ export function runGroupBy(context: TExecutionContext, tep: TEPGroupBy, onRowSel
     }
     tw.cursor = readLast(tw.table, tw.def, tw.cursor);
     if (!cursorEOF(tw.cursor)) {
-        writeRow(context, tw, td, tep, aggregateFunctions);
+        writeRow(db, context, tw, td, tep, aggregateFunctions);
     }
 
 

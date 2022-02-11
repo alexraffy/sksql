@@ -20,9 +20,10 @@ import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 import {TValidExpressions} from "../Query/Types/TValidExpressions";
 import {TQueryColumn} from "../Query/Types/TQueryColumn";
 import {TQueryExpression} from "../Query/Types/TQueryExpression";
+import {SKSQL} from "./SKSQL";
 
 
-export function evaluateWithRowDEPREC(struct: TQueryExpression | TValidExpressions | TQueryColumn,
+export function evaluateWithRowDEPREC(db: SKSQL, struct: TQueryExpression | TValidExpressions | TQueryColumn,
                                 table: ITable,
                                 def: ITableDefinition,
                                 colDef: TableColumn,
@@ -70,11 +71,11 @@ export function evaluateWithRowDEPREC(struct: TQueryExpression | TValidExpressio
         return val;
     }
     if (instanceOfTQueryColumn(struct)) {
-        return evaluateWithRowDEPREC(struct.expression, table, def, colDef, fullRow, offset);
+        return evaluateWithRowDEPREC(db, struct.expression, table, def, colDef, fullRow, offset);
     }
     if (instanceOfTQueryExpression(struct)) {
-        let left = evaluateWithRowDEPREC(struct.value.left, table, def, colDef, fullRow, offset);
-        let right = evaluateWithRowDEPREC(struct.value.right, table, def, colDef, fullRow, offset);
+        let left = evaluateWithRowDEPREC(db, struct.value.left, table, def, colDef, fullRow, offset);
+        let right = evaluateWithRowDEPREC(db, struct.value.right, table, def, colDef, fullRow, offset);
         let op = struct.value.op;
         if (typeof left !== typeof right) {
             throw new TParserError("Incompatible types between " + left + " and " + right);

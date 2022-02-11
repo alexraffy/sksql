@@ -35,10 +35,11 @@ import {aggregate_sum} from "./Aggregate/aggregate_sum";
 import {string_unicode} from "./String/string_unicode";
 import {tests_IsNull} from "./Tests/IsNull";
 import {scoped_identity} from "./scoped_identity";
+import {newid} from "./newid";
+import {date_dateadd} from "./Date/date_dateadd";
 
 
-export function registerFunctions() {
-    let db = SKSQL.instance;
+export function registerFunctions(db: SKSQL) {
 
     // AGGREGATE
     db.declareFunction(kFunctionType.aggregate, "SUM", [
@@ -57,7 +58,8 @@ export function registerFunctions() {
     db.declareFunction(kFunctionType.scalar, "ISDATE", [{name: "DATE", type: TableColumnType.varchar}], TableColumnType.boolean, date_isdate);
     db.declareFunction(kFunctionType.scalar, "MONTH", [{name: "DATE", type: TableColumnType.date}], TableColumnType.uint8, date_month);
     db.declareFunction(kFunctionType.scalar, "YEAR", [{name: "DATE", type: TableColumnType.date}], TableColumnType.int32, date_year);
-
+    db.declareFunction(kFunctionType.scalar, "DATEADD", [{name: "DATEPART", type: TableColumnType.varchar},
+        { name: "NUMBER", type: TableColumnType.int32}, {name: "DATE", type: TableColumnType.datetime}], TableColumnType.datetime, date_dateadd);
     // NUMERIC
     db.declareFunction(kFunctionType.scalar, "ABS", [{name: "NUMERIC", type: TableColumnType.numeric}], TableColumnType.numeric, scalar_abs);
     db.declareFunction(kFunctionType.scalar, "POWER", [{name: "BASE", type: TableColumnType.numeric}, {name: "EXP", type: TableColumnType.numeric}], TableColumnType.numeric, scalar_power );
@@ -121,4 +123,5 @@ export function registerFunctions() {
             {name: "replacement_value", type: TableColumnType.any}],
         TableColumnType.any, tests_IsNull);
     db.declareFunction(kFunctionType.scalar, "SCOPE_IDENTITY", [], TableColumnType.uint32, scoped_identity);
+    db.declareFunction(kFunctionType.scalar, "NEWID", [], TableColumnType.varchar, newid);
 }

@@ -56,13 +56,13 @@ export const predicateTQuerySelect = function *(callback) {
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
 
-    let param1: TQueryColumn = yield oneOf([predicateTQueryColumn], "");
+    let param1: TQueryColumn = yield predicateTQueryColumn;
     parameters.push(param1);
     yield maybe(atLeast1(whitespaceOrNewLine));
     let gotMore = yield maybe(str(","));
     while (gotMore === ",") {
         yield maybe(atLeast1(whitespaceOrNewLine));
-        const extraParam = yield oneOf([predicateTQueryColumn], "a list of parameters");
+        const extraParam = yield predicateTQueryColumn;
         parameters.push(extraParam);
         yield maybe(atLeast1(whitespaceOrNewLine));
         let reachedFROM = yield exitIf(str("FROM"));

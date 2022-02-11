@@ -28,50 +28,36 @@ import {convertValue} from "../API/convertValue";
 import {TExecutionContext} from "./TExecutionContext";
 import {openTables} from "../API/openTables";
 import {createNewContext} from "./newContext";
-import {evaluateWhereClause} from "../API/evaluateWhereClause";
-import {readFirst} from "../Cursor/readFirst";
-import {runScan} from "./runScan";
-import {cloneContext} from "./cloneContext";
-import {TEPScan} from "./TEPScan";
-import {TTable} from "../Query/Types/TTable";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
-import {TNumber} from "../Query/Types/TNumber";
-import {TString} from "../Query/Types/TString";
-import {columnTypeToString} from "../Table/columnTypeToString";
-import {readValue} from "../BlockIO/readValue";
-import {columnTypeIsNumeric} from "../Table/columnTypeIsNumeric";
-import {numericDisplay} from "../Numeric/numericDisplay";
-import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
-import {columnTypeIsBoolean} from "../Table/columnTypeIsBoolean";
-import {TBoolValue} from "../Query/Types/TBoolValue";
-import {columnTypeIsDate} from "../Table/columnTypeIsDate";
-import {TableColumnType} from "../Table/TableColumnType";
-import {TComparison} from "../Query/Types/TComparison";
-import {kQueryComparison} from "../Query/Enums/kQueryComparison";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {instanceOfTQueryComparison} from "../Query/Guards/instanceOfTQueryComparison";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {checkConstraint} from "./checkConstraint";
 import {predicateValidExpressions} from "../Query/Parser/predicateValidExpressions";
 import {returnPred} from "../BaseParser/Predicates/ret";
 import {oneOf} from "../BaseParser/Predicates/oneOf";
+import {cloneContext} from "./cloneContext";
+import {SKSQL} from "../API/SKSQL";
 
 
-export function processInsertStatement(context: TExecutionContext, statement: TQueryInsert) {
+export function processInsertStatement(db: SKSQL, context: TExecutionContext, statement: TQueryInsert) {
     let insert: TQueryInsert = statement;
     let tbl: ITable;
     let def: ITableDefinition;
     let rowLength: number;
-    let newContext = JSON.parse(JSON.stringify(context));
-    newContext.openTables = openTables(statement);
-    for (let i = 0; i < newContext.openTables.length; i++) {
-        if (newContext.openTables[i].name.toUpperCase() === insert.table.table.toUpperCase()) {
-            tbl = newContext.openTables[i].table;
-            def = newContext.openTables[i].def;
-            rowLength = newContext.openTables[i].rowLength;
-            break;
+    let newContext: TExecutionContext = cloneContext(context, "insert", true, true);
+    let ots = openTables(db, statement);
+    for (let i = 0; i < ots.length; i++) {
+        let exists = newContext.openTables.find((ot) => { return ot.name.toUpperCase() === ots[i].name.toUpperCase();});
+        if (exists === undefined) {
+            newContext.openTables.push(ots[i]);
+        }
+        if (ots[i].name.toUpperCase() === insert.table.table.toUpperCase()) {
+            tbl = ots[i].table;
+            def = ots[i].def;
+            rowLength = ots[i].rowLength;
         }
     }
+
+    newContext.currentStatement = insert;
+
     if (tbl === undefined) {
         throw new TParserError("Table " + getValueForAliasTableOrLiteral(insert.table).table + " not found.");
     }
@@ -120,7 +106,7 @@ export function processInsertStatement(context: TExecutionContext, statement: TQ
                     if (colDef.name.toUpperCase() === colName.toUpperCase()) {
                         columnProcessed = true;
                         let val = insert.values[currentValuesIndex].values[x];
-                        value = evaluate(newContext, val, colDef);
+                        value = evaluate(db, newContext, val, colDef);
                         let val2Write = convertValue(value, colDef.type);
                         writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
                     }
@@ -128,7 +114,7 @@ export function processInsertStatement(context: TExecutionContext, statement: TQ
             } else {
                 columnProcessed = true;
                 let val = insert.values[currentValuesIndex].values[i];
-                value = evaluate(newContext, val, colDef);
+                value = evaluate(db, newContext, val, colDef);
                 let val2Write = convertValue(value, colDef.type);
                 writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
             }
@@ -143,7 +129,7 @@ export function processInsertStatement(context: TExecutionContext, statement: TQ
                         throw new TParserError("Error: Default Value for column " + colDef.name.toUpperCase() + " could not be computed.");
                     }
                     let newContext: TExecutionContext = createNewContext("", context.query, undefined);
-                    value = evaluate(newContext, res.value, colDef);
+                    value = evaluate(db, newContext, res.value, colDef);
                     let val2Write = convertValue(value, colDef.type);
                     writeValue(tbl, def, colDef, row, val2Write, rowHeaderSize);
                     columnProcessed = true;
@@ -172,7 +158,7 @@ export function processInsertStatement(context: TExecutionContext, statement: TQ
 
         for (let i = 0; i < def.constraints.length; i++) {
             let constraint = def.constraints[i];
-            checkConstraint(context, tbl, def, constraint, row, rowLength);
+            checkConstraint(db, context, tbl, def, constraint, row, rowLength);
         }
 
         // we write the row to the block
@@ -186,14 +172,9 @@ export function processInsertStatement(context: TExecutionContext, statement: TQ
     if (def.hasIdentity) {
         updateTableIdentityValue(tbl, newKey);
     }
+    context.broadcastQuery = true;
+    context.result.rowsInserted += numberOfRowsAdded;
 
 
-    context.results.push({
-        resultTableName: "",
-        rowCount: numberOfRowsAdded,
-        executionPlan: {
-            description: ""
-        }
-    } as SQLResult);
 
 }

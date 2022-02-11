@@ -4,6 +4,7 @@
 import {TAuthSession} from "./TAuthSession";
 import {TDate} from "../Query/Types/TDate";
 import {numeric} from "../Numeric/numeric";
+import {TableColumnType} from "../Table/TableColumnType";
 
 export const WSRAuthenticatePlease: string = "WSRAP";
 export interface TWSRAuthenticatePleaseResponse {
@@ -47,10 +48,19 @@ export const WSRSQL: string = "SQL";
 export interface TWSRSQL {
     r: string;
     id: number;
-    p: { k: string; v: string | number | numeric | TDate | boolean}[]
+    p: { name: string; type: TableColumnType, value: string | number | numeric | TDate | boolean}[]
 }
 
 export const WSROK: string = "OK";
 
 
-
+export const WSRGNID: string = "GNID";
+export interface TWSRGNID {
+    uid: string;
+    table: string;
+    count: number;
+}
+export interface TWSRGNIDResponse {
+    uid: string;
+    ids: number[]
+}

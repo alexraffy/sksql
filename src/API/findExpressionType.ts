@@ -22,7 +22,8 @@ export interface TFindExpressionTypeOptions {
     callbackOnTColumn: boolean;
 }
 
-export function findExpressionType(o: any,
+export function findExpressionType(db: SKSQL,
+                                   o: any,
                                    tables: TTableWalkInfo[],
                                    parameters: {name: string, type: TableColumnType, value: any}[],
                                    callback?: (o: any, key: string, value: string | number | boolean | any, options: TFindExpressionTypeOptions ) => boolean,
@@ -55,7 +56,7 @@ export function findExpressionType(o: any,
             let table = o.table;
             // fix no table
             if (table === undefined || table === "") {
-                let tableNames = findTableNameForColumn(name, tables);
+                let tableNames = findTableNameForColumn(name, tables, o);
                 if (tableNames.length > 1) {
                     throw new TParserError("Ambiguous column name " + name);
                 }
@@ -101,7 +102,7 @@ export function findExpressionType(o: any,
         }
         if (instanceOfTQueryFunctionCall(o)) {
             let fnName = o.value.name;
-            let fnData = SKSQL.instance.getFunctionNamed(fnName);
+            let fnData = db.getFunctionNamed(fnName);
             if (fnData === undefined) {
                 throw new TParserError("Function " + fnName + " does not exist. Use DBData.instance.declareFunction before using it.");
             }
@@ -112,7 +113,7 @@ export function findExpressionType(o: any,
             }
 
             for (let i = 0; i < o.value.parameters.length; i++) {
-                findExpressionType(o.value.parameters[i], tables, parameters, callback, {callbackOnTColumn: true});
+                findExpressionType(db, o.value.parameters[i], tables, parameters, callback, {callbackOnTColumn: true});
             }
             return fnData.returnType;
         }

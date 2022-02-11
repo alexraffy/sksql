@@ -11,9 +11,9 @@ import { numericToNumber } from "../Numeric/numericToNumber";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 
 
-export function readTableAsJSON(table: string): any[] {
+export function readTableAsJSON(db: SKSQL, table: string): any[] {
     let ret: any[] = [];
-    let tbl = SKSQL.instance.getTable(table);
+    let tbl = db.getTable(table);
     if (tbl === undefined) { return ret; }
     let def = readTableDefinition(tbl.data);
     let cursor = readFirst(tbl, def);

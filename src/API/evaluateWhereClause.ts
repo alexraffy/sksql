@@ -21,9 +21,11 @@ import {TableColumnType} from "../Table/TableColumnType";
 import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
+import {SKSQL} from "./SKSQL";
 
 
 export function evaluateWhereClause(
+    db: SKSQL,
     context: TExecutionContext,
     struct: TQueryComparison | TQueryComparisonExpression ,
     evaluateOptions: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []},
@@ -38,8 +40,8 @@ export function evaluateWhereClause(
         return true;
     }
     if (instanceOfTQueryComparisonExpression(struct)) {
-        let leftValue = evaluateWhereClause(context, struct.a, evaluateOptions, withRow);
-        let rightValue = evaluateWhereClause(context, struct.b, evaluateOptions, withRow);
+        let leftValue = evaluateWhereClause(db, context, struct.a, evaluateOptions, withRow);
+        let rightValue = evaluateWhereClause(db, context, struct.b, evaluateOptions, withRow);
         switch (struct.bool) {
             case "AND":
                 return leftValue && rightValue;
@@ -51,12 +53,12 @@ export function evaluateWhereClause(
     }
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
-        let leftValue = evaluate(context, qc.left, undefined, evaluateOptions, withRow);
+        let leftValue = evaluate(db, context, qc.left, undefined, evaluateOptions, withRow);
         let rightValue = undefined;
         if (qc.comp.value === kQueryComparison.in && instanceOfTArray(qc.right)) {
             let rightArray: TArray = qc.right as TArray;
             for (let x = 0; x < rightArray.array.length; x++) {
-                let rv = evaluate(context, rightArray.array[x] as any, undefined, evaluateOptions, withRow);
+                let rv = evaluate(db, context, rightArray.array[x] as any, undefined, evaluateOptions, withRow);
                 if (compareValues(leftValue, rv) === 0) {
                     if (qc.comp.negative === true) { return false;}
                     return true;
@@ -66,14 +68,9 @@ export function evaluateWhereClause(
             return false;
         }
         if (!instanceOfTArray(qc.right)) {
-            rightValue = evaluate(context, qc.right, undefined, evaluateOptions, withRow);
+            rightValue = evaluate(db, context, qc.right, undefined, evaluateOptions, withRow);
         }
-        if (rightValue === undefined) {
-            if (leftValue === undefined) {
-                return true;
-            }
-            return false;
-        }
+
         let cmp = compareValues(leftValue, rightValue);
 
         switch (qc.comp.value) {

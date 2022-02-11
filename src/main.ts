@@ -39,6 +39,7 @@ export * from "./API/evaluateWithRow";
 export * from "./API/findExpressionType";
 export * from "./API/findTableNameForColumn";
 export * from "./API/getColumnDefinition";
+export * from "./API/generateV4UUID";
 export * from "./API/kResultType";
 export * from "./API/openTables";
 export * from "./API/readTableAsJSON";

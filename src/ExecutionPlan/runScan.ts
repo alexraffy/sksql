@@ -12,7 +12,7 @@ import {TableColumnType} from "../Table/TableColumnType";
 import {TExecutionContext} from "./TExecutionContext";
 
 
-export function runScan(context: TExecutionContext,
+export function runScan(db: SKSQL, context: TExecutionContext,
                         tep: TEPScan,
                         onRowSelected: (scan: TEPScan, walking: TTableWalkInfo[]) => boolean) {
     let tableName = getValueForAliasTableOrLiteral(tep.table);
@@ -34,7 +34,7 @@ export function runScan(context: TExecutionContext,
         }
         let selectRow = true;
         if (tep.predicate !== undefined) {
-            selectRow = evaluateWhereClause(context, tep.predicate);
+            selectRow = evaluateWhereClause(db, context, tep.predicate);
         }
         if (selectRow) {
             let ret = onRowSelected(tep, context.openTables);

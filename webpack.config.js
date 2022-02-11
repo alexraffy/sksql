@@ -17,7 +17,8 @@ module.exports = {
     resolve: {
         fallback: {
             "worker_threads": false,
-            "perf_hooks": false
+            "perf_hooks": false,
+            "ws": false
         }
     }
 

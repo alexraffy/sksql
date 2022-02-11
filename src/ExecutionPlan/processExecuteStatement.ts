@@ -15,26 +15,25 @@ import {evaluate} from "../API/evaluate";
 import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
 import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 import {TVariable} from "../Query/Types/TVariable";
+import {cloneContext} from "./cloneContext";
+import {addNewestResultToList} from "./addNewestResultToList";
+import {swapContext} from "./swapContext";
 
 
-export function processExecuteStatement(context: TExecutionContext,
+export function processExecuteStatement(db: SKSQL,
+                                        context: TExecutionContext,
                                         statement: TExecute): SQLResult {
     if (!instanceOfTExecute(statement)) {
-        return {
-            error: "Misformed Execute Query.",
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: ""
-            }
-        } as SQLResult;
+        context.result.error = "Misformed Execute Query.";
+        return;
     }
 
-    let proc = SKSQL.instance.procedures.find((p) => { return p.procName.toUpperCase() === statement.procName.toUpperCase();});
+    let proc = db.procedures.find((p) => { return p.procName.toUpperCase() === statement.procName.toUpperCase();});
     if (proc !== undefined) {
-        let newContext: TExecutionContext = JSON.parse(JSON.stringify(context));
+        let newContext: TExecutionContext = cloneContext(context, "Execute ", false, true);
         newContext.label = proc.procName;
         newContext.stack = [];
+        newContext.currentStatement = proc;
         let gotOutput = false;
         for (let i = 0; i < proc.parameters.length; i++) {
             let p = proc.parameters[i];
@@ -43,7 +42,7 @@ export function processExecuteStatement(context: TExecutionContext,
             let gotParameter = false;
             if (exists) {
                 if (exists.value !== undefined) {
-                    let value = evaluate(context, exists.value, undefined);
+                    let value = evaluate(db, context, exists.value, undefined);
                     newParameter.value = value;
                     gotParameter = true;
                     if (exists.output === true) {
@@ -55,7 +54,7 @@ export function processExecuteStatement(context: TExecutionContext,
                 let existsByIndex = statement.parameters.find((param) => { return param.order === i;});
                 if (existsByIndex) {
                     if (existsByIndex) {
-                        let value = evaluate(context, existsByIndex.value, undefined);
+                        let value = evaluate(db, context, existsByIndex.value, undefined);
                         newParameter.value = value;
                         gotParameter = true;
                         if (existsByIndex.output === true) {
@@ -66,14 +65,18 @@ export function processExecuteStatement(context: TExecutionContext,
             }
             if (gotParameter === false) {
                 if (p.defaultValue !== undefined) {
-                    let value = evaluate(context, p.defaultValue, undefined);
+                    let value = evaluate(db, context, p.defaultValue, undefined);
                     newParameter.value = true;
                 }
             }
             newContext.stack.push(newParameter);
         }
 
-        runProcedure(newContext, statement, proc);
+        runProcedure(db, newContext, statement, proc);
+        context.broadcastQuery = newContext.broadcastQuery;
+        swapContext(context, newContext);
+        context.exitExecution = false;
+        addNewestResultToList(context, newContext);
 
         if (gotOutput) {
             for (let i = 0; i < statement.parameters.length; i++) {
@@ -92,7 +95,7 @@ export function processExecuteStatement(context: TExecutionContext,
                 }
             }
         }
-        console.dir(context);
+
 
     } else {
         throw new TParserError("Could not find procedure " + proc.procName);

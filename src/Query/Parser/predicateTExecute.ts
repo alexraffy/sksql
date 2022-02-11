@@ -31,7 +31,7 @@ export function* predicateTExecute(callback) {
     }
     let procName = yield literal;
     ret.procName = procName;
-    yield atLeast1(whitespaceOrNewLine);
+    yield maybe(atLeast1(whitespaceOrNewLine));
 
     let param_order = -1;
     let noParams = yield maybe(str(";"));

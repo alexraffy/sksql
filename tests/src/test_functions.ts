@@ -1,10 +1,10 @@
-import {SQLStatement, readTableAsJSON, kResultType, dumpTable, SKSQL} from "sksql";
+import {SQLStatement, readTableAsJSON, kResultType, dumpTable, SKSQL, SQLResult} from "sksql";
 import assert = require("assert");
 
 
 
 
-export function test_functions()  {
+export function test_functions(db: SKSQL)  {
 
     let sql = "SELECT \
     DATEFROMPARTS(2021, 11, 01) as datefromparts, \
@@ -44,11 +44,11 @@ export function test_functions()  {
 
    //sql = "SELECT DAY(GETDATE()) FROM DUAL";
 
-    let st1 = new SQLStatement(sql);
-    let res1 = st1.run();
-    assert(res1[0].error === undefined, "SQL ERROR " + res1[0].error)
-    let ret = readTableAsJSON(res1[0].resultTableName);
-    assert(res1.length > 0 && ret[0]["padleft"] === "001", "Error USING FUNCTION PADLEFT");
+    let st1 = new SQLStatement(db, sql);
+    let res1 = st1.run() as SQLResult;
+    assert(res1.error === undefined, "SQL ERROR " + res1.error)
+    let ret = readTableAsJSON(db, res1.resultTableName);
+    assert(ret[0]["padleft"] === "001", "Error USING FUNCTION PADLEFT");
 
 
     {
@@ -69,13 +69,13 @@ export function test_functions()  {
         END\
         ";
 
-        let st = new SQLStatement(sCreateFunction);
-        let res = st.run();
+        let st = new SQLStatement(db, sCreateFunction);
+        let res = st.run() as SQLResult;
         console.log(res);
 
-        let st2 = new SQLStatement("SELECT testfunction(false) as greetings FROM dual");
-        let ret2 = st2.run();
-        console.log(dumpTable(SKSQL.instance.getTable(ret2[0].resultTableName)));
+        let st2 = new SQLStatement(db, "SELECT testfunction(false) as greetings FROM dual");
+        let ret2 = st2.run() as SQLResult;
+        console.log(dumpTable(db.getTable(ret2.resultTableName)));
 
     }
     {
@@ -102,13 +102,13 @@ export function test_functions()  {
 \
         RETURN @hash;\
         END";
-        let st = new SQLStatement(sql);
-        let res = st.run();
+        let st = new SQLStatement(db, sql);
+        let res = st.run() as SQLResult;
         console.log(res);
 
-        let st2 = new SQLStatement("SELECT hash(100, 'NxBvP0nK7QgWmejLzwdA6apRV25lkOqo8MX1ZrbyGDE3') as hash_id FROM dual");
-        let ret2 = st2.run();
-        console.log(dumpTable(SKSQL.instance.getTable(ret2[0].resultTableName)));
+        let st2 = new SQLStatement(db, "SELECT hash(100, 'NxBvP0nK7QgWmejLzwdA6apRV25lkOqo8MX1ZrbyGDE3') as hash_id FROM dual");
+        let ret2 = st2.run() as SQLResult;
+        console.log(dumpTable(db.getTable(ret2.resultTableName)));
 
 
     }
@@ -159,11 +159,11 @@ export function test_functions()  {
         RETURN @alphabet;\
 \
         END";
-        let st = new SQLStatement(sql);
-        let res = st.run();
+        let st = new SQLStatement(db, sql);
+        let res = st.run() as SQLResult;
         console.log(res);
 
-        let test = new SQLStatement("SELECT consistentShuffle('NxBvP0nK7QgWmejLzwdA6apRV25lkOqo8MX1ZrbyGDE3', 'CE6E160F053C41518582EA36CE9383D5') FROM dual");
+        let test = new SQLStatement(db, "SELECT consistentShuffle('NxBvP0nK7QgWmejLzwdA6apRV25lkOqo8MX1ZrbyGDE3', 'CE6E160F053C41518582EA36CE9383D5') FROM dual");
         console.log(test.run(kResultType.JSON));
 
 
@@ -243,11 +243,11 @@ export function test_functions()  {
             "\tRETURN @ret;\n" +
             "END\n";
 
-        let st = new SQLStatement(sql, false);
-        let ret = st.run();
+        let st = new SQLStatement(db, sql, false);
+        let ret = st.run() as SQLResult;
         console.log(ret);
 
-        let test = new SQLStatement("SELECT encode2b(1, 1024) FROM dual");
+        let test = new SQLStatement(db, "SELECT encode2b(1, 1024) FROM dual");
         console.log(test.run(kResultType.JSON));
 
     }

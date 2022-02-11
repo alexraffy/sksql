@@ -50,6 +50,8 @@ import {predicateTVariableDeclaration} from "../Query/Parser/predicateTVariableD
 import {predicateTQueryUpdate} from "../Query/Parser/predicateTQueryUpdate";
 import {predicateTWhile} from "../Query/Parser/predicateTWhile";
 import {predicateTQuerySelect} from "../Query/Parser/predicateTQuerySelect";
+import {cloneContext} from "../ExecutionPlan/cloneContext";
+import {predicateTGO} from "../Query/Parser/predicateTGO";
 
 let performance = undefined;
 try {
@@ -62,18 +64,19 @@ try {
     performance = require('perf_hooks').performance;
 }
 export class SQLStatement {
-
+    db: SKSQL;
     query: string = "";
     broadcast: boolean;
-    databaseHashId: string;
     ast: ParseResult | ParseError;
     context: TExecutionContext;
+    contextOriginal: TExecutionContext;
 
-    constructor(statements: string, broadcast: boolean = true, databaseHashId: string = "") {
+    constructor(db: SKSQL, statements: string, broadcast: boolean = true) {
+        this.db = db;
         this.query = statements;
         this.broadcast = broadcast;
-        this.databaseHashId = databaseHashId;
         this.context = createNewContext("", statements, undefined);
+        this.contextOriginal = cloneContext(this.context, "", false, false);
     }
 
     get hasErrors():boolean {
@@ -107,6 +110,11 @@ export class SQLStatement {
                 type: t,
                 value: value
             });
+            this.contextOriginal.stack.push({
+                name: param,
+                type: t,
+                value: value
+            });
         }
         return this;
     }
@@ -122,13 +130,13 @@ export class SQLStatement {
     }
     close() {
         for (let i = 0; i < this.context.openedTempTables.length; i++) {
-            SKSQL.instance.dropTable(this.context.openedTempTables[i]);
+            this.db.dropTable(this.context.openedTempTables[i]);
         }
     }
     runOnWebWorker(): Promise<string> {
         return new Promise<string>( (resolve, reject) => {
-            SKSQL.instance.updateWorkerDB(0);
-            SKSQL.instance.sendWorkerQuery(0, this, reject, resolve);
+            this.db.updateWorkerDB(0);
+            this.db.sendWorkerQuery(0, this, reject, resolve);
 
         });
     }
@@ -154,6 +162,8 @@ export class SQLStatement {
                     checkSequence([str("DELETE"), whitespaceOrNewLine]),
                     checkSequence([str("DROP"), whitespaceOrNewLine]),
                     checkSequence([str("EXECUTE"), whitespaceOrNewLine]),
+                    checkSequence([str("EXEC"), whitespaceOrNewLine]),
+                    checkSequence([str("GO"), maybe(whitespaceOrNewLine), maybe(str(";"))]),
                     checkSequence([str("IF"), whitespaceOrNewLine]),
                     checkSequence([str("INSERT"), whitespaceOrNewLine]),
                     checkSequence([str("RETURN"), whitespaceOrNewLine]),
@@ -163,6 +173,7 @@ export class SQLStatement {
                     checkSequence([str("UPDATE"), whitespaceOrNewLine]),
                     checkSequence([str("WHILE"), whitespaceOrNewLine])
                 ], "")], "");
+                
                 if (stType !== undefined) {
                     switch ((stType as any[])[0]) {
                         case "--":
@@ -253,7 +264,11 @@ export class SQLStatement {
                         }
                         break;
                         case "EXECUTE":
+                        case "EXEC":
                             result = yield predicateTExecute;
+                            break;
+                        case "GO":
+                            result = yield predicateTGO;
                             break;
                         case "IF":
                             result = yield predicateTIf;
@@ -307,6 +322,9 @@ export class SQLStatement {
                 if (instanceOfParseError(result)) {
                     exit = true;
                 } else {
+                    yield maybe(atLeast1(whitespaceOrNewLine));
+                    yield maybe(atLeast1(str(";")));
+                    yield maybe(atLeast1(whitespaceOrNewLine));
                     exit = yield eof;
                 }
             }
@@ -317,44 +335,67 @@ export class SQLStatement {
         }, new Stream(this.query, 0));
         this.context.parseResult = this.ast;
     }
-    run(type: kResultType = kResultType.SQLResult): SQLResult[] | any[] {
+    run(type: kResultType = kResultType.SQLResult): SQLResult | any[] {
         let perfs = {
             parser: 0,
             query: 0
         }
-        let t0 = performance.now();
+        let t0 = 0;
+        if (performance !== undefined) {
+            t0 = performance.now();
+        }
         if (this.ast === undefined) {
             this.parse();
         }
-        let t1 = performance.now();
-        perfs.parser = (t1 - t0);
+        if (performance !== undefined) {
+            let t1 = performance.now();
+            perfs.parser = (t1 - t0);
+        }
 
         if (this.hasErrors) {
             if (type === kResultType.SQLResult) {
-                return [{
+                return {
                     error: (this.ast as ParseError).description,
                     rowCount: 0,
+                    rowsDeleted: 0,
+                    rowsModified: 0,
+                    rowsInserted: 0,
+                    queries: [],
                     resultTableName: "",
-                    perfs: perfs,
-                    executionPlan: {
-                        description: ""
-                    }
-                } as SQLResult];
+                    totalRuntime: 0,
+                    parserTime: perfs.parser
+                } as SQLResult;
             } else if (type === kResultType.JSON) {
                 return [];
             }
         }
 
+        this.context.result = {
+            messages: "",
+            queries: [],
+            totalRuntime: 0,
+            resultTableName: "",
+            parserTime: perfs.parser,
+            rowsInserted: 0,
+            rowsModified: 0,
+            rowsDeleted: 0,
+            rowCount: 0
+        } as SQLResult
+
         let statements:  (TValidStatementsInProcedure | TValidStatementsInFunction)[] = [];
         if (instanceOfParseResult(this.ast)) {
             statements = this.ast.value.statements;
         } else {
-            return;
+            this.context.result.error = (this.ast as ParseError).description;
+            return this.context.result;
         }
-        let st0 = performance.now();
+        let st0 = 0;
+        if (performance !== undefined) {
+            st0 = performance.now();
+        }
         for (let i = 0; i < statements.length; i++) {
             let statement = statements[i];
-            processStatement(this.context, statement);
+            processStatement(this.db, this.context, statement);
             if (this.context.rollback === true) {
                 throw new TParserError(this.context.rollbackMessage);
                 break;
@@ -363,27 +404,38 @@ export class SQLStatement {
                 break;
             }
         }
-        let st1 = performance.now();
-        perfs.query = st1 - st0;
+        if (performance !== undefined) {
+            let st1 = performance.now();
+            perfs.query = st1 - st0;
+        }
+        this.context.result.totalRuntime = perfs.query;
+
+        for (let i = 0; i < this.context.openedTempTables.length; i++) {
+            if (this.context.result.resultTableName === undefined || (this.context.openedTempTables[i].toUpperCase() !== this.context.result.resultTableName.toUpperCase())) {
+                this.db.dropTable(this.context.openedTempTables[i]);
+            }
+        }
 
 
         if (this.broadcast && this.context.broadcastQuery) {
-            let tc = SKSQL.instance.getConnectionInfoForDB(this.databaseHashId);
-            if (tc !== undefined) {
-                tc.socket.send(WSRSQL, {id: tc.socket.con_id, r: this.query} as TWSRSQL );
+            if (this.db.connections.length > 0) {
+                let tc = this.db.getConnectionInfoForDB(this.db.connections[0].databaseHashId);
+                if (tc !== undefined) {
+                    tc.socket.send(WSRSQL, {
+                        id: tc.socket.con_id,
+                        p: this.contextOriginal.stack,
+                        r: this.query
+                    } as TWSRSQL);
+                }
             }
-
         }
 
         if (type === kResultType.SQLResult) {
-            return this.context.results;
+            return this.context.result;
         } else if (type === kResultType.JSON) {
-            for (let i = 0; i < this.context.results.length; i++) {
-                if (this.context.results[i].resultTableName !== undefined && this.context.results[i].resultTableName !== "") {
-                    return readTableAsJSON(this.context.results[i].resultTableName);
-                }
+            if (this.context.result.resultTableName !== undefined && this.context.result.resultTableName !== "") {
+                return readTableAsJSON(this.db, this.context.result.resultTableName);
             }
-
         }
 
     }

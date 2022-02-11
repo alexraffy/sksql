@@ -37,7 +37,8 @@ import {TEPUpdate} from "./TEPUpdate";
 
 
 
-function addInvisibleColumnsForSorting(tables: TTableWalkInfo[],
+function addInvisibleColumnsForSorting(db: SKSQL,
+                                       tables: TTableWalkInfo[],
                                        select: TQuerySelect,
                                        clause: TQueryOrderBy,
                                        def: ITableDefinition,
@@ -68,7 +69,7 @@ function addInvisibleColumnsForSorting(tables: TTableWalkInfo[],
         }
     }
     if (found === false) {
-        let type = findExpressionType(o.column, tables, parameters);
+        let type = findExpressionType(db, o.column, tables, parameters);
         // add the column to the select columns so they are written automatically
         let tcol: TQueryColumn = {
             kind: "TQueryColumn",
@@ -99,18 +100,23 @@ function addInvisibleColumnsForSorting(tables: TTableWalkInfo[],
 }
 
 
-export function generateExecutionPlanFromStatement(context: TExecutionContext, select: TQuerySelect | TQueryUpdate): TEP[] {
+export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutionContext, select: TQuerySelect | TQueryUpdate): TEP[] {
     let ret: TEP[] = [];
 
 
-    let tables: TTableWalkInfo[] = openTables(select);
-    context.openTables.push(...tables);
+    let tables: TTableWalkInfo[] = openTables(db, select);
+    for (let i = 0; i < tables.length; i++) {
+        let exists = context.openTables.find((ot) => { return ot.name.toUpperCase() === tables[i].name.toUpperCase();});
+        if (exists === undefined) {
+            context.openTables.push(tables[i]);
+        }
+    }
     let columnsNeeded: {tableName: string, columnName: string}[] = [];
     let returnTableName = "";
     if (instanceOfTQuerySelect(select)) {
         let i = 1;
         returnTableName = "#query" + i;
-        while (SKSQL.instance.getTable(returnTableName) !== undefined) {
+        while (db.tableInfo.get(returnTableName) !== undefined) {
             returnTableName = "#query" + (++i);
         }
     }
@@ -192,7 +198,7 @@ export function generateExecutionPlanFromStatement(context: TExecutionContext, s
                 continue;
             }
 
-            let types = findExpressionType(col.expression, context.openTables, context.stack, recursion_callback);
+            let types = findExpressionType(db, col.expression, context.openTables, context.stack, recursion_callback);
             let name = "";
             if (instanceOfTLiteral(col.alias.alias)) {
                 name = col.alias.alias.value;
@@ -267,7 +273,7 @@ export function generateExecutionPlanFromStatement(context: TExecutionContext, s
     if (instanceOfTQuerySelect(select)) {
         if (select.orderBy !== undefined && select.orderBy.length > 0) {
             for (let i = 0; i < select.orderBy.length; i++) {
-                let temp = addInvisibleColumnsForSorting(context.openTables, select, select.orderBy[i], returnTableDefinition, projections, context.stack);
+                let temp = addInvisibleColumnsForSorting(db, context.openTables, select, select.orderBy[i], returnTableDefinition, projections, context.stack);
                 if (temp !== undefined) {
                     returnTableDefinition = temp.def;
                     projections = temp.projections;
@@ -276,7 +282,7 @@ export function generateExecutionPlanFromStatement(context: TExecutionContext, s
         }
         if (select.groupBy !== undefined && select.orderBy.length > 0) {
             for (let i = 0; i < select.groupBy.length; i++) {
-                let temp = addInvisibleColumnsForSorting(context.openTables, select, select.groupBy[i], returnTableDefinition, projections, context.stack)
+                let temp = addInvisibleColumnsForSorting(db, context.openTables, select, select.groupBy[i], returnTableDefinition, projections, context.stack)
                 if (temp !== undefined) {
                     returnTableDefinition = temp.def;
                     projections = temp.projections;
@@ -285,13 +291,13 @@ export function generateExecutionPlanFromStatement(context: TExecutionContext, s
         }
 
         if (select.having !== undefined) {
-            findExpressionType(select.having, context.openTables, context.stack, recursion_callback, {callbackOnTColumn: true});
+            findExpressionType(db, select.having, context.openTables, context.stack, recursion_callback, {callbackOnTColumn: true});
         }
     }
     let returnTable: ITable;
     if (returnTableName !== "") {
-        returnTable = newTable(returnTableDefinition);
-        returnTableDefinition = readTableDefinition(returnTable.data, true);
+        returnTable = newTable(db, returnTableDefinition);
+        returnTableDefinition = db.tableInfo.get(returnTableDefinition.name).def;
         context.openedTempTables.push(returnTableName);
         context.openTables.push(
             {
@@ -371,8 +377,8 @@ export function generateExecutionPlanFromStatement(context: TExecutionContext, s
                 }
             }
             groupByResultTableDef.name = groupByResultTableName;
-            let groupByResultTable = newTable(groupByResultTableDef);
-            groupByResultTableDef = readTableDefinition(groupByResultTable.data, true);
+            let groupByResultTable = newTable(db, groupByResultTableDef);
+            groupByResultTableDef = db.tableInfo.get(groupByResultTableName).def;
 
             context.openedTempTables.push(groupByResultTableName);
             context.openTables.push(

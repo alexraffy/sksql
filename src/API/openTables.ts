@@ -20,8 +20,10 @@ import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
 import {stat} from "fs";
 import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
+import {ITable} from "../Table/ITable";
+import {ITableDefinition} from "../Table/ITableDefinition";
 
-function openTable(table: TAlias | TTable): TTableWalkInfo[] {
+function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
     let ret = [];
     let tableToOpen = "";
     let alias = "";
@@ -49,12 +51,20 @@ function openTable(table: TAlias | TTable): TTableWalkInfo[] {
         alias = tableToOpen;
     }
 
-
-    let tbl = SKSQL.instance.getTable(tableToOpen);
-    if (tbl === undefined) {
-        throw new TParserError("Table " + tableToOpen + " not found.");
+    let tblInfo = db.tableInfo.get(tableToOpen);
+    let tbl: ITable;
+    let def: ITableDefinition;
+    if (tblInfo) {
+        tbl = tblInfo.pointer;
+        def = tblInfo.def;
+    } else {
+        tbl = db.getTable(tableToOpen);
+        if (tbl === undefined) {
+            throw new TParserError("Table " + tableToOpen + " not found.");
+        }
+        def = readTableDefinition(tbl.data);
     }
-    let def = readTableDefinition(tbl.data);
+
     let cursor = readFirst(tbl, def);
     let rowLength = recordSize(tbl.data) + 5;
     ret.push({name: tableToOpen, alias: alias, table: tbl, def: def, cursor: cursor, rowLength: rowLength});
@@ -62,15 +72,15 @@ function openTable(table: TAlias | TTable): TTableWalkInfo[] {
 }
 
 
-export function openTables(statement: TQuerySelect | TQueryUpdate | TQueryDelete | TQueryInsert): TTableWalkInfo[] {
+export function openTables(db: SKSQL, statement: TQuerySelect | TQueryUpdate | TQueryDelete | TQueryInsert): TTableWalkInfo[] {
     let ret : TTableWalkInfo[] = [];
 
     if (instanceOfTQueryInsert(statement) || instanceOfTQueryUpdate(statement)) {
-        ret.push(...openTable(statement.table));
+        ret.push(...openTable(db, statement.table));
     }
     if (instanceOfTQuerySelect(statement) || instanceOfTQueryUpdate(statement) || instanceOfTQueryDelete(statement)) {
         for (let i = 0; i < statement.tables.length; i++) {
-            ret.push(...openTable(statement.tables[i].tableName));
+            ret.push(...openTable(db, statement.tables[i].tableName));
         }
     }
 

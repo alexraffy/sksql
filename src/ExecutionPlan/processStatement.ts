@@ -40,9 +40,10 @@ import {processExecuteStatement} from "./processExecuteStatement";
 import {instanceOfTQueryDropTable} from "../Query/Guards/instanceOfTQueryDropTable";
 import {processDropTableStatement} from "./processDropTableStatement";
 import {TParserError} from "../API/TParserError";
+import {SKSQL} from "../API/SKSQL";
 
 
-export function processStatement(context: TExecutionContext, op: TValidStatementsInProcedure) {
+export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure) {
     if (context.rollback === true) {
         throw new TParserError(context.rollbackMessage);
     }
@@ -51,7 +52,7 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
     if (instanceOfTDebugger(op)) {
         let shouldDisplay = true;
         if (op.test !== undefined) {
-            shouldDisplay = evaluateWhereClause(context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            shouldDisplay = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         }
         if (shouldDisplay) {
             let debugStr = "-- FROM " + context.label + "\r\n";
@@ -79,7 +80,7 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
     if (instanceOfTVariableAssignment(op)) {
         let varExists = context.stack.find((v) => { return v.name.toUpperCase() === op.name.name.toUpperCase();});
         if (varExists) {
-            let val = evaluate(context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            let val = evaluate(db, context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
             if (isNumeric(val) && columnTypeIsInteger(varExists.type)) {
                 varExists.value = numericToNumber(val);
             } else if (typeof val === "number" && varExists.type === TableColumnType.numeric) {
@@ -94,7 +95,7 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
         for (let i = 0; i < op.declarations.length; i++) {
             let value = undefined;
             if (op.declarations[i].value !== undefined) {
-                value = evaluate(context, op.declarations[i].value, undefined, {
+                value = evaluate(db, context, op.declarations[i].value, undefined, {
                     aggregateMode: "none",
                     aggregateObjects: [],
                     forceTable: ""
@@ -119,14 +120,14 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
         return;
     }
     if (instanceOfTReturnValue(op)) {
-        let value = evaluate(context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        let value = evaluate(db, context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         context.returnValue = value;
         context.exitExecution = true;
         return;
     }
     if (instanceOfTBeginEnd(op)) {
         for (let x = 0; x < op.ops.length; x++) {
-            processStatement(context, op.ops[x]);
+            processStatement(db, context, op.ops[x]);
             if (context.exitExecution === true) {
                 return context.returnValue;
             }
@@ -137,10 +138,10 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
         return;
     }
     if (instanceOfTWhile(op)) {
-        let test = evaluateWhereClause(context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        let test = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         while (test) {
             for (let i = 0; i < op.op.length; i++) {
-                processStatement(context, op.op[i]);
+                processStatement(db, context, op.op[i]);
                 if (context.exitExecution === true) {
                     return context.returnValue;
                 }
@@ -152,20 +153,20 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
                 context.breakLoop = false;
                 break;
             }
-            test = evaluateWhereClause(context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            test = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         }
         return;
     }
     if (instanceOfTIf(op)) {
         for (let x = 0; x < op.tests.length; x++) {
             if (op.tests[x].test !== undefined) {
-                let evalRet = evaluateWhereClause(context, op.tests[x].test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+                let evalRet = evaluateWhereClause(db, context, op.tests[x].test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
                 if (evalRet === false) {
                     continue;
                 }
             }
             for (let i = 0; i < op.tests[x].op.length; i++) {
-                processStatement(context, op.tests[x].op[i]);
+                processStatement(db, context, op.tests[x].op[i]);
                 if (context.exitExecution === true) {
                     return;
                 }
@@ -179,43 +180,43 @@ export function processStatement(context: TExecutionContext, op: TValidStatement
         return;
     }
     if (instanceOfTQueryFunctionCall(op)) {
-        evaluate(context, op, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        evaluate(db, context, op, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         return;
     }
     if (instanceOfTExecute(op)) {
-        processExecuteStatement(context, op);
+        processExecuteStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryCreateProcedure(op)) {
-        processCreateProcedureStatement(context, op);
+        processCreateProcedureStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryCreateFunction(op)) {
-        processCreateFunctionStatement(context, op);
+        processCreateFunctionStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryCreateTable(op)) {
-        processCreateStatement(context, op);
+        processCreateStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryInsert(op)) {
-        processInsertStatement(context, op);
+        processInsertStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryUpdate(op)) {
-        processUpdateStatement(context, op);
+        processUpdateStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryDelete(op)) {
-        processDeleteStatement(context, op);
+        processDeleteStatement(db, context, op);
         return;
     }
     if (instanceOfTQuerySelect(op)) {
-        processSelectStatement(context, op);
+        processSelectStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryDropTable(op)) {
-        processDropTableStatement(context, op);
+        processDropTableStatement(db, context, op);
         return;
     }
 

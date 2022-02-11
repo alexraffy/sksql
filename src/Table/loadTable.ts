@@ -4,7 +4,7 @@ import {ITable} from "./ITable";
 import {SKSQL} from "../API/SKSQL";
 
 
-export function loadTable(header: ArrayBuffer, blocks: ArrayBuffer[]): ITable {
+export function loadTable(db: SKSQL, header: ArrayBuffer, blocks: ArrayBuffer[]): ITable {
     let ret: ITable = {
         data: {
             tableDef: new SharedArrayBuffer(header.byteLength),
@@ -17,6 +17,6 @@ export function loadTable(header: ArrayBuffer, blocks: ArrayBuffer[]): ITable {
         copyBytesToSharedBuffer(blocks[i], new DataView(s));
         ret.data.blocks.push(s);
     }
-    SKSQL.instance.allTables.push(ret);
+    db.allTables.push(ret);
     return ret;
 }

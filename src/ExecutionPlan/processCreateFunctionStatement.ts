@@ -11,7 +11,7 @@ import {kResultType} from "../API/kResultType";
 import {TExecutionContext} from "./TExecutionContext";
 
 
-export function processCreateFunctionStatement(context: TExecutionContext, statement: TQueryCreateFunction): SQLResult {
+export function processCreateFunctionStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateFunction): SQLResult {
     if (instanceOfTQueryCreateFunction(statement)) {
         let c: TQueryCreateFunction = statement;
 
@@ -19,60 +19,55 @@ export function processCreateFunctionStatement(context: TExecutionContext, state
         for (let i = 0; i < c.parameters.length; i++) {
             parameters.push({name: c.parameters[i].variableName.name, type: typeString2TableColumnType(c.parameters[i].type.type)});
         }
-        SKSQL.instance.declareFunction(kFunctionType.scalar, c.functionName, parameters, typeString2TableColumnType(c.returnType.type), c);
-
+        db.declareFunction(kFunctionType.scalar, c.functionName, parameters, typeString2TableColumnType(c.returnType.type), c);
+        let text = "";
+        if (context.query !== undefined && context.query !== "") {
+            // @ts-ignore
+            if (statement.debug !== undefined) {
+                // @ts-ignore
+                text = context.query.substring(statement.debug.start, statement.debug.end);
+            }
+        }
 
         // write function text in routines
         let sql = "SELECT true FROM master.routines WHERE name = @name AND TYPE = 'FUNCTION'";
-        let doesItExist = new SQLStatement(sql, false);
+        let doesItExist = new SQLStatement(db, sql, false);
         doesItExist.setParameter("@name", c.functionName);
         let exists = doesItExist.run(kResultType.JSON);
         doesItExist.close();
-        if (exists.length > 0 && exists[0].true !== true) {
+        if ((exists as any[]).length > 0 && exists[0].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
-            let stUpdate = new SQLStatement(sqlUpdate, false);
-            stUpdate.setParameter("@text", context.query);
+            let stUpdate = new SQLStatement(db, sqlUpdate, false);
+            stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.functionName);
             let retUpdate = stUpdate.run();
             console.dir(retUpdate);
             stUpdate.close();
         } else {
             let sqlInsert = "INSERT INTO master.routines (schema, name, type, definition, modified) VALUES (@schema, @name, 'FUNCTION', @text, GETUTCDATE())";
-            let stInsert = new SQLStatement(sqlInsert, false);
+            let stInsert = new SQLStatement(db, sqlInsert, false);
             stInsert.setParameter("@schema", 'dbo');
             stInsert.setParameter("@name", c.functionName);
-            stInsert.setParameter("@text", context.query);
+            stInsert.setParameter("@text", text);
             stInsert.run();
             stInsert.close();
         }
 
         context.broadcastQuery = true;
-        context.results.push({
-            resultTableName: "",
-            rowCount: 0,
-            executionPlan: {
-                description: "CREATE FUNCTION"
-            },
-            perfs: {
-                parser: 0,
-                query: 0
-            }
-        } as SQLResult);
+        if (context.result.messages === undefined) {
+            context.result.messages = "CREATE FUNCTION";
+        } else {
+            context.result.messages += "\r\n" + "CREATE FUNCTION";
+        }
         return;
     }
     context.broadcastQuery = false;
-    context.exitExecution = true;
-    context.results.push({
-        error: "Misformed CREATE FUNCTION query.",
-        resultTableName: "",
-        rowCount: 0,
-        executionPlan: {
-            description: ""
-        },
-        perfs: {
-            parser: 0,
-            query: 0
-        }
-    });
+    context.exitExecution = false;
+    if (context.result.error === undefined) {
+        context.result.error = "Misformed CREATE FUNCTION query.";
+    } else {
+        context.result.error += "\r\n" + "Misformed CREATE FUNCTION query.";
+    }
+
 
 }

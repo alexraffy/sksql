@@ -23,6 +23,18 @@ import {numericLoad} from "../Numeric/numericLoad";
 
 
 export function compareValues(a: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime, b: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime) {
+    if (b === undefined) {
+        if (a === undefined) {
+            return 0;
+        }
+        return 1;
+    }
+    if (a === undefined) {
+        if (b === undefined) {
+            return 0;
+        }
+        return -1;
+    }
     if (typeof a === "string" && typeof b === "string") {
         let sc = a.localeCompare(b);
         if (sc >= 1) { return 1;}

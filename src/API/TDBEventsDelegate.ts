@@ -1,10 +1,11 @@
 import {TAuthSession} from "../WebSocket/TAuthSession";
+import {SKSQL} from "./SKSQL";
 
 
 export interface TDBEventsDelegate {
-    on?(databaseHashId: string, message: string, payload: any): void;
-    connectionLost?(databaseHashId: string): void;
-    connectionError?(databaseHashId: string, error: string);
-    authRequired(databaseHashId: string): TAuthSession;
-    ready(databaseHashId: string);
+    on?(db: SKSQL, databaseHashId: string, message: string, payload: any): void;
+    connectionLost?(db: SKSQL, databaseHashId: string): void;
+    connectionError?(db: SKSQL, databaseHashId: string, error: string);
+    authRequired(db: SKSQL, databaseHashId: string): TAuthSession;
+    ready(db: SKSQL, databaseHashId: string);
 }

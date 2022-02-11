@@ -9,7 +9,7 @@ import {TParserError} from "./TParserError";
 export function getColumnDefinition(column: TColumn, tables: TTableWalkInfo[]): TableColumn {
     let table = column.table;
     if (table === "") {
-        let tablesFound = findTableNameForColumn(column.column, tables);
+        let tablesFound = findTableNameForColumn(column.column, tables, undefined);
         if (tablesFound.length === 0) {
             throw new TParserError("Unknown column " + column.column);
         }

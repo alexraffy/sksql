@@ -173,7 +173,7 @@ export class SQLStatement {
                     checkSequence([str("UPDATE"), whitespaceOrNewLine]),
                     checkSequence([str("WHILE"), whitespaceOrNewLine])
                 ], "")], "");
-                
+
                 if (stType !== undefined) {
                     switch ((stType as any[])[0]) {
                         case "--":

@@ -9,12 +9,14 @@ import {test_insert} from "./test_insert";
 import {test_groupby} from "./test_groupby";
 import {test_functions} from "./test_functions";
 import {update1} from "./update1";
+import {test_compress} from "./test_compress";
 let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
 
 test_parser();
 let db = new SKSQL();
 db.initWorkerPool(4, sksqlData);
 
+test_compress(db);
 update1(db);
 test_functions(db);
 test_groupby(db);

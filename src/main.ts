@@ -104,8 +104,10 @@ export * from "./Blocks/IBlockInfo";
 export * from "./Blocks/kBlockHeaderField";
 export * from "./Blocks/newBlock";
 
+export * from "./BlockIO/compress";
 export * from "./BlockIO/copyBytesBetweenDV";
 export * from "./BlockIO/copyBytesToSharedBuffer";
+export * from "./BlockIO/decompress";
 export * from "./BlockIO/getBlobValue";
 export * from "./BlockIO/getLastRowId";
 export * from "./BlockIO/readBlobRecord";

@@ -4,7 +4,7 @@ import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
 import {
-    compileNewRoutines,
+    compileNewRoutines, decompress,
     ITableDefinition,
     TableColumnType,
     TWSRDataResponse,
@@ -181,7 +181,7 @@ export class SKSQL {
                         }
                         let t: ITable = {
                             data: {
-                                tableDef: buf,
+                                tableDef: decompress(buf, SKSQL.supportsSharedArrayBuffers),
                                 blocks: []
                             }
                         }
@@ -204,7 +204,7 @@ export class SKSQL {
                             for (let i = 0; i < payload.size; i++) {
                                 dv.setUint8(i, payload.data[i]);
                             }
-                            t.data.blocks.push(buf);
+                            t.data.blocks.push(decompress(buf, SKSQL.supportsSharedArrayBuffers));
                         }
                     }
                 }

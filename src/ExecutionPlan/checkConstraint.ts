@@ -36,10 +36,11 @@ import {ITable} from "../Table/ITable";
 import {evaluate} from "../API/evaluate";
 import {SKSQL} from "../API/SKSQL";
 import {readTableDefinition} from "../Table/readTableDefinition";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
 
 interface PPP {
-    exp: TQueryComparisonExpression | TQueryComparison;
-    ptr: TQueryComparisonExpression | TQueryComparison;
+    exp: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
+    ptr: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
 }
 
 function buildConstraintComparison(ret: PPP,

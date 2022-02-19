@@ -11,6 +11,7 @@ import {TQueryFunctionCall} from "./TQueryFunctionCall";
 import {TVariable} from "./TVariable";
 import {TNumber} from "./TNumber";
 import {TQueryOrderBy} from "./TQueryOrderBy";
+import {TQueryComparisonColumnEqualsString} from "./TQueryComparisonColumnEqualsString";
 
 
 export interface TQuerySelect {
@@ -19,8 +20,8 @@ export interface TQuerySelect {
     top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
     tables: TQueryTable[];
     columns: TQueryColumn[];
-    where: TQueryComparisonExpression | TQueryComparison;
+    where: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
     groupBy: TQueryOrderBy[];
-    having: TQueryComparisonExpression | TQueryComparison;
+    having: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
     orderBy: TQueryOrderBy[];
 }

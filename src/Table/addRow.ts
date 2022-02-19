@@ -20,6 +20,9 @@ export const rowHeaderSize = 4 + // ROWID
  */
 export function addRow(tb: ITableData, growBy: number = 4096): DataView {
     const length = recordSize(tb);
+    if (length * 10 > growBy) {
+        growBy = length * 10;
+    }
     let d: ArrayBuffer | SharedArrayBuffer = undefined;
     if (tb.blocks === undefined || tb.blocks.length === 0) {
         d = newBlock(growBy, BlockType.rows, tb.blocks.length + 1);

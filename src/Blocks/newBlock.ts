@@ -6,7 +6,7 @@ import {SKSQL} from "../API/SKSQL";
 /*
     Creates a new block of size blockSize
  */
-export function newBlock(blockSize: number = 4096, blockType: BlockType, blockId: number): ArrayBuffer | SharedArrayBuffer {
+export function newBlock(blockSize: number = 65536, blockType: BlockType, blockId: number): ArrayBuffer | SharedArrayBuffer {
     let ret: ArrayBuffer | SharedArrayBuffer = undefined;
     if (SKSQL.supportsSharedArrayBuffers) {
         ret = new SharedArrayBuffer(blockSize);

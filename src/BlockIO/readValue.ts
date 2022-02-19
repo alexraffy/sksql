@@ -13,7 +13,7 @@ import {TDateTime} from "../Query/Types/TDateTime";
     offset should be set to 5 if the row DataView contains the 5 bytes row header
  */
 export function readValue(table: ITable, tableDef: ITableDefinition,
-                          column: TableColumn, fullRow: DataView, offset: number = 5):
+                          column: TableColumn, fullRow: DataView, offset: number = 5, compareWithString : string = undefined):
     string | number | boolean | bigint | numeric | TDate | TTime | TDateTime {
     let value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime;
     let isNull = fullRow.getUint8(column.offset + offset);
@@ -59,7 +59,7 @@ export function readValue(table: ITable, tableDef: ITableDefinition,
             break;
         case TableColumnType.varchar:
         {
-            value = readStringFromUtf8Array(fullRow, column.offset + offset + 1, column.length);
+            value = readStringFromUtf8Array(fullRow, column.offset + offset + 1, column.length, compareWithString);
         }
             break;
         case TableColumnType.boolean:

@@ -39,7 +39,7 @@ export function run(db: SKSQL, context: TExecutionContext,
             resultWI = walkInfos.find((w) => { return w.name.toUpperCase() === tep.a.result.toUpperCase(); });
         }
         returnTable = resultWI.name;
-        let lenNewBuffer = 4096;
+        let lenNewBuffer = 65536;
         while (resultWI.rowLength > lenNewBuffer) {
             lenNewBuffer = lenNewBuffer * 2;
         }

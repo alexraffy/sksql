@@ -9,7 +9,6 @@ import {findExpressionType} from "../API/findExpressionType";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {TableColumnType} from "../Table/TableColumnType";
 import {newTable} from "../Table/newTable";
-import {readTableDefinition} from "../Table/readTableDefinition";
 import {TEPSelect} from "./TEPSelect";
 import {TEPSortNTop} from "./TEPSortNTop";
 import {TEPNestedLoop} from "./TEPNestedLoop";
@@ -26,7 +25,6 @@ import {TColumn} from "../Query/Types/TColumn";
 import {instanceOfTStar} from "../Query/Guards/instanceOfTStar";
 import {TStar} from "../Query/Types/TStar";
 import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
-import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TExecutionContext} from "./TExecutionContext";
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
@@ -34,7 +32,16 @@ import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
 import {ITable} from "../Table/ITable";
 import {TEPUpdate} from "./TEPUpdate";
-
+import {TQueryComparison} from "../Query/Types/TQueryComparison";
+import {instanceOfTQueryComparison} from "../Query/Guards/instanceOfTQueryComparison";
+import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
+import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
+import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
+import {instanceOfTString} from "../Query/Guards/instanceOfTString";
+import {kQueryComparison} from "../Query/Enums/kQueryComparison";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
+import {findTableNameForColumn} from "../API/findTableNameForColumn";
+import {TParserError} from "../API/TParserError";
 
 
 function addInvisibleColumnsForSorting(db: SKSQL,
@@ -157,7 +164,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                     {
                         name: column,
                         type: coldef.type,
-                        length: (coldef.type === TableColumnType.varchar) ? 255 : 1,
+                        length: (coldef.type === TableColumnType.varchar) ? 4096 : 1,
                         nullable: true,
                         defaultExpression: "",
                         invisible: true
@@ -199,6 +206,30 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
             }
 
             let types = findExpressionType(db, col.expression, context.openTables, context.stack, recursion_callback);
+            let length = 4096;
+            if (instanceOfTColumn(col.expression)) {
+                let name = col.expression.column;
+                let table = col.expression.table;
+                // fix no table
+                if (table === undefined || table === "") {
+                    let tableNames = findTableNameForColumn(name, tables, col.expression);
+                    if (tableNames.length > 1) {
+                        throw new TParserError("Ambiguous column name " + name);
+                    }
+                    if (tableNames.length === 0) {
+                        throw new TParserError("Unknown column name " + name);
+                    }
+                    table = tableNames[0];
+                }
+                let t = tables.find((t) => { return t.alias === table;});
+                if (t === undefined) {
+                    throw new TParserError("Could not find table for column " + name + " from TColumn " + JSON.stringify(col.expression));
+                }
+                let colDef = t.def.columns.find( (col) => { return col.name.toUpperCase() === name.toUpperCase();});
+                if (colDef !== undefined) {
+                    length = colDef.length;
+                }
+            }
             let name = "";
             if (instanceOfTLiteral(col.alias.alias)) {
                 name = col.alias.alias.value;
@@ -209,7 +240,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                 {
                     name: name,
                     type: types,
-                    length: (types === TableColumnType.varchar) ? 255 : 1,
+                    length: (types === TableColumnType.varchar) ? length : 1,
                     nullable: true,
                     defaultExpression: ""
                 }
@@ -293,6 +324,73 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         if (select.having !== undefined) {
             findExpressionType(db, select.having, context.openTables, context.stack, recursion_callback, {callbackOnTColumn: true});
         }
+
+
+        if (select.where !== undefined) {
+
+            let recur = function (st: TQueryComparison | TQueryComparisonExpression | TQueryComparisonColumnEqualsString)
+            {
+                if (instanceOfTQueryComparison(st)) {
+                    if (st.comp.value === kQueryComparison.equal && instanceOfTColumn(st.left) &&
+                        (instanceOfTString(st.right) || instanceOfTVariable(st.right))) {
+                        // possible optimisation
+                        // if we need to test column = stringValue
+                        // instead of reading the full column and then comparing it with the other value
+                        // we can read the column and compare it byte by byte with the other value and abort as soon as possible.
+                        let name = "";
+                        let table = "";
+                        name = (st.left as TColumn).column;
+                        table = st.left.table;
+                        if (table === "") {
+
+                            let tablesMatch = findTableNameForColumn(name, context.openTables, context.currentStatement, undefined);
+                            if (tablesMatch.length !== 1) {
+                                if (context.openTables.length === 0) {
+                                    throw new TParserError("Unknown column name " + name);
+                                }
+                                if (context.openTables.length > 1) {
+                                    throw new TParserError("Ambiguous column name " + name);
+                                }
+                            }
+                            table = tablesMatch[0];
+                        }
+                        let tableInfo = context.openTables.find((t) => {
+                            return t.name.toUpperCase() === table.toUpperCase()
+                        });
+                        let columnDef = tableInfo.def.columns.find((c) => {
+                            return c.name.toUpperCase() === name.toUpperCase();
+                        });
+                        if (columnDef === undefined) {
+                            throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
+                        }
+                        if (columnDef.type === TableColumnType.varchar) {
+
+                            let newValue: TQueryComparisonColumnEqualsString = {
+                                kind: "TQueryComparisonColumnEqualsString",
+                                column: st.left,
+                                value: st.right
+                            };
+                            return newValue;
+                        }
+                    }
+                    return st;
+                } else if (instanceOfTQueryComparisonExpression(st)) {
+                    let newA = recur(st.a);
+                    st.a = newA;
+                    let newB = recur(st.b);
+                    st.b = newB;
+                    return st;
+                } else {
+                    return st;
+                }
+
+            }
+            select.where = recur(select.where);
+
+
+        }
+
+
     }
     let returnTable: ITable;
     if (returnTableName !== "") {

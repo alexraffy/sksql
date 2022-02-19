@@ -12,9 +12,10 @@ import { TArray } from "../Query/Types/TArray";
 import { compareValues } from "./compareValues";
 import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
 import {SKSQL} from "./SKSQL";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
 
 
-export function evaluateBooleanClauseWithRowDEPREC(db: SKSQL, struct: TQueryComparisonExpression | TQueryComparison, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
+export function evaluateBooleanClauseWithRowDEPREC(db: SKSQL, struct: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString, table: ITable, def: ITableDefinition, fullRow: DataView, offset: number = 5) {
     if (struct === undefined) {
         return true;
     }

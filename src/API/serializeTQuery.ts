@@ -32,10 +32,14 @@ import {isNumeric} from "../Numeric/isNumeric";
 import {numericDisplay} from "../Numeric/numericDisplay";
 import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 import {TValidExpressions} from "../Query/Types/TValidExpressions";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
+import {
+    instanceOfTQueryComparisonColumnEqualsString
+} from "../Query/Guards/instanceOfTQueryComparisonColumnEqualsString";
 
 
 
-export function serializeTQuery(a: TQueryExpression | TValidExpressions | TQueryComparison | TQueryComparisonExpression | numeric | string): string {
+export function serializeTQuery(a: TQueryExpression | TValidExpressions | TQueryComparison | TQueryComparisonExpression | TQueryComparisonColumnEqualsString | numeric | string): string {
     if (instanceOfTNumber(a)) {
         return a.value;
     }
@@ -116,6 +120,12 @@ export function serializeTQuery(a: TQueryExpression | TValidExpressions | TQuery
         let str = serializeTQuery(a.a);
         str += " " + (a.bool) + " ";
         str += serializeTQuery(a.b);
+        return str;
+    }
+    if (instanceOfTQueryComparisonColumnEqualsString(a)) {
+        let str = serializeTQuery(a.column);
+        str += " = ";
+        str += serializeTQuery(a.value);
         return str;
     }
 

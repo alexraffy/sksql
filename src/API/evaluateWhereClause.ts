@@ -22,12 +22,17 @@ import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {SKSQL} from "./SKSQL";
+import {
+    instanceOfTQueryComparisonColumnEqualsString
+} from "../Query/Guards/instanceOfTQueryComparisonColumnEqualsString";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
+import {readStringFromUtf8Array} from "../BlockIO/readStringFromUtf8Array";
 
 
 export function evaluateWhereClause(
     db: SKSQL,
     context: TExecutionContext,
-    struct: TQueryComparison | TQueryComparisonExpression ,
+    struct: TQueryComparison | TQueryComparisonExpression | TQueryComparisonColumnEqualsString ,
     evaluateOptions: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []},
     withRow: {
         fullRow: DataView,
@@ -51,6 +56,25 @@ export function evaluateWhereClause(
                 return leftValue || rightValue;
         }
     }
+    if (instanceOfTQueryComparisonColumnEqualsString(struct)) {
+        let qc = struct as TQueryComparisonColumnEqualsString;
+        let stringValue = evaluate(db, context, qc.value, undefined, evaluateOptions, withRow);
+        if (typeof stringValue === "string") {
+            let copyOptions: TEvaluateOptions = {
+                aggregateMode: evaluateOptions.aggregateMode,
+                aggregateObjects: evaluateOptions.aggregateObjects,
+                forceTable: evaluateOptions.forceTable,
+                compareColumnToStringValue: stringValue as string
+            };
+            let columnValue: string = evaluate(db, context, qc.column, undefined, copyOptions, withRow) as string;
+            if (typeof columnValue === "string") {
+                return columnValue.localeCompare(stringValue) === 0;
+            }
+        }
+        return false;
+    }
+
+
     if (instanceOfTQueryComparison(struct)) {
         let qc = struct as TQueryComparison;
         let leftValue = evaluate(db, context, qc.left, undefined, evaluateOptions, withRow);

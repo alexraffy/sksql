@@ -6,12 +6,13 @@ import {TQueryColumn} from "../Query/Types/TQueryColumn";
 import {TAlias} from "../Query/Types/TAlias";
 import {TTable} from "../Query/Types/TTable";
 import {TEPProjection} from "./TEPProjection";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
 
 
 export interface TEPScan extends TEP {
     kind: "TEPScan";
     table: TAlias | TTable;
-    predicate: TQueryComparisonExpression | TQueryComparison;
+    predicate: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
     range?: TEPRange;
     projection: TEPProjection[];
     result: string;

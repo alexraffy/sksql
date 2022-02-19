@@ -6,6 +6,7 @@ import {TTable} from "../Query/Types/TTable";
 import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
 import {TQueryComparison} from "../Query/Types/TQueryComparison";
 import {TEPProjection} from "./TEPProjection";
+import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
 
 
 export interface TEPGroupBy extends TEP {
@@ -13,7 +14,7 @@ export interface TEPGroupBy extends TEP {
     source: TAlias | TTable;
     dest: TAlias | TTable;
     groupBy: TQueryOrderBy[];
-    having: TQueryComparisonExpression | TQueryComparison;
+    having: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
     output: TQueryColumn[];
     projections: TEPProjection[];
 }

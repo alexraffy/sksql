@@ -234,6 +234,8 @@ export class SKSQL {
                     connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
                 }
             })
+        } else {
+
         }
 
 

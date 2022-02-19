@@ -2,7 +2,7 @@
 
 
 
-export function readStringFromUtf8Array(v: DataView, offset: number, length: number = -1) {
+export function readStringFromUtf8Array(v: DataView, offset: number, length: number = -1, compareWith: string = undefined) {
     var out = [], pos = offset, c = 0;
     while ((length === -1 && pos < v.byteLength) || (pos - offset < length)) {
         var c1 = v.getUint8(pos++);
@@ -28,6 +28,11 @@ export function readStringFromUtf8Array(v: DataView, offset: number, length: num
             var c3 = v.getUint8(pos++);
             out[c++] =
                 String.fromCharCode((c1 & 15) << 12 | (c2 & 63) << 6 | c3 & 63);
+        }
+        if (compareWith !== undefined) {
+            if (out[c-1].charCodeAt(0) !== compareWith.charCodeAt(c-1)) {
+                return out.join('');
+            }
         }
     }
     return out.join('');

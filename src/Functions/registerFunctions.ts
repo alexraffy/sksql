@@ -37,6 +37,7 @@ import {tests_IsNull} from "./Tests/IsNull";
 import {scoped_identity} from "./scoped_identity";
 import {newid} from "./newid";
 import {date_dateadd} from "./Date/date_dateadd";
+import {aggregate_string_agg} from "./Aggregate/aggregate_string_agg";
 
 
 export function registerFunctions(db: SKSQL) {
@@ -45,6 +46,11 @@ export function registerFunctions(db: SKSQL) {
     db.declareFunction(kFunctionType.aggregate, "SUM", [
         {name: "EXPRESSION", type: TableColumnType.numeric}
     ], TableColumnType.numeric, aggregate_sum);
+
+    db.declareFunction(kFunctionType.aggregate, "STRING_AGG", [
+        {name: "EXPRESSION", type: TableColumnType.varchar},
+        {name: "SEPARATOR", type: TableColumnType.varchar}
+    ], TableColumnType.varchar, aggregate_string_agg);
 
     // DATE
     db.declareFunction(kFunctionType.scalar, "DATEFROMPARTS", [

@@ -55,9 +55,10 @@ import {cloneContext} from "../ExecutionPlan/cloneContext";
 import {swapContext} from "../ExecutionPlan/swapContext";
 
 export interface TEvaluateOptions {
-    aggregateMode: "none" | "init" | "row" | "final",
-    aggregateObjects: { name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any }[],
-    forceTable?: string
+    aggregateMode: "none" | "init" | "row" | "final";
+    aggregateObjects: { name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any }[];
+    forceTable?: string;
+    compareColumnToStringValue?: string;
 }
 
 
@@ -66,13 +67,14 @@ export function evaluate(
     context: TExecutionContext,
     struct: string | number | bigint | boolean | TQueryExpression | TValidExpressions | TQueryColumn,
     colDef: TableColumn,
-    options: TEvaluateOptions = { aggregateMode: "none", aggregateObjects: []},
+    options: TEvaluateOptions = { compareColumnToStringValue: undefined, aggregateMode: "none", aggregateObjects: []},
     withRow: {
         fullRow: DataView,
         table: ITable,
         def: ITableDefinition,
         offset: number
-    } = undefined
+    } = undefined,
+
 ): string | number | boolean | bigint | numeric | TDate | TTime | TDateTime
 {
     if (struct === undefined) {
@@ -176,14 +178,15 @@ export function evaluate(
                 throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
             }
             let dv = new DataView(tableInfo.table.data.blocks[tableInfo.cursor.blockIndex], tableInfo.cursor.offset, tableInfo.rowLength);
-            let val = readValue(tableInfo.table, tableInfo.def, columnDef, dv, 5);
+
+            let val = readValue(tableInfo.table, tableInfo.def, columnDef, dv, 5, options.compareColumnToStringValue);
             return val;
         } else {
             let columnDef = withRow.def.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
             if (columnDef === undefined) {
                 throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
             }
-            let val = readValue(withRow.table, withRow.def, columnDef, withRow.fullRow, withRow.offset);
+            let val = readValue(withRow.table, withRow.def, columnDef, withRow.fullRow, withRow.offset, options.compareColumnToStringValue);
 
             return val;
         }

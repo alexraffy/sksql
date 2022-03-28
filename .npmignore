@@ -8,3 +8,4 @@ webpack.config.js
 .idea
 *.map
 *.tgz
+clean.js

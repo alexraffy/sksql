@@ -52,11 +52,11 @@ export function numericAdjustExponent(a: numeric, b: numeric): {a: numeric, b: n
     }
     while (newA.e > newB.e && newB.m % 10 === 0) {
         newB.m /= 10;
-        newB.e--;
+        newB.e++;
     }
     while (newA.e > newB.e && newA.m <= NUMERIC_MAX) {
         newB.m *= 10;
-        newB.e++;
+        newB.e--;
     }
     while (newA.e > newB.e) {
         newB.m /= 10;

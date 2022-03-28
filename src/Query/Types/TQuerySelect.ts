@@ -1,17 +1,13 @@
 import {kCommandType} from "../Enums/kCommandType";
 import {TQueryTable} from "./TQueryTable";
 import {TQueryColumn} from "./TQueryColumn";
-import {TQueryComparison} from "./TQueryComparison";
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
-import {TLiteral} from "./TLiteral";
-import {kOrder} from "../Enums/kOrder";
-import {TColumn} from "./TColumn";
 import {TQueryExpression} from "./TQueryExpression";
 import {TQueryFunctionCall} from "./TQueryFunctionCall";
 import {TVariable} from "./TVariable";
 import {TNumber} from "./TNumber";
 import {TQueryOrderBy} from "./TQueryOrderBy";
 import {TQueryComparisonColumnEqualsString} from "./TQueryComparisonColumnEqualsString";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQuerySelect {
@@ -20,8 +16,10 @@ export interface TQuerySelect {
     top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
     tables: TQueryTable[];
     columns: TQueryColumn[];
-    where: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
+    where: TQueryExpression | TValidExpressions;
     groupBy: TQueryOrderBy[];
-    having: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
+    having: TQueryExpression | TValidExpressions;
     orderBy: TQueryOrderBy[];
+    resultTableName: string;
+    hasForeignColumns: boolean;
 }

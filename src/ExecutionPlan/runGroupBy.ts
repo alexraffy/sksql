@@ -5,10 +5,6 @@ import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLi
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
-import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
-import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
-import {TColumn} from "../Query/Types/TColumn";
-import {TLiteral} from "../Query/Types/TLiteral";
 import {readValue} from "../BlockIO/readValue";
 import {TableColumnType} from "../Table/TableColumnType";
 import {numericCmp} from "../Numeric/numericCmp";
@@ -18,30 +14,30 @@ import {TDate} from "../Query/Types/TDate";
 import {addRow, rowHeaderSize} from "../Table/addRow";
 import {writeValue} from "../BlockIO/writeValue";
 import {evaluate} from "../API/evaluate";
-import {findExpressionType, TFindExpressionTypeOptions} from "../API/findExpressionType";
 import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
 import {SKSQL} from "../API/SKSQL";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
-import {evaluateWhereClause} from "../API/evaluateWhereClause";
 import {readPrevious} from "../Cursor/readPrevious";
 import {readLast} from "../Cursor/readLast";
 import {instanceOfTQueryCreateFunction} from "../Query/Guards/instanceOfTQueryCreateFunction";
-import {runFunction} from "./runFunction";
 import {TExecutionContext} from "./TExecutionContext";
-import {createNewContext} from "./newContext";
 import {cloneContext} from "./cloneContext";
 import {swapContext} from "./swapContext";
-
+import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
+import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
+import {kBooleanResult} from "../API/kBooleanResult";
+import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
+import {TBooleanResult} from "../API/TBooleanResult";
 
 
 function writeRow(db: SKSQL, context: TExecutionContext, tw: TTableWalkInfo, td: TTableWalkInfo, tep: TEPGroupBy,
                   aggregateFunctions:{name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] ) {
-    let writeRecord = true;
+    let writeRecord: TBooleanResult = {kind: "TBooleanResult", value: kBooleanResult.isTrue};
 
     if (tep.having !== undefined) {
-        writeRecord = evaluateWhereClause(db, context, tep.having, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions});
+        writeRecord = evaluate(db, context, tep.having, context.tables, undefined, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions}) as TBooleanResult;
     }
-    if (writeRecord) {
+    if (instanceOfTBooleanResult(writeRecord) && writeRecord.value === kBooleanResult.isTrue) {
         let newRow = addRow(td.table.data, 4096);
 
         for (let x = 0; x < tep.projections.length; x++) {
@@ -50,11 +46,18 @@ function writeRow(db: SKSQL, context: TExecutionContext, tw: TTableWalkInfo, td:
                 return t.name.toUpperCase() === p.columnName.toUpperCase();
             });
             if (col !== undefined) {
-                let value = evaluate(db, context, p.output, col, {
+                let value = evaluate(db, context, p.output, context.tables, col, {
                     forceTable: tw.name,
                     aggregateMode: "final",
-                    aggregateObjects: aggregateFunctions
+                    aggregateObjects: aggregateFunctions,
+                    currentStep: tep
                 });
+                if (instanceOfTTable(value)) {
+                    value = readFirstColumnOfTable(db, context, value);
+                }
+                if (instanceOfTBooleanResult(value)) {
+                    value = value.value === kBooleanResult.isTrue;
+                }
                 writeValue(td.table, td.def, col, newRow, value, rowHeaderSize);
             }
         }
@@ -65,52 +68,21 @@ function writeRow(db: SKSQL, context: TExecutionContext, tw: TTableWalkInfo, td:
 
 export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupBy, onRowSelected: (tep: TEPGroupBy, walkInfos: TTableWalkInfo[]) => boolean) {
     let tableToOpen = getValueForAliasTableOrLiteral(tep.source);
-    let tw = context.openTables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
+    let tw = context.tables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
     if (tw === undefined) {
         throw "GroupBy with unknown table";
     }
-    bubbleSort(tw.table, tw.def, tep.groupBy);
+    bubbleSort(db, context, tw.table, tw.def, tep.groupBy);
 
     let destTable = getValueForAliasTableOrLiteral(tep.dest);
-    let td = context.openTables.find((t) => { return t.name.toUpperCase() === destTable.table.toUpperCase();});
+    let td = context.tables.find((t) => { return t.name.toUpperCase() === destTable.table.toUpperCase();});
     if (td === undefined) {
         throw "GroupBy with unknown table";
     }
 
     let groups = [];
     let group = undefined;
-    let aggregateFunctions: {name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] = [];
-
-    let cbFindAllAggregateFunctions = (o: any, key: string, value: any, options: TFindExpressionTypeOptions) => {
-        if (key === "AGGREGATE") {
-            let fnCall = o as TQueryFunctionCall;
-            let fnData = db.getFunctionNamed(fnCall.value.name.toUpperCase());
-            if (fnData === undefined) {
-                throw "Function " + fnCall.value.name.toUpperCase() + " does not exist. Use DBData.instance.declareFunction before using it.";
-            }
-            let fnAggData = undefined;
-            if (!instanceOfTQueryCreateFunction(fnData.fn)) {
-                fnAggData = fnData.fn(context, undefined);
-            }
-            aggregateFunctions.push({
-                name: fnCall.value.name.toUpperCase(),
-                fn: fnData,
-                funcCall: fnCall,
-                data: fnAggData
-            });
-        }
-        return true;
-    }
-
-    // find all aggregate functions
-    for (let x = 0; x < tep.projections.length; x++) {
-        let proj = tep.projections[x];
-        findExpressionType(db, proj.output.expression, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
-    }
-    // having clause ?
-    if (tep.having !== undefined) {
-        findExpressionType(db, tep.having, context.openTables, context.stack, cbFindAllAggregateFunctions, {callbackOnTColumn: true});
-    }
+    let aggregateFunctions: {name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] = tep.aggregateFunctions;
 
 
     // open a cursor on the sorted table
@@ -121,19 +93,9 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
         let groupValues = [];
         let isDifferent = false;
         for (let i = 0; i < tep.groupBy.length; i++) {
-            let colName = "";
-            if (instanceOfTColumn(tep.groupBy[i].column)) {
-                colName = (tep.groupBy[i].column as TColumn).column.toUpperCase();
-            } else if (instanceOfTLiteral(tep.groupBy[i].column)) {
-                colName = (tep.groupBy[i].column as TLiteral).value.toUpperCase();
-            } else {
-                throw "Could not find column in order by clause";
-            }
-            if (colName === "ROWID") {
-                return;
-            }
+            let colName = tep.groupBy[i].column.alias.alias as string;
 
-            let colDef = tw.def.columns.find((t) => { return t.name.toUpperCase() === colName; })
+            let colDef = tw.def.columns.find((t) => { return t.name.toUpperCase() === colName.toUpperCase(); })
             let val = readValue(tw.table, tw.def, colDef, row, rowHeaderSize);
             groupValues.push(val);
 
@@ -207,7 +169,7 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
                 for (let i = 0; i < aggregateFunctions.length; i++) {
                     if (!instanceOfTQueryCreateFunction(aggregateFunctions[i].fn.fn)) {
                         //@ts-ignore
-                        aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(undefined);
+                        aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(context, "init", aggregateFunctions[i].funcCall.distinct, undefined);
                     }
                 }
 
@@ -221,14 +183,19 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
             let params: any[] = [];
             for (let i = 0; i < af.funcCall.value.parameters.length; i++) {
                 let newContext: TExecutionContext = cloneContext(context, "GroupBy", true, false);
-                newContext.openTables = [tw];
+                newContext.tables = [tw];
 
-                let val = evaluate(db, newContext, af.funcCall.value.parameters[i], undefined, {aggregateMode: "row", aggregateObjects: aggregateFunctions, forceTable: tw.name});
+                let val = evaluate(db, newContext, af.funcCall.value.parameters[i], newContext.tables, undefined,
+                    {
+                        aggregateMode: "row",
+                        aggregateObjects: aggregateFunctions,
+                        forceTable: tw.name
+                    });
                 swapContext(context, newContext);
                 params.push(val);
             }
             if (!instanceOfTQueryCreateFunction(af.fn.fn)) {
-                af.data = af.fn.fn(context, af.data, ...params);
+                af.data = af.fn.fn(context, "row", af.funcCall.distinct, af.data, ...params);
             }
 
         }
@@ -238,6 +205,17 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
     tw.cursor = readLast(tw.table, tw.def, tw.cursor);
     if (!cursorEOF(tw.cursor)) {
         writeRow(db, context, tw, td, tep, aggregateFunctions);
+    } else {
+        if (group === undefined) {
+            // reset data for aggregate functions
+            for (let i = 0; i < aggregateFunctions.length; i++) {
+                if (!instanceOfTQueryCreateFunction(aggregateFunctions[i].fn.fn)) {
+                    //@ts-ignore
+                    aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(context, "init", aggregateFunctions[i].funcCall.distinct, undefined);
+                }
+            }
+            writeRow(db, context, tw, td, tep, aggregateFunctions);
+        }
     }
 
 

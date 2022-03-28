@@ -1,7 +1,7 @@
 import {kTableConstraintType} from "./kTableConstraintType";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
 import {kForeignKeyOnEvent} from "./kForeignKeyOnEvent";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 /*
     Constraint information
@@ -19,7 +19,7 @@ export interface TTableConstraint {
     foreignKeyColumnsRef: string[];
     foreignKeyOnUpdate: kForeignKeyOnEvent;
     foreignKeyOnDelete: kForeignKeyOnEvent;
-    check: TQueryComparisonExpression | TQueryComparison;
+    check: TQueryExpression | TValidExpressions;
 
 
 }

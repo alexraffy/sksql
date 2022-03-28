@@ -7,7 +7,7 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {literal} from "../../BaseParser/Predicates/literal";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 import {returnPred} from "../../BaseParser/Predicates/ret";
-import {predicateTQueryExpression, predicateTQueryExpressionFAULTY} from "./predicateTQueryExpression";
+import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {TExecute} from "../Types/TExecute";
 import {TLiteral} from "../Types/TLiteral";
 

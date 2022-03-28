@@ -1,4 +1,4 @@
-import {numeric} from "./numeric";
+import {numeric, NUMERIC_NAN_EXP} from "./numeric";
 
 
 export function numericRound(a: numeric, decimals: number) {
@@ -8,9 +8,20 @@ export function numericRound(a: numeric, decimals: number) {
         e: a.e,
         approx: a.approx
     };
-    while (newA.e > decimals) {
-        newA.e--;
-        newA.m /= 10;
+    if( decimals < 0 ) decimals = 0;
+    if( newA.e >= -decimals ) return newA;
+    if( newA.e < -(decimals+30) ){
+        newA.sign = 0;
+        newA.m = 0;
+        newA.e = NUMERIC_NAN_EXP;
+        newA.approx = 0;
+        return newA;
     }
+    while( newA.e < -(decimals+1) ){
+        newA.m = parseInt((newA.m / 10).toString());
+        newA.e++;
+    }
+    newA.m = parseInt(((newA.m+5)/10).toString());
+    newA.e++;
     return newA;
 }

@@ -14,7 +14,7 @@ import {SQLResult} from "./SQLResult";
 import {whitespaceOrNewLine} from "../BaseParser/Predicates/whitespaceOrNewLine";
 import {returnPred} from "../BaseParser/Predicates/ret";
 import {oneOf} from "../BaseParser/Predicates/oneOf";
-import {eof} from "../BaseParser/Predicates/eof";
+import {eof, isEOF} from "../BaseParser/Predicates/eof";
 import {str} from "../BaseParser/Predicates/str";
 import {kResultType} from "./kResultType";
 import {readTableAsJSON} from "./readTableAsJSON";
@@ -52,6 +52,7 @@ import {predicateTWhile} from "../Query/Parser/predicateTWhile";
 import {predicateTQuerySelect} from "../Query/Parser/predicateTQuerySelect";
 import {cloneContext} from "../ExecutionPlan/cloneContext";
 import {predicateTGO} from "../Query/Parser/predicateTGO";
+import {TDebugInfo} from "../Query/Types/TDebugInfo";
 
 let performance = undefined;
 try {
@@ -143,9 +144,11 @@ export class SQLStatement {
     private parse() {
         let callback = function () {}
 
+        let endOfStatement = oneOf([whitespaceOrNewLine, str(";"), eof], "");
+
         this.ast = parse(callback, function *(callback) {
             let ret: (TValidStatementsInFunction)[] = [];
-            let exit: boolean = yield eof;
+            let exit: boolean = yield isEOF;
             while (!exit) {
 
                 let result;
@@ -155,18 +158,18 @@ export class SQLStatement {
                     checkSequence([str("--")]),
                     checkSequence([str("ALTER"), whitespaceOrNewLine]),
                     checkSequence([str("BEGIN"), whitespaceOrNewLine]),
-                    checkSequence([str("BREAK"), whitespaceOrNewLine]),
+                    checkSequence([str("BREAK"), endOfStatement]),
                     checkSequence([str("CREATE"), whitespaceOrNewLine]),
-                    checkSequence([str("DEBUGGER"), whitespaceOrNewLine]),
+                    checkSequence([str("DEBUGGER"), endOfStatement]),
                     checkSequence([str("DECLARE"), whitespaceOrNewLine]),
                     checkSequence([str("DELETE"), whitespaceOrNewLine]),
                     checkSequence([str("DROP"), whitespaceOrNewLine]),
                     checkSequence([str("EXECUTE"), whitespaceOrNewLine]),
                     checkSequence([str("EXEC"), whitespaceOrNewLine]),
-                    checkSequence([str("GO"), maybe(whitespaceOrNewLine), maybe(str(";"))]),
+                    checkSequence([str("GO"), endOfStatement]),
                     checkSequence([str("IF"), whitespaceOrNewLine]),
                     checkSequence([str("INSERT"), whitespaceOrNewLine]),
-                    checkSequence([str("RETURN"), whitespaceOrNewLine]),
+                    checkSequence([str("RETURN"), endOfStatement]),
                     checkSequence([str("SELECT"), whitespaceOrNewLine]),
                     checkSequence([str("SET"), whitespaceOrNewLine]),
                     checkSequence([str("TRUNCATE"), whitespaceOrNewLine]),
@@ -325,7 +328,7 @@ export class SQLStatement {
                     yield maybe(atLeast1(whitespaceOrNewLine));
                     yield maybe(atLeast1(str(";")));
                     yield maybe(atLeast1(whitespaceOrNewLine));
-                    exit = yield eof;
+                    exit = yield isEOF;
                 }
             }
             yield returnPred({
@@ -335,7 +338,12 @@ export class SQLStatement {
         }, new Stream(this.query, 0));
         this.context.parseResult = this.ast;
     }
-    run(type: kResultType = kResultType.SQLResult): SQLResult | any[] {
+    run(type: kResultType = kResultType.SQLResult, options: {printDebug: boolean} = {printDebug: false}): SQLResult | any[] {
+        if (options !== undefined && options.printDebug === true) {
+            console.log("****************************************");
+            console.log("DEBUG INFO");
+            console.log("FOR STATEMENT " + this.query);
+        }
         let perfs = {
             parser: 0,
             query: 0
@@ -351,9 +359,18 @@ export class SQLStatement {
             let t1 = performance.now();
             perfs.parser = (t1 - t0);
         }
+        if (options !== undefined && options.printDebug === true) {
+            console.log("--------------------------");
+            console.log("PARSED TREE:");
+            console.dir(this.ast);
+        }
 
         if (this.hasErrors) {
             if (type === kResultType.SQLResult) {
+                if (options !== undefined && options.printDebug === true) {
+                    console.log("--------------------------");
+                    console.log("ERROR: " + (this.ast as ParseError).description);
+                }
                 return {
                     error: (this.ast as ParseError).description,
                     rowCount: 0,
@@ -395,7 +412,7 @@ export class SQLStatement {
         }
         for (let i = 0; i < statements.length; i++) {
             let statement = statements[i];
-            processStatement(this.db, this.context, statement);
+            processStatement(this.db, this.context, statement, options);
             if (this.context.rollback === true) {
                 throw new TParserError(this.context.rollbackMessage);
                 break;

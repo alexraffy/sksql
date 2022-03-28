@@ -4,23 +4,19 @@ import {TableColumnType} from "./TableColumnType";
 import {TableColumn} from "./TableColumn";
 import {ITableDefinition} from "./ITableDefinition";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
-import {writeStringToUtf8ByteArray} from "../BlockIO/writeStringToUtf8ByteArray";
-import {serializeTQuery} from "../API/serializeTQuery";
 import {kTableConstraintType} from "./kTableConstraintType";
 import {kForeignKeyOnEvent} from "./kForeignKeyOnEvent";
 import {TTableConstraint} from "./TTableConstraint";
 import {predicateTQueryExpression} from "../Query/Parser/predicateTQueryExpression";
-import {predicateTQueryComparisonExpression} from "../Query/Parser/predicateTQueryComparisonExpression";
-import {predicateTQueryComparison} from "../Query/Parser/predicateTQueryComparison";
 import {returnPred} from "../BaseParser/Predicates/ret";
-import {oneOf} from "../BaseParser/Predicates/oneOf";
 import {ParseResult} from "../BaseParser/ParseResult";
 import {ParseError} from "../BaseParser/ParseError";
 import {parse} from "../BaseParser/parse";
 import {Stream} from "../BaseParser/Stream";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
+
 import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
 
 
 /*
@@ -110,10 +106,10 @@ export function readTableDefinition(tb: ITableData, showInvisibleColumns = false
         offset += kBlockHeaderField.TableDefConstraintEnd;
 
         let parseResult: ParseResult | ParseError = parse((name, value) => {}, function *(callback) {
-            let ret = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "");
+            let ret = yield predicateTQueryExpression;
             yield returnPred(ret);
         }, new Stream(checkExpression, 0));
-        let checkExpressionValue: TQueryComparisonExpression | TQueryComparison;
+        let checkExpressionValue: TQueryExpression | TValidExpressions;
         if (instanceOfParseResult(parseResult)) {
             checkExpressionValue = parseResult.value;
         }

@@ -6,15 +6,15 @@ import {kQueryComparison} from "../Enums/kQueryComparison";
 import {TBetween} from "./TBetween";
 import {TColumn} from "./TColumn";
 import {TString} from "./TString";
-import {TComparison} from "./TComparison";
+import {TComparisonDEPREC} from "./TComparison";
 import {TNull} from "./TNull";
 import { TArray } from "./TArray";
 import {TValidExpressions} from "./TValidExpressions";
 
 
-export interface TQueryComparison {
+export interface TQueryComparisonDEPREC {
     kind: "TQueryComparison";
     left: TQueryExpression | TValidExpressions;
-    comp: TComparison;
+    comp: TComparisonDEPREC;
     right: TQueryExpression | TValidExpressions;
 }

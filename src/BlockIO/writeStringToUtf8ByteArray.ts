@@ -5,7 +5,9 @@ export function writeStringToUtf8ByteArray (dataView: DataView, offset: number, 
     let p = offset;
     for (var i = 0; i < maxLengthInBytes; i++) {
         if (i >= str.length ) {
-            dataView.setUint8(p++, 0);
+            if (p < maxLengthInBytes) {
+                dataView.setUint8(p++, 0);
+            }
             continue;
         }
         var c = str.charCodeAt(i);

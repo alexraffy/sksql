@@ -11,7 +11,7 @@ export function str(equalsTo: string): (input: Stream) => ParseResult | ParseErr
             return;
         }
         if (input.EOF) {
-            return new ParseError(input, "a literal, got EOF instead.", false);
+            return new ParseError(input, equalsTo  + " got EOF instead.", false);
         }
         equalsTo = equalsTo.toUpperCase();
 
@@ -32,7 +32,7 @@ export function str(equalsTo: string): (input: Stream) => ParseResult | ParseErr
         if (value === equalsTo) {
             return new ParseResult(value, s, input, value);
         } else {
-            return new ParseError(input, equalsTo, false);
+            return new ParseError(input, equalsTo + " got " + value + " instead", false);
         }
     }
 }

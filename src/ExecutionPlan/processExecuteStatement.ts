@@ -42,7 +42,7 @@ export function processExecuteStatement(db: SKSQL,
             let gotParameter = false;
             if (exists) {
                 if (exists.value !== undefined) {
-                    let value = evaluate(db, context, exists.value, undefined);
+                    let value = evaluate(db, context, exists.value,  [], undefined);
                     newParameter.value = value;
                     gotParameter = true;
                     if (exists.output === true) {
@@ -54,7 +54,7 @@ export function processExecuteStatement(db: SKSQL,
                 let existsByIndex = statement.parameters.find((param) => { return param.order === i;});
                 if (existsByIndex) {
                     if (existsByIndex) {
-                        let value = evaluate(db, context, existsByIndex.value, undefined);
+                        let value = evaluate(db, context, existsByIndex.value,  [],  undefined);
                         newParameter.value = value;
                         gotParameter = true;
                         if (existsByIndex.output === true) {
@@ -65,7 +65,7 @@ export function processExecuteStatement(db: SKSQL,
             }
             if (gotParameter === false) {
                 if (p.defaultValue !== undefined) {
-                    let value = evaluate(db, context, p.defaultValue, undefined);
+                    let value = evaluate(db, context, p.defaultValue,  [],  undefined);
                     newParameter.value = true;
                 }
             }

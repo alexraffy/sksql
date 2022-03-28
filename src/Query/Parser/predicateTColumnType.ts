@@ -20,8 +20,9 @@ export const predicateTColumnType = function *(callback) {
     let dec: TNumber = {kind: "TNumber", value: "0"}
     const type = yield oneOf([str("int8"), str("int16"), str("int32"), str("int64"),
         str("uint8"), str("uint16"), str("uint32"), str("uint64"), str("integer"), str("int"),
+        str("float"), str("float32"), str("double"), str("float64"),
         str("BOOLEAN"), str("VARCHAR"),
-        str("NUMERIC"), str("DATETIME"),
+        str("NUMERIC"), str("DECIMAL"), str("DATETIME"),
         str("TIME"), str("DATE")
         ], "a column type");
     if (type.toUpperCase() === "NUMERIC") {

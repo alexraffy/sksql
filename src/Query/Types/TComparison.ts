@@ -1,7 +1,7 @@
 import {kQueryComparison} from "../Enums/kQueryComparison";
 
 
-export interface TComparison {
+export interface TComparisonDEPREC {
     kind: "TComparison";
     negative: boolean;
     value: kQueryComparison;

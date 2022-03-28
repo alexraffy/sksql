@@ -3,8 +3,8 @@ import assert = require("assert");
 
 
 
-export function test_compress(db: SKSQL) {
-
+export function test_compress(db: SKSQL, next: ()=>void) {
+    console.log("TESTING 0 COMPRESSION...")
     let tb = db.getTable("dual");
     console.log("Test compression");
     console.log("dual header is " + tb.data.tableDef.byteLength );
@@ -22,5 +22,5 @@ export function test_compress(db: SKSQL) {
         assert(a === b, "compress/decompress does not return the same data! " + i);
     }
 
-
+    next();
 }

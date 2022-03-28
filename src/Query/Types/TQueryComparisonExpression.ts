@@ -1,10 +1,10 @@
-import {TQueryComparison} from "./TQueryComparison";
+import {TQueryComparisonDEPREC} from "./TQueryComparison";
 import {TQueryComparisonColumnEqualsString} from "./TQueryComparisonColumnEqualsString";
 
 
-export interface TQueryComparisonExpression {
+export interface TQueryComparisonExpressionDEPREC {
     kind: "TQueryComparisonExpression"
-    a: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString,
+    a: TQueryComparisonExpressionDEPREC | TQueryComparisonDEPREC | TQueryComparisonColumnEqualsString,
     bool: "AND" | "AND NOT" | "OR",
-    b: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString
+    b: TQueryComparisonExpressionDEPREC | TQueryComparisonDEPREC | TQueryComparisonColumnEqualsString
 }

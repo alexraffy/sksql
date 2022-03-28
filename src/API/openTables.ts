@@ -22,12 +22,17 @@ import {stat} from "fs";
 import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
+import {processSelectStatement} from "../ExecutionPlan/processSelectStatement";
+import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 
-function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
-    let ret = [];
+export function openTable(db: SKSQL, context: TExecutionContext, table: TAlias | TTable | TQuerySelect | TQueryUpdate): TTableWalkInfo[] {
+    let ret : TTableWalkInfo[] = [];
     let tableToOpen = "";
     let alias = "";
     if (table === undefined) { return []; }
+    if (instanceOfTQueryUpdate(table)) {
+        return openTable(db, context, table.table);
+    }
     if (instanceOfTAlias(table)) {
         let tn : TAlias = table as TAlias;
         if (instanceOfTLiteral(tn.name)) {
@@ -36,6 +41,8 @@ function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
             tableToOpen = (tn.name as TTable).table;
         } else if (typeof tn.name === "string") {
             tableToOpen = tn.name as string;
+        } else if (instanceOfTQuerySelect(tn.name)) {
+            return [];
         }
         if (instanceOfTLiteral(tn.alias)) {
             alias = (tn.alias as TLiteral).value;
@@ -50,7 +57,9 @@ function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
         tableToOpen = (table as TTable).table;
         alias = tableToOpen;
     }
-
+    if (instanceOfTQuerySelect(table)) {
+        return [];
+    }
     let tblInfo = db.tableInfo.get(tableToOpen);
     let tbl: ITable;
     let def: ITableDefinition;
@@ -62,7 +71,7 @@ function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
         if (tbl === undefined) {
             throw new TParserError("Table " + tableToOpen + " not found.");
         }
-        def = readTableDefinition(tbl.data);
+        def = readTableDefinition(tbl.data, true);
     }
 
     let cursor = readFirst(tbl, def);
@@ -72,15 +81,15 @@ function openTable(db: SKSQL, table: TAlias | TTable): TTableWalkInfo[] {
 }
 
 
-export function openTables(db: SKSQL, statement: TQuerySelect | TQueryUpdate | TQueryDelete | TQueryInsert): TTableWalkInfo[] {
+export function openTables(db: SKSQL, context: TExecutionContext, statement: TQuerySelect | TQueryUpdate | TQueryDelete | TQueryInsert): TTableWalkInfo[] {
     let ret : TTableWalkInfo[] = [];
 
     if (instanceOfTQueryInsert(statement) || instanceOfTQueryUpdate(statement)) {
-        ret.push(...openTable(db, statement.table));
+        ret.push(...openTable(db, context, statement.table));
     }
     if (instanceOfTQuerySelect(statement) || instanceOfTQueryUpdate(statement) || instanceOfTQueryDelete(statement)) {
         for (let i = 0; i < statement.tables.length; i++) {
-            ret.push(...openTable(db, statement.tables[i].tableName));
+            ret.push(...openTable(db, context, statement.tables[i].tableName));
         }
     }
 

@@ -1,6 +1,4 @@
-import {TValidStatementsInFunction} from "../Query/Types/TValidStatementsInFunction";
 import {instanceOfTDebugger} from "../Query/Guards/instanceOfTDebugger";
-import {evaluateWhereClause} from "../API/evaluateWhereClause";
 import {serializeTQuery} from "../API/serializeTQuery";
 import {instanceOfTBreak} from "../Query/Guards/instanceOfTBreak";
 import {instanceOfTVariableAssignment} from "../Query/Guards/instanceOfTVariableAssignment";
@@ -35,26 +33,39 @@ import {TValidStatementsInProcedure} from "../Query/Types/TValidStatementsInProc
 import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {processSelectStatement} from "./processSelectStatement";
 import {instanceOfTExecute} from "../Query/Guards/instanceOfTExecute";
-import {runProcedure} from "./runProcedure";
 import {processExecuteStatement} from "./processExecuteStatement";
 import {instanceOfTQueryDropTable} from "../Query/Guards/instanceOfTQueryDropTable";
 import {processDropTableStatement} from "./processDropTableStatement";
 import {TParserError} from "../API/TParserError";
 import {SKSQL} from "../API/SKSQL";
+import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
+import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
+import {kBooleanResult} from "../API/kBooleanResult";
+import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
+import {TBooleanResult} from "../API/TBooleanResult";
+import {instanceOfTQueryDropFunction} from "../Query/Guards/instanceOfTQueryDropFunction";
+import {processDropFunctionStatement} from "./processDropFunctionStatement";
+import {TDebugInfo} from "../Query/Types/TDebugInfo";
 
 
-export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure) {
+export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure, options: {printDebug: boolean} = {printDebug: false}) {
+
+    if (options !== undefined && options.printDebug === true) {
+        console.log("--------------------------");
+        console.log("PROCESS STATEMENT: " + context.query.substring((op as TDebugInfo).debug.start), (op as TDebugInfo).debug.end);
+    }
+
     if (context.rollback === true) {
         throw new TParserError(context.rollbackMessage);
     }
-
+    context.tables = [];
 
     if (instanceOfTDebugger(op)) {
-        let shouldDisplay = true;
+        let shouldDisplay: TBooleanResult;
         if (op.test !== undefined) {
-            shouldDisplay = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            shouldDisplay = evaluate(db, context, op.test,  [], undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""}) as TBooleanResult;
         }
-        if (shouldDisplay) {
+        if (instanceOfTBooleanResult(shouldDisplay) && shouldDisplay.value === kBooleanResult.isTrue) {
             let debugStr = "-- FROM " + context.label + "\r\n";
             if (op.label !== undefined) {
                 debugStr += "-- LABEL " + op.label.value + "\r\n";
@@ -80,12 +91,19 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
     if (instanceOfTVariableAssignment(op)) {
         let varExists = context.stack.find((v) => { return v.name.toUpperCase() === op.name.name.toUpperCase();});
         if (varExists) {
-            let val = evaluate(db, context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            let val = evaluate(db, context, op.value,  [],  undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            if (instanceOfTTable(val)) {
+                val = readFirstColumnOfTable(db, context, val);
+            }
             if (isNumeric(val) && columnTypeIsInteger(varExists.type)) {
                 varExists.value = numericToNumber(val);
             } else if (typeof val === "number" && varExists.type === TableColumnType.numeric) {
                 varExists.value = numericFromNumber(val);
             } else {
+                if (instanceOfTBooleanResult(val)) {
+                    varExists.value = val.value === kBooleanResult.isTrue;
+                    return;
+                }
                 varExists.value = val;
             }
         }
@@ -95,11 +113,14 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         for (let i = 0; i < op.declarations.length; i++) {
             let value = undefined;
             if (op.declarations[i].value !== undefined) {
-                value = evaluate(db, context, op.declarations[i].value, undefined, {
+                value = evaluate(db, context, op.declarations[i].value,  [],  undefined, {
                     aggregateMode: "none",
                     aggregateObjects: [],
                     forceTable: ""
                 });
+                if (instanceOfTTable(value)) {
+                    value = readFirstColumnOfTable(db, context, value);
+                }
             }
             let varExists = context.stack.find((v) => {
                 return v.name.toUpperCase() === op.declarations[i].name.name.toUpperCase();
@@ -120,7 +141,13 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTReturnValue(op)) {
-        let value = evaluate(db, context, op.value, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        let value = evaluate(db, context, op.value,  [],  undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        if (instanceOfTTable(value)) {
+            value = readFirstColumnOfTable(db, context, value);
+        }
+        if (instanceOfTBooleanResult(value)) {
+            value = value.value === kBooleanResult.isTrue;
+        }
         context.returnValue = value;
         context.exitExecution = true;
         return;
@@ -138,8 +165,8 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTWhile(op)) {
-        let test = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
-        while (test) {
+        let test = evaluate(db, context, op.test,  [],  undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""}) as TBooleanResult;
+        while (instanceOfTBooleanResult(test) && test.value === kBooleanResult.isTrue) {
             for (let i = 0; i < op.op.length; i++) {
                 processStatement(db, context, op.op[i]);
                 if (context.exitExecution === true) {
@@ -153,15 +180,15 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
                 context.breakLoop = false;
                 break;
             }
-            test = evaluateWhereClause(db, context, op.test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+            test = evaluate(db, context, op.test,  [],  undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""}) as TBooleanResult;
         }
         return;
     }
     if (instanceOfTIf(op)) {
         for (let x = 0; x < op.tests.length; x++) {
             if (op.tests[x].test !== undefined) {
-                let evalRet = evaluateWhereClause(db, context, op.tests[x].test, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
-                if (evalRet === false) {
+                let evalRet = evaluate(db, context, op.tests[x].test,  [], undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""}) as TBooleanResult;
+                if (!instanceOfTBooleanResult(evalRet) || evalRet.value !== kBooleanResult.isTrue) {
                     continue;
                 }
             }
@@ -180,7 +207,7 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTQueryFunctionCall(op)) {
-        evaluate(db, context, op, undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
+        evaluate(db, context, op,  [], undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""});
         return;
     }
     if (instanceOfTExecute(op)) {
@@ -212,11 +239,15 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTQuerySelect(op)) {
-        processSelectStatement(db, context, op);
+        processSelectStatement(db, context, op, false, options);
         return;
     }
     if (instanceOfTQueryDropTable(op)) {
         processDropTableStatement(db, context, op);
+        return;
+    }
+    if (instanceOfTQueryDropFunction(op)) {
+        processDropFunctionStatement(db, context, op);
         return;
     }
 

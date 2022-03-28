@@ -1,7 +1,5 @@
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
-import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
-import {predicateTQueryComparison} from "./predicateTQueryComparison";
 import {str} from "../../BaseParser/Predicates/str";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateReturnValue} from "./predicateReturnValue";
@@ -12,6 +10,7 @@ import {predicateTBeginEnd} from "./predicateTBeginEnd";
 import {TIf} from "../Types/TIf";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateValidStatementsInProcedure} from "./predicateValidStatementsInProcedure";
+import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
 
 export function * predicateTIf(callback) {
@@ -23,7 +22,7 @@ export function * predicateTIf(callback) {
 
     yield str("IF");
     yield atLeast1(whitespaceOrNewLine);
-    const test = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "");
+    const test = yield predicateTQueryExpression;
     yield maybe(atLeast1(whitespaceOrNewLine));
 
     let op = yield predicateValidStatementsInProcedure;

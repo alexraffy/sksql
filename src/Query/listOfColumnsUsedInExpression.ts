@@ -1,6 +1,4 @@
 import {TQueryExpression} from "./Types/TQueryExpression";
-import {TQueryComparisonExpression} from "./Types/TQueryComparisonExpression";
-import {TQueryComparison} from "./Types/TQueryComparison";
 import {TQueryColumn} from "./Types/TQueryColumn";
 import {TBoolValue} from "./Types/TBoolValue";
 import {instanceOfTVariable} from "./Guards/instanceOfTVariable";

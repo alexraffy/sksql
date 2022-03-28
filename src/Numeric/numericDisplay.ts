@@ -17,11 +17,11 @@ export function numericDisplay(num: numeric) {
         return "0";
     }
     strArray = num.m.toString().split("");
-    while (strArray.length < num.e) {
+    while (strArray.length < Math.abs(num.e)) {
         strArray.unshift("0");
     }
-    if (num.e > 0) {
-        strArray.splice((strArray.length) - num.e, 0, ".");
+    if (Math.abs(num.e) > 0) {
+        strArray.splice((strArray.length) - Math.abs(num.e), 0, ".");
     }
 
 

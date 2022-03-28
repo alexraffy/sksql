@@ -1,17 +1,7 @@
-import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
-import {SQLResult} from "../API/SQLResult";
-import {ParseResult} from "../BaseParser/ParseResult";
-import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
+
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
-import {openTables} from "../API/openTables";
-import {cursorEOF} from "../Cursor/cursorEOF";
-import {evaluateWhereClause} from "../API/evaluateWhereClause";
 import {evaluate} from "../API/evaluate";
-import {getColumnDefinition} from "../API/getColumnDefinition";
-import {writeValue} from "../BlockIO/writeValue";
-import {readNext} from "../Cursor/readNext";
 import {TQueryDelete} from "../Query/Types/TQueryDelete";
-import {TableColumnType} from "../Table/TableColumnType";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {ITable} from "../Table/ITable";
@@ -31,43 +21,35 @@ import {TExecutionContext} from "./TExecutionContext";
 import {runScan} from "./runScan";
 import {TEPScan} from "./TEPScan";
 import {SKSQL} from "../API/SKSQL";
+import {openTable} from "../API/openTables";
+import {recordSize} from "../Table/recordSize";
+import {findWalkTable} from "./findWalkTable";
+import {contextTables} from "./contextTables";
 
 
 export function processDeleteStatement(db: SKSQL, context: TExecutionContext, statement: TQueryDelete) {
-
-    let tables = openTables(db, statement);
-    for (let i = 0; i < tables.length; i++) {
-        let exists = context.openTables.find((ot) => { return ot.name.toUpperCase() === tables[i].name.toUpperCase();});
-        if (exists === undefined) {
-            context.openTables.push(tables[i]);
-        }
-    }
 
     let del = statement as TQueryDelete;
     let tbl: ITable;
     let def: ITableDefinition;
     let rowLength = 0;
-    for (let i = 0; i < context.openTables.length; i++) {
-        let name = getValueForAliasTableOrLiteral(del.tables[0].tableName)
-        if (context.openTables[i].name.toUpperCase() === name.table.toUpperCase()) {
-            tbl = context.openTables[i].table;
-            def = context.openTables[i].def;
-            rowLength = context.openTables[i].rowLength;
-        }
+    let tblInfo = db.tableInfo.get(getValueForAliasTableOrLiteral(statement.tables[0].tableName as TAlias | TTable).table);
+    tbl = tblInfo.pointer;
+    def = tblInfo.def;
+    rowLength = recordSize(tbl.data);
 
-    }
     context.currentStatement = del;
     if (tbl === undefined) {
-        throw new TParserError("Table " + getValueForAliasTableOrLiteral(del.tables[0].tableName).table + " not found.");
+        throw new TParserError("Table " + getValueForAliasTableOrLiteral(del.tables[0].tableName as (TAlias | TTable)).table + " not found.");
     }
-
+    contextTables(db, context, del, undefined, del);
     let numberOfRowsModified: number = 0;
     let done = false;
     let tep = {
         kind: "TEPScan",
         table: {
             kind: "TTable",
-            table: getValueForAliasTableOrLiteral(del.tables[0].tableName).table,
+            table: getValueForAliasTableOrLiteral(del.tables[0].tableName as (TAlias | TTable)).table.toUpperCase(),
             schema: ""
         } as TTable,
         result: "",
@@ -76,12 +58,17 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
         range: undefined
     } as TEPScan;
 
-    runScan(db, context, tep, (scan, walking) => {
+    runScan(db, context, tep, [{
+        name: def.name.toUpperCase(),
+        def: def,
+        table: tbl,
+        alias: "",
+        cursor: readFirst(tbl, def),
+        rowLength: rowLength
+    }], (scan: TEPScan, tables: TTableWalkInfo[]) => {
         let cont = true;
-        let w = walking.find((w) => { return w.name.toUpperCase() === getValueForAliasTableOrLiteral(tep.table).table.toUpperCase();});
-        if (w === undefined) {
-            throw new TParserError("Could not find table " + getValueForAliasTableOrLiteral(tep.table).table.toUpperCase());
-        }
+        let w = findWalkTable(tables, tep.table);
+
         let b = tbl.data.blocks[w.cursor.blockIndex];
         let dv = new DataView(b, w.cursor.offset, w.rowLength);
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
@@ -93,7 +80,7 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
         dvBlock.setUint8(kBlockHeaderField.BlockDirty, 1);
 
         if (del.top !== undefined) {
-            let maxCount = evaluate(db, context, del.top, undefined, undefined);
+            let maxCount = evaluate(db, context, del.top, [], undefined, undefined);
             if (isNumeric(maxCount)) {
                 if (maxCount.m <= numberOfRowsModified) {
                     cont = false;

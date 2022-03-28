@@ -2,7 +2,9 @@ import {SQLStatement, readTableAsJSON, SKSQL, SQLResult, kResultType} from "sksq
 import * as assert from "assert";
 
 
-export function update1(db: SKSQL) {
+export function update1(db: SKSQL, next:()=>void) {
+    console.log("TESTING UPDATE STATEMENTS...");
+
     {
         let sql = "CREATE TABLE test_update1(id INT32, value INT32);";
         let s = new SQLStatement(db, sql);
@@ -57,5 +59,5 @@ export function update1(db: SKSQL) {
         let ret = s.run();
         
     }
-
+    next();
 }

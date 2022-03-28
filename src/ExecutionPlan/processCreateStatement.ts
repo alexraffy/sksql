@@ -111,20 +111,6 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
 
         newTable(db, tblDef);
 
-        // the next statement may need info about this table
-        let tt = db.tableInfo.get(statement.name.table);
-
-        context.openTables.push(
-            {
-                name: tt.name,
-                table: tt.pointer,
-                def: tt.def,
-                rowLength: recordSize(tt.pointer.data),
-                cursor: readFirst(tt.pointer, tt.def),
-                alias: ""
-            }
-        );
-
         if (context.result.messages === undefined) {
             context.result.messages = "CREATE TABLE";
         } else {

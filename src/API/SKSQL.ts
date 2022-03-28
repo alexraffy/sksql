@@ -56,6 +56,7 @@ workerJavascript += "   if (value !== undefined && value.c !== undefined) {\n";
 workerJavascript += "       switch (value.c) {\n";
 workerJavascript += "           case \"DB\":\n";
 workerJavascript += "               db.allTables = value.d;\n";
+workerJavascript += "               db.tableInfo.syncAll();\n";
 workerJavascript += "               break;\n";
 workerJavascript += "           case \"QR\":\n";
 workerJavascript += "               runQuery(value.d.id, value.d.query, value.d.params);\n";
@@ -225,17 +226,58 @@ export class SKSQL {
         if (databaseHashId.startsWith("wss://") || databaseHashId.startsWith("ws://")) {
             connectionEntry.socket.connect(connectionEntry.databaseHashId).then( (v) => {
                 if (v === false) {
-                    if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
+                    if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
                         connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
                     }
                 }
             }).catch((e) => {
-                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
+                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
                     connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
                 }
             })
         } else {
-
+            let token = "";
+            if (connectionEntry.delegate !== undefined && connectionEntry.delegate.authRequired) {
+                let authSession = connectionEntry.delegate.authRequired(this, databaseHashId);
+                token = authSession.token;
+            }
+            let payload = {
+                dbHashId: databaseHashId,
+                token: token
+            };
+            fetch("https://sksql.com/api/v1/connect", {
+                method: 'post',
+                body: JSON.stringify(payload),
+                headers: {'Content-Type': 'application/json'}
+            }).then((value: Response) => {
+                value.json().then((json) => {
+                    if (json.valid === false) {
+                        if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
+                        }
+                        return;
+                    }
+                    connectionEntry.socket.connect(json.address).then( (v) => {
+                        if (v === false) {
+                            if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                                connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
+                            }
+                        }
+                    }).catch((e) => {
+                        if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
+                        }
+                    })
+                }).catch ((err) => {
+                    if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                        connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + err.message);
+                    }
+                })
+            }).catch ((reason) => {
+                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
+                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + reason.message);
+                }
+            })
         }
 
 
@@ -250,12 +292,20 @@ export class SKSQL {
     }
 
 
-    declareFunction(type: kFunctionType, name: string, parameters: {name: string, type: TableColumnType}[], returnType: TableColumnType, fn: ((...args) => any) | TQueryCreateFunction) {
+    declareFunction(type: kFunctionType,
+                    name: string,
+                    parameters: {name: string, type: TableColumnType}[],
+                    returnType: TableColumnType,
+                    fn: ((...args) => any) | TQueryCreateFunction,
+                    hasVariableParams: boolean = false,
+                    returnTypeSameTypeHasParameterX: number = undefined) {
         let exists = this.functions.find((f) => { return f.name.toUpperCase() === name.toUpperCase();});
         if (exists) {
+            exists.hasVariableParams = hasVariableParams;
             exists.parameters = JSON.parse(JSON.stringify(parameters));
             exists.returnType = returnType;
             exists.fn = fn;
+            exists.returnTypeSameTypeHasParameterX = returnTypeSameTypeHasParameterX;
         } else {
             this.functions.push(
                 {
@@ -263,11 +313,22 @@ export class SKSQL {
                     name: name,
                     parameters: JSON.parse(JSON.stringify(parameters)),
                     returnType: returnType,
-                    fn: fn
+                    fn: fn,
+                    hasVariableParams: hasVariableParams,
+                    returnTypeSameTypeHasParameterX: returnTypeSameTypeHasParameterX
                 }
             );
         }
     }
+
+    dropFunction(fnName: string) {
+        let exists = this.functions.findIndex((f) => { return f.name.toUpperCase() === fnName.toUpperCase();});
+        if (exists > -1) {
+            this.functions.splice(exists, 1);
+        }
+
+    }
+
 
     declareProcedure(proc: TQueryCreateProcedure) {
         let exists = this.procedures.find((p) => { return p.procName === proc.procName;});

@@ -38,14 +38,37 @@ import {scoped_identity} from "./scoped_identity";
 import {newid} from "./newid";
 import {date_dateadd} from "./Date/date_dateadd";
 import {aggregate_string_agg} from "./Aggregate/aggregate_string_agg";
+import {tests_exists} from "./Tests/Exists";
+import {logical_least} from "./Logical/least";
+import {logical_greatest} from "./Logical/greatest";
+import {logical_choose} from "./Logical/choose";
+import {logical_iif} from "./Logical/iif";
+import {aggregate_max} from "./Aggregate/aggregate_max";
+import {aggregate_min} from "./Aggregate/aggregate_min";
+import {aggregate_avg} from "./Aggregate/aggregate_avg";
+import {aggregate_count} from "./Aggregate/aggregate_count";
+import {logical_coalesce} from "./Logical/coalesce";
+import {logical_nullif} from "./Logical/nullif";
 
 
 export function registerFunctions(db: SKSQL) {
 
     // AGGREGATE
     db.declareFunction(kFunctionType.aggregate, "SUM", [
-        {name: "EXPRESSION", type: TableColumnType.numeric}
-    ], TableColumnType.numeric, aggregate_sum);
+        {name: "EXPRESSION", type: TableColumnType.any}
+    ], TableColumnType.any, aggregate_sum, false, 0);
+
+    db.declareFunction(kFunctionType.aggregate, "MAX", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, aggregate_max, false, 0);
+    db.declareFunction(kFunctionType.aggregate, "MIN", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, aggregate_min, false, 0);
+    db.declareFunction(kFunctionType.aggregate, "AVG", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, aggregate_avg, false, 0);
+    db.declareFunction(kFunctionType.aggregate, "COUNT", [
+        {name: "EXPRESSION", type: TableColumnType.any}
+    ], TableColumnType.int32, aggregate_count);
+
+
 
     db.declareFunction(kFunctionType.aggregate, "STRING_AGG", [
         {name: "EXPRESSION", type: TableColumnType.varchar},
@@ -74,9 +97,9 @@ export function registerFunctions(db: SKSQL) {
 
     // STRING
     db.declareFunction(kFunctionType.scalar, "CONCAT", [{name: "STR_A", type: TableColumnType.varchar}, {name: "STR_B", type: TableColumnType.varchar}],
-        TableColumnType.varchar, string_concat);
+        TableColumnType.varchar, string_concat, true);
     db.declareFunction(kFunctionType.scalar, "CONCAT_WS", [{name: "SEP", type: TableColumnType.varchar}, {name: "STR_A", type: TableColumnType.varchar}, {name: "STR_B", type: TableColumnType.varchar}],
-        TableColumnType.varchar, string_concat_ws);
+        TableColumnType.varchar, string_concat_ws, true);
     db.declareFunction(kFunctionType.scalar, "LEFT", [{name: "STRING", type: TableColumnType.varchar}, {name: "LENGTH", type: TableColumnType.uint8}],
         TableColumnType.varchar, string_left);
     db.declareFunction(kFunctionType.scalar, "LEN", [{name: "STRING", type: TableColumnType.varchar}], TableColumnType.uint8, string_len);
@@ -125,9 +148,33 @@ export function registerFunctions(db: SKSQL) {
         TableColumnType.varchar, string_upper);
     db.declareFunction(kFunctionType.scalar, "UNICODE", [{name: "STRING", type: TableColumnType.varchar}],
         TableColumnType.int32, string_unicode);
+
+    // TEST
     db.declareFunction(kFunctionType.scalar, "ISNULL", [{name: "check_expression", type: TableColumnType.any},
             {name: "replacement_value", type: TableColumnType.any}],
-        TableColumnType.any, tests_IsNull);
+        TableColumnType.any, tests_IsNull, false, 0);
+    db.declareFunction(kFunctionType.scalar, "EXISTS", [{name: "SUBQUERY", type: TableColumnType.any}],
+        TableColumnType.boolean, tests_exists);
+
+    // IDS
     db.declareFunction(kFunctionType.scalar, "SCOPE_IDENTITY", [], TableColumnType.uint32, scoped_identity);
     db.declareFunction(kFunctionType.scalar, "NEWID", [], TableColumnType.varchar, newid);
+
+
+    // LOGICAL
+    db.declareFunction(kFunctionType.scalar, "LEAST", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, logical_least, true, 0);
+    db.declareFunction(kFunctionType.scalar, "GREATEST", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, logical_greatest, true, 0);
+    db.declareFunction(kFunctionType.scalar, "CHOOSE", [{name: "INDEX", type: TableColumnType.uint8},
+        {name: "EXPRESSION", type: TableColumnType.any}], TableColumnType.any, logical_choose, true, 1);
+    db.declareFunction(kFunctionType.scalar, "IIF", [{name: "BOOLEAN EXPRESSION", type: TableColumnType.boolean},
+        {name: "TRUE_VALUE", type: TableColumnType.any}, {name: "FALSE_VALUE", type: TableColumnType.any}],
+        TableColumnType.any, logical_iif, false, 1);
+    db.declareFunction(kFunctionType.scalar, "COALESCE", [{name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, logical_coalesce, true, 1);
+    db.declareFunction(kFunctionType.scalar, "NULLIF", [{name: "EXPRESSION", type: TableColumnType.any},
+        {name: "EXPRESSION", type: TableColumnType.any}],
+        TableColumnType.any, logical_nullif, false, 0);
+
 }

@@ -77,7 +77,7 @@ export function readValue(table: ITable, tableDef: ITableDefinition,
             } as numeric;
             value.sign = fullRow.getUint8(column.offset + offset + 1);
             value.m = fullRow.getUint32(column.offset + offset + 2);
-            value.e = fullRow.getUint16(column.offset + offset + 2 + 4);
+            value.e = fullRow.getInt16(column.offset + offset + 2 + 4);
             value.approx = 0;
         }
         break;
@@ -138,6 +138,14 @@ export function readValue(table: ITable, tableDef: ITableDefinition,
             value.time.seconds = fullRow.getUint8(column.offset + offset + 2 + 4 + 1 + 3);
             value.time.millis = fullRow.getUint16(column.offset + offset + 2 + 4 + 1 + 4);
 
+        }
+        break;
+        case TableColumnType.float: {
+            value = fullRow.getFloat32(column.offset + offset + 1);
+        }
+        break;
+        case TableColumnType.double: {
+            value = fullRow.getFloat64(column.offset + offset + 1);
         }
         break;
     }

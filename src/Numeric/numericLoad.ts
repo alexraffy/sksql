@@ -7,11 +7,13 @@ import {str} from "../BaseParser/Predicates/str";
 import {returnPred} from "../BaseParser/Predicates/ret";
 import {Stream} from "../BaseParser/Stream";
 import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
+import {numericRound} from "./numericRound";
+import {TParserError} from "../API/TParserError";
 
 /*
     parse a string and returns a numeric
  */
-export function numericLoad(value: string): numeric {
+export function numericLoad(value: string, p: number = undefined, d: number = undefined): numeric {
     let ret : numeric = {
         sign: 0,
         m: 0,
@@ -43,7 +45,26 @@ export function numericLoad(value: string): numeric {
 
     ret.sign = val.sign === "-" ? 1 : 0;
     ret.m = parseInt(val.m + val.e);
-    ret.e = val.e.length;
+    ret.e = -val.e.length;
+
+    if (p !== undefined && d !== undefined) {
+        let mLength = ret.m.toString().length;
+        let eLength = val.e.length;
+        if (eLength > d) {
+            ret = numericRound(ret, d);
+            eLength = d;
+        }
+        while (d > -ret.e) {
+            ret.m *= 10;
+            ret.e--;
+        }
+        mLength = ret.m.toString().length;
+        if (p - d < mLength - (-ret.e)) {
+            throw new TParserError("Arithmetic overflow error converting numeric to data type numeric");
+        }
+
+    }
+
 
     return ret;
 }

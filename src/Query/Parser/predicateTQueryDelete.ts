@@ -1,12 +1,8 @@
 import {str} from "../../BaseParser/Predicates/str";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {predicateTTableName} from "./predicateTTableName";
 import {TQueryTable} from "../Types/TQueryTable";
 import {kQueryJoin} from "../Enums/kQueryJoin";
-import {TQueryComparisonExpression} from "../Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Types/TQueryComparison";
-import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
 import {predicateTNumber} from "./predicateTNumber";
 import {TNumber} from "../Types/TNumber";
 import {TQueryExpression} from "../Types/TQueryExpression";
@@ -20,6 +16,7 @@ import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TQueryDelete} from "../Types/TQueryDelete";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+
 
 /*
     tries to parse a delete statement
@@ -65,10 +62,10 @@ export const predicateTQueryDelete = function *(callback) {
     )
     yield maybe(atLeast1(whitespaceOrNewLine));
     const where = yield maybe(str("WHERE"));
-    let whereClause: TQueryComparisonExpression | TQueryComparison = undefined;
+    let whereClause: TQueryExpression;
     if (where === "WHERE") {
         yield atLeast1(whitespaceOrNewLine);
-        whereClause = yield predicateTQueryComparisonExpression;
+        whereClause = yield predicateTQueryExpression;
     }
     yield maybe(str(";"));
     yield maybe(atLeast1(whitespaceOrNewLine));

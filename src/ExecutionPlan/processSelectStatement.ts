@@ -2,23 +2,21 @@
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {TEP} from "./TEP";
-import {generateExecutionPlanFromStatement} from "./generateExecutionPlanFromStatement";
+
 import {run} from "./run";
 import {SKSQL} from "../API/SKSQL";
 import {readTableDefinition} from "../Table/readTableDefinition";
 import {readFirst} from "../Cursor/readFirst";
 import {recordSize} from "../Table/recordSize";
-import {TEPScan} from "./TEPScan";
-import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
-import {TEPNestedLoop} from "./TEPNestedLoop";
-import {TEPSortNTop} from "./TEPSortNTop";
 import {TEPSelect} from "./TEPSelect";
-import {TEPGroupBy} from "./TEPGroupBy";
 import {TParserError} from "../API/TParserError";
 import {TExecutionContext} from "./TExecutionContext";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {TTableInfo} from "../API/CTableInfoManager";
+import {TEPUpdate} from "./TEPUpdate";
+import {TTable} from "../Query/Types/TTable";
+import {generateEP} from "./generateEP";
 
 
 export function addTable2Plan(db: SKSQL, tables: TTableWalkInfo[], table: string, alias: string) {
@@ -58,13 +56,14 @@ export function addTable2Plan(db: SKSQL, tables: TTableWalkInfo[], table: string
 }
 
 export function processSelectStatement(db: SKSQL, context: TExecutionContext,
-                                       statement: TQuerySelect) {
+                                       statement: TQuerySelect, isSubQuery: boolean = false, options: { printDebug: boolean} = {printDebug: false}) {
     let select: TQuerySelect = statement;
 
     context.currentStatement = select;
 
     let planDescription = "";
-    let plan: TEP[] = generateExecutionPlanFromStatement(db, context, select);
+    let plan: TEP[] = generateEP(db, context, select, options);
+    /*
     let recur = function (plan: TEP) {
         planDescription += "\t"
         if (plan.kind === "TEPScan") {
@@ -108,6 +107,8 @@ export function processSelectStatement(db: SKSQL, context: TExecutionContext,
         recur(plan[i]);
     }
 
+     */
+
     //console.log(planDescription);
 
     run(db, context, select, plan);
@@ -120,11 +121,28 @@ export function processSelectStatement(db: SKSQL, context: TExecutionContext,
         runtime: 0
     });
 
-
-
-    //if (returnSQLResult.resultTableName !== undefined && returnSQLResult.resultTableName !== "") {
-//        context.openedTempTables.push(returnSQLResult.resultTableName);
-//    }
-
+    if (plan.length > 0) {
+        switch (plan[plan.length -1].kind) {
+            case "TEPSelect": {
+                let ps = plan[plan.length - 1] as TEPSelect;
+                return {
+                    kind: "TTable",
+                    table: ps.dest,
+                    schema: ""
+                } as TTable
+            }
+                break;
+            case "TEPUpdate": {
+                let ps = plan[plan.length - 1] as TEPUpdate;
+                return {
+                    kind: "TTable",
+                    table: ps.dest,
+                    schema: ""
+                } as TTable
+            }
+                break;
+        }
+    }
+    return undefined;
 
 }

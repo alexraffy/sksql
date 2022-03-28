@@ -21,10 +21,13 @@ export function parse(callback: TParserCallback,
     let s = input;
     let maxChar = 0;
     parse_inception++;
+
+    let cursorPos = s.cursor;
+
      if (isGeneratorFunction(genFunc)) {
          let gen = (genFunc as (value: TParserCallback) => IterableIterator<TParser | TFuncGen>)(callback);
          let nextParser = gen.next();
-         let cursorPos = s.cursor;
+
          while (nextParser.value !== undefined) {
              if (s.cursor > maxChar) {
                  maxChar = s.cursor;
@@ -32,10 +35,18 @@ export function parse(callback: TParserCallback,
              if (isGeneratorFunction(nextParser.value)) {
                 let ret: ParseResult | ParseError = parse(callback, nextParser.value, s);
                 if (ret.kind === "ParseResult" ) {
-                    ((ret as ParseResult).value as TDebugInfo).debug = {start: cursorPos, end: (ret as ParseResult).next.cursor }
+                    /*
+                    if (typeof (ret as ParseResult).value === "object") {
+                        ((ret as ParseResult).value as TDebugInfo).debug = {
+                            start: cursorPos,
+                            end: (ret as ParseResult).next.cursor
+                        }
+                    }
+
+                     */
                     results.push(ret);
                     s = (ret as ParseResult).next;
-                    cursorPos = s.cursor;
+                    //cursorPos = s.cursor;
                 } else {
                     results.push(ret);
                     success = false;
@@ -50,8 +61,18 @@ export function parse(callback: TParserCallback,
                  }
                  let ret: ParseResult | ParseError = p(s);
                  if (ret.kind === "ParseResult") {
+                     /*
+                     if (typeof (ret as ParseResult).value === "object") {
+                         ((ret as ParseResult).value as TDebugInfo).debug = {
+                             start: cursorPos,
+                             end: (ret as ParseResult).next.cursor
+                         }
+                     }
+
+                      */
                      results.push(ret);
                      s = (ret as ParseResult).next;
+                     //cursorPos = s.cursor;
                  } else {
                      results.push(ret);
                      success = false;
@@ -63,13 +84,23 @@ export function parse(callback: TParserCallback,
      } else {
          for (let i = 0; i < genFunc.length; i++) {
              let p = genFunc[i];
-             if (s.EOF) {
-                 break;
-             }
+             //if (s.EOF) {
+             //    break;
+            // }
              let ret: ParseResult | ParseError = p(s);
              if (ret.kind === "ParseResult") {
+                 /*
+                 if (typeof (ret as ParseResult).value === "object") {
+                     ((ret as ParseResult).value as TDebugInfo).debug = {
+                         start: cursorPos,
+                         end: (ret as ParseResult).next.cursor
+                     }
+                 }
+
+                  */
                  results.push(ret);
                  s =  (ret as ParseResult).next;
+                 //cursorPos = s.cursor;
              } else {
                  results.push(ret);
                  success = false;
@@ -79,7 +110,17 @@ export function parse(callback: TParserCallback,
      }
      parse_inception--;
      if (results.length > 0) {
-         return results[results.length - 1];
+         let ret = results[results.length - 1];
+         if (ret.kind === "ParseResult") {
+             if (typeof (ret as ParseResult).value === "object") {
+                 (ret as ParseResult).value.debug = {
+                     start: cursorPos,
+                     end: (ret as ParseResult).next.cursor
+                 };
+
+             }
+         }
+         return ret;
      } else {
          return new ParseError(input, "Expected a result but got nothing", false);
      }

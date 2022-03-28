@@ -11,5 +11,7 @@ export interface TQueryFunctionCall {
     value: {
         name: string;
         parameters: (TQueryExpression | TValidExpressions)[];
-    }
+    },
+    aggregateDataId: string;
+    distinct: boolean;
 }

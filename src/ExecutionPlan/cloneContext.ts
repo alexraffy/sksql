@@ -8,7 +8,6 @@ export function cloneContext(context: TExecutionContext, label: string, keepStac
     let newContext = createNewContext(label, "", context.parseResult as ParseResult);
     newContext.currentStatement = undefined;
     newContext.stack = (keepStack === false) ? [] : context.stack;
-    newContext.openTables = (keepTables === false) ? [] : context.openTables;
     newContext.result = context.result;
     newContext.broadcastQuery = context.broadcastQuery;
     newContext.rollbackMessage = context.rollbackMessage;

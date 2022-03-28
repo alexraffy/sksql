@@ -27,6 +27,12 @@ import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
 import {TParserError} from "../API/TParserError";
 import {convertValue} from "../API/convertValue";
 import {SKSQL} from "../API/SKSQL";
+import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
+import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
+import {TAlias} from "../Query/Types/TAlias";
+import {TTable} from "../Query/Types/TTable";
+import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
+import {checkConstraint} from "./checkConstraint";
 
 
 
@@ -39,27 +45,59 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
 
         if (tep.kind === "TEPScan") {
 
+            let targetTable: TTableWalkInfo = undefined;
+            if (statement.table !== undefined) {
+                targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === statement.table.table.toUpperCase();})
+            } else {
+                targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(statement.tables[0].tableName as (TAlias | TTable)).table.toUpperCase();})
+            }
+            // mark the block as dirty
+            let b = targetTable.table.data.blocks[targetTable.cursor.blockIndex];
+            let blockDV = new DataView(b, 0, 25);
+            blockDV.setUint8(kBlockHeaderField.BlockDirty, 1);
+
+            // source row
+            let dv = new DataView(b, targetTable.cursor.offset, targetTable.cursor.rowLength + rowHeaderSize );
+
+            // write to a temp buffer
+            // if no constraint errors happen,
+            // we'll copy the content to the existing row
+            let ab = new ArrayBuffer(targetTable.cursor.rowLength + rowHeaderSize);
+            let row = new DataView(ab, 0, targetTable.cursor.rowLength + rowHeaderSize);
+            copyBytesBetweenDV(targetTable.cursor.rowLength + rowHeaderSize, dv, row, 0, 0);
+
             for (let i = 0; i < statement.sets.length; i++) {
                 let col = statement.sets[i].column
-                let targetTable: TTableWalkInfo = undefined;
-                if (statement.table !== undefined) {
-                    targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === statement.table.table.toUpperCase();})
-                } else {
-                    targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(statement.tables[0].tableName).table.toUpperCase();})
-                }
 
                 let colDef = targetTable.def.columns.find((c) => { return c.name.toUpperCase() === statement.sets[i].column.column.toUpperCase();});
                 if (colDef === undefined) {
                     throw new TParserError("Unknown column " + col.column);
                 }
-                let value = evaluate(db, context, statement.sets[i].value, colDef);
+                let value = evaluate(db, context, statement.sets[i].value, walkInfos, colDef);
+                if (instanceOfTTable(value)) {
+                    value = readFirstColumnOfTable(db, context, value);
+                }
+
+                // Check if there's a NOT NULL constraint
+                if (colDef.nullable === false && (value === undefined || value === null)) {
+                    throw new TParserError("Error: Column " + colDef.name.toUpperCase() + " must not be NULL.");
+                }
+
                 let val2Write = convertValue(value, colDef.type);
-                let b = targetTable.table.data.blocks[targetTable.cursor.blockIndex];
-                let blockDV = new DataView(b, 0, 25);
-                blockDV.setUint8(kBlockHeaderField.BlockDirty, 1);
-                let dv = new DataView(b, targetTable.cursor.offset, targetTable.cursor.rowLength + rowHeaderSize );
-                writeValue(targetTable.table, targetTable.def, colDef, dv, val2Write, rowHeaderSize);
+
+                writeValue(targetTable.table, targetTable.def, colDef, row, val2Write, rowHeaderSize);
             }
+
+
+            for (let i = 0; i < targetTable.def.constraints.length; i++) {
+                let constraint = targetTable.def.constraints[i];
+                checkConstraint(db, context, targetTable.table, targetTable.def, constraint, row, targetTable.cursor.rowLength + rowHeaderSize);
+            }
+
+            // we write the row to the block
+            copyBytesBetweenDV(targetTable.cursor.rowLength, row, dv, rowHeaderSize, rowHeaderSize);
+
+
             context.result.rowsModified += 1;
         }
         if (tep.kind === "TEPNestedLoop") {
@@ -67,7 +105,7 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
         }
 
         if (statement.top !== undefined) {
-            let topValue = evaluate(db, context, statement.top, undefined);
+            let topValue = evaluate(db, context, statement.top, [],  undefined);
             if ((typeof topValue === "number" && topValue <= rowsModified) || (isNumeric(topValue) && topValue.m <= rowsModified))  {
                 return false;
             }
@@ -81,7 +119,7 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
         let p = ep[i];
         if (p.kind === "TEPScan") {
             let ps = p as TEPScan;
-            runScan(db, context, ps, runCallback);
+            runScan(db, context, ps, context.tables, runCallback);
         }
         if (p.kind === "TEPNestedLoop") {
             let ps = p as TEPNestedLoop;
@@ -96,10 +134,10 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
         }
         if (p.kind === "TEPSortNTop") {
             let ps = p as TEPSortNTop;
-            let resultWI = context.openTables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
-            bubbleSort(resultWI.table,resultWI.def, ps.orderBy);
+            let resultWI = context.tables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
+            bubbleSort(db, context, resultWI.table,resultWI.def, ps.orderBy);
             if (ps.top !== undefined) {
-                let topValue = evaluate(db, context, ps.top, undefined);
+                let topValue = evaluate(db, context, ps.top, [], undefined);
                 if (isNumeric(topValue)) {
                     let curs = readFirst(resultWI.table, resultWI.def);
                     let num = 0;

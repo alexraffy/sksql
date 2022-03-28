@@ -25,6 +25,10 @@ import {predicateTDateTime} from "./predicateTDateTime";
 import {predicateTTime} from "./predicateTTime";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 import {predicateTVariableAssignment} from "./predicateTVariableAssignment";
+import {TString} from "../Types/TString";
+import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
+import {exitIf} from "../../BaseParser/Predicates/exitIf";
+
 
 
 /*
@@ -34,28 +38,26 @@ import {predicateTVariableAssignment} from "./predicateTVariableAssignment";
     AS STRING | LITERAL
  */
 export const predicateTQueryColumn = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
-    let left = yield oneOf([predicateTStar, predicateTVariableAssignment, predicateTQueryExpression,
-        predicateValidExpressions], "" );
+
+
+    let left = yield oneOf([predicateTStar, predicateTVariableAssignment, predicateTQueryExpression], "an expression or column" );
     yield maybe(atLeast1(whitespaceOrNewLine));
-    let as = yield maybe(str("AS "));
+    let as = yield exitIf(checkSequence([str("AS"), whitespaceOrNewLine]));
     let columnName = "";
-    if (as === "AS ") {
-        yield maybe(atLeast1(whitespaceOrNewLine));
-        columnName = yield oneOf([predicateTLiteral, predicateTString], "");
+    if (as === true) {
+        yield str("AS");
+        yield atLeast1(whitespaceOrNewLine);
+        columnName = yield oneOf([predicateTLiteral, predicateTString], "an alias");
     } else {
         switch (left.kind) {
             case "TLiteral":
                 columnName = (left as TLiteral).value;
                 break;
             case "TColumn":
-                columnName = (((left as TColumn).table !== "") ?  ((left as TColumn).table + ".") : "") + (left as TColumn).column;
+                columnName = (left as TColumn).column;
                 break;
-            case "TQueryFunctionCall":
-                columnName = '"' + (left as TQueryFunctionCall).value.name + '"';
+            case "TString":
+                columnName = (left as TString).value;
                 break;
         }
     }

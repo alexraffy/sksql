@@ -8,10 +8,7 @@ import {ParseError} from "../ParseError";
 
 export function checkAhead(params: (TFuncGen | TParser)[], error: string) {
     return (s: Stream) => {
-        //@ts-ignore
-        if (s as string === "isGenerator") {
-            return;
-        }
+
         for (let i = 0; i < params.length; i++) {
             let results = undefined;
 

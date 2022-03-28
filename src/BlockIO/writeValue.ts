@@ -68,7 +68,7 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
             case TableColumnType.numeric:
                 fullRow.setUint8(column.offset + extraOffset + 1, 0);
                 fullRow.setUint32(column.offset + extraOffset + 2, 0);
-                fullRow.setUint16(column.offset + extraOffset + 2 + 4, 0);
+                fullRow.setInt16(column.offset + extraOffset + 2 + 4, 0);
                 break;
             case TableColumnType.date:
                 let flagUnknownYear = 1;
@@ -108,6 +108,16 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 2, 0);
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 3, 0);
                 fullRow.setUint16(column.offset + extraOffset + 2 + 4 + 1 + 4, 0);
+            }
+            break;
+            case TableColumnType.float:
+            {
+                fullRow.setFloat32(column.offset + extraOffset + 1, 0);
+            }
+            break;
+            case TableColumnType.double:
+            {
+                fullRow.setFloat64(column.offset + extraOffset + 1, 0);
             }
             break;
         }
@@ -160,7 +170,7 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 let num = value as numeric;
                 fullRow.setUint8(column.offset + extraOffset + 1, num.sign);
                 fullRow.setUint32(column.offset + extraOffset + 2, num.m);
-                fullRow.setUint16(column.offset + extraOffset + 2 + 4, num.e);
+                fullRow.setInt16(column.offset + extraOffset + 2 + 4, num.e);
                 break;
             case TableColumnType.date:
                 let val = value as TDate;
@@ -212,6 +222,16 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 2, val.time.minutes);
                 fullRow.setUint8(column.offset + extraOffset + 2 + 4 + 1 + 3, val.time.seconds);
                 fullRow.setUint16(column.offset + extraOffset + 2 + 4 + 1 + 4, val.time.millis);
+            }
+            break;
+            case TableColumnType.float: {
+                let val = value as number;
+                fullRow.setFloat32(column.offset + extraOffset + 1, val);
+            }
+            break;
+            case TableColumnType.double: {
+                let val = value as number;
+                fullRow.setFloat64(column.offset + extraOffset + 1, val);
             }
             break;
         }

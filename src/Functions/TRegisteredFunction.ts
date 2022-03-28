@@ -9,4 +9,6 @@ export interface TRegisteredFunction {
     parameters: {name: string, type: TableColumnType}[],
     returnType: TableColumnType,
     fn: ((...args) => any) | TQueryCreateFunction;
+    hasVariableParams: boolean;
+    returnTypeSameTypeHasParameterX?: number;
 }

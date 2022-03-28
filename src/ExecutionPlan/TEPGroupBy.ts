@@ -3,10 +3,11 @@ import {TEP} from "./TEP";
 import {TQueryColumn} from "../Query/Types/TQueryColumn";
 import {TAlias} from "../Query/Types/TAlias";
 import {TTable} from "../Query/Types/TTable";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
 import {TEPProjection} from "./TEPProjection";
-import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
+import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
+import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
 export interface TEPGroupBy extends TEP {
@@ -14,7 +15,8 @@ export interface TEPGroupBy extends TEP {
     source: TAlias | TTable;
     dest: TAlias | TTable;
     groupBy: TQueryOrderBy[];
-    having: TQueryComparisonExpression | TQueryComparison | TQueryComparisonColumnEqualsString;
+    having: TQueryExpression | TValidExpressions;
     output: TQueryColumn[];
     projections: TEPProjection[];
+    aggregateFunctions: {name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[];
 }

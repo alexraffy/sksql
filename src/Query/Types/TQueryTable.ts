@@ -1,14 +1,14 @@
 import {kQueryJoin} from "../Enums/kQueryJoin";
 import {TAlias} from "./TAlias";
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
-import {TQueryComparison} from "./TQueryComparison";
 import {TTable} from "./TTable";
+import {TQuerySelect} from "./TQuerySelect";
+import {TQueryExpression} from "./TQueryExpression";
 
 
 export interface TQueryTable {
     kind: "TQueryTable",
-    tableName: TAlias | TTable;
+    tableName: TAlias | TTable | TQuerySelect;
     joinType: kQueryJoin,
     joinTarget: TAlias;
-    joinClauses: TQueryComparisonExpression | TQueryComparison;
+    joinClauses: TQueryExpression;
 }

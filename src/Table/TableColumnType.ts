@@ -18,6 +18,7 @@ export enum TableColumnType {
     blob = 20,
     date = 21,
     time = 22,
-    datetime = 23
+    datetime = 23,
+    double = 24
 
 }

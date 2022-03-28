@@ -10,11 +10,11 @@ export function numericFromNumber(a: number): numeric {
     let idx = str.indexOf(".");
     if ( idx > -1) {
         m =  parseInt(str.replace(".", ""));
-        e = Math.abs(str.length - idx);
+        e = -Math.abs(str.length - idx);
     }
     let ret = {
         sign: (a < 0) ? 1 : 0,
-        m : m,
+        m : Math.abs(m),
         e: e,
         approx: 0
     } as numeric;

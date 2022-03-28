@@ -9,8 +9,6 @@ import {TColumnDefinition} from "../Types/TColumnDefinition";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TQueryCreateTable} from "../Types/TQueryCreateTable";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
-import {predicateTQueryComparison} from "./predicateTQueryComparison";
-import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
 import {number} from "../../BaseParser/Predicates/number";
 import {TTableConstraint} from "../../Table/TTableConstraint";
 import {kTableConstraintType} from "../../Table/kTableConstraintType";
@@ -202,7 +200,7 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
             yield maybe(atLeast1(whitespaceOrNewLine));
             yield str("(");
             yield maybe(atLeast1(whitespaceOrNewLine));
-            const checkExpression = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "");
+            const checkExpression = yield predicateTQueryExpression;
             yield maybe(atLeast1(whitespaceOrNewLine));
             yield str(")")
             yield maybe(atLeast1(whitespaceOrNewLine));

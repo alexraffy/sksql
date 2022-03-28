@@ -12,6 +12,7 @@ export enum kQueryComparison {
     like = "like",
     notLike = "not like",
     in = "in",
-    between = "between"
+    between = "between",
+    isNull = "isNull"
 
 }

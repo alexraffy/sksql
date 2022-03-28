@@ -1,6 +1,4 @@
 import {TQueryExpression} from "./TQueryExpression";
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
-import {TQueryComparison} from "./TQueryComparison";
 import {TQueryColumn} from "./TQueryColumn";
 import {TBoolValue} from "./TBoolValue";
 import {TString} from "./TString";
@@ -16,4 +14,5 @@ import {TNull} from "./TNull";
 import {TDate} from "./TDate";
 
 
-export type TQueryAnyType = TQueryExpression | TQueryFunctionCall | TQueryComparisonExpression | TQueryComparison | TQueryColumn | TDate | TString | TNull | TLiteral | TNumber | TVariable | TBoolValue | TQuerySelect | TQueryUpdate | TQueryDelete | TColumn;
+export type TQueryAnyType = TQueryExpression | TQueryFunctionCall | TQueryColumn | TDate | TString | TNull | TLiteral |
+    TNumber | TVariable | TBoolValue | TQuerySelect | TQueryUpdate | TQueryDelete | TColumn;

@@ -24,7 +24,7 @@ import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
  */
 export function dumpTable(table: ITable) {
     let ret: string = "";
-    let def = readTableDefinition(table.data);
+    let def = readTableDefinition(table.data, true);
     let cursor = readFirst(table, def);
     let record = recordSize(table.data);
     ret = "ID\tFLAG\t";
@@ -42,7 +42,9 @@ export function dumpTable(table: ITable) {
             let len = def.columns[x].length;
             let coffset = def.columns[x].offset
             let value: string | number | bigint | boolean | numeric | TDate | TTime | TDateTime = readValue(table, def, def.columns[x], dv);
-            if (isNumeric(value)) {
+            if (value === undefined) {
+                ret += "NULL" + "\t";
+            } else if (isNumeric(value)) {
                 ret += numericDisplay(value) + "\t";
             } else if (instanceOfTDate(value)) {
                 ret += padLeft(value.year.toString(), 4, "0") + "-" +

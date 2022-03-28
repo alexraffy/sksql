@@ -1,37 +1,17 @@
 import {TFuncGen} from "../../BaseParser/parse";
 import {literal} from "../../BaseParser/Predicates/literal";
 import {maybe} from "../../BaseParser/Predicates/maybe";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {str} from "../../BaseParser/Predicates/str";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
-import {either} from "../../BaseParser/Predicates/either";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TQueryFunctionCall} from "../Types/TQueryFunctionCall";
 import {TQueryExpression} from "../Types/TQueryExpression";
-import {TLiteral} from "../Types/TLiteral";
-import {TString} from "../Types/TString";
-import {TNumber} from "../Types/TNumber";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
-import {predicateTString} from "./predicateTString";
-import {predicateTLiteral} from "./predicateTLiteral";
-import {predicateTNumber} from "./predicateTNumber";
-import {TColumn} from "../Types/TColumn";
-import {predicateTColumn} from "./predicateTColumn";
-import {TBoolValue} from "../Types/TBoolValue";
-import {predicateTVariable} from "./predicateTVariable";
-import {predicateTBoolValue} from "./predicateTBoolValue";
-import {TVariable} from "../Types/TVariable";
-import {TDate} from "../Types/TDate";
-import {predicateTDate} from "./predicateTDate";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
-import {TDateTime} from "../Types/TDateTime";
-import {TTime} from "../Types/TTime";
-import {predicateTDateTime} from "./predicateTDateTime";
-import {predicateTTime} from "./predicateTTime";
 import {TValidExpressions} from "../Types/TValidExpressions";
-import {predicateValidExpressions} from "./predicateValidExpressions";
-import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
+import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
+import {exitIf} from "../../BaseParser/Predicates/exitIf";
+
 
 /*
     tries to parse a function call
@@ -47,8 +27,15 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("(");
     yield maybe(atLeast1(whitespaceOrNewLine));
-    const param1: (TQueryExpression | TValidExpressions) = yield maybe(oneOf(
-        [predicateTQueryExpression, predicateTParenthesisGroup,  predicateValidExpressions], "a list of parameters"));
+
+    // if its an aggregate function we maybe have DISTINCT here
+    const gotDistinct = yield exitIf(checkSequence([str("DISTINCT"), atLeast1(whitespaceOrNewLine)]));
+    if (gotDistinct) {
+        yield str("DISTINCT");
+        yield atLeast1(whitespaceOrNewLine);
+    }
+
+    const param1: (TQueryExpression | TValidExpressions) = yield maybe(predicateTQueryExpression);
     if (param1 !== undefined) {
         parameters.push(param1);
     }
@@ -57,8 +44,7 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
     let extraParamOrEnd = yield maybe(str(","));
     while (extraParamOrEnd===",") {
         yield maybe(atLeast1(whitespaceOrNewLine));
-        const extraParam: (TQueryExpression | TValidExpressions) = yield oneOf(
-            [predicateTQueryExpression, predicateTParenthesisGroup, predicateValidExpressions], "a list of parameters");
+        const extraParam: (TQueryExpression | TValidExpressions) = yield predicateTQueryExpression;
         parameters.push(extraParam);
         yield maybe(atLeast1(whitespaceOrNewLine));
         extraParamOrEnd = yield maybe(str(","));
@@ -69,6 +55,7 @@ export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
         value: {
             name: fnName,
             parameters: parameters
-        }
+        },
+        distinct: gotDistinct
     } as TQueryFunctionCall)
 }

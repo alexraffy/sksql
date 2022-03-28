@@ -8,12 +8,19 @@ import {numeric} from "../Numeric/numeric";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {TDate} from "../Query/Types/TDate";
 import {TTime} from "../Query/Types/TTime";
+import {TBooleanResult} from "./TBooleanResult";
+import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 
 
-export function conversionMap(a: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint,
-                              b: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint
+export function conversionMap(a: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint | TBooleanResult,
+                              b: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint | TBooleanResult
                               ): TableColumnType {
-
+    if (a === undefined || b === undefined ) {
+        return undefined;
+    }
+    if (instanceOfTBooleanResult(a) || instanceOfTBooleanResult(b)) {
+        return TableColumnType.boolean;
+    }
     if (typeof a === "string") {
         if (typeof b === "string") {
             return TableColumnType.varchar;
@@ -42,11 +49,17 @@ export function conversionMap(a: string | number | numeric | boolean | TDateTime
             return TableColumnType.varchar;
         }
         if (typeof b === "number") {
-            return TableColumnType.int32;
+            if (Number.isInteger(b) && Number.isInteger(a)) {
+                return TableColumnType.int32;
+            }
+            return TableColumnType.numeric;
         }
         if (isNumeric(b)) {
+            if (!Number.isInteger(a)) {
+                return TableColumnType.float;
+            }
             if (b.e === 0) {
-                return TableColumnType.int32;
+                return TableColumnType.numeric;
             }
             return TableColumnType.numeric;
         }
@@ -69,7 +82,7 @@ export function conversionMap(a: string | number | numeric | boolean | TDateTime
         }
         if (typeof b === "number") {
             if ((a as numeric).e === 0) {
-                return TableColumnType.int32;
+                return TableColumnType.numeric;
             }
             return TableColumnType.numeric;
         }

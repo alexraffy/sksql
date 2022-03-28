@@ -1,11 +1,11 @@
 import {TEPScan} from "./TEPScan";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
+import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
 export interface TEPNestedLoop {
     kind: "TEPNestedLoop",
     a: TEPScan,
     b: TEPScan | TEPNestedLoop,
-    join: TQueryComparisonExpression | TQueryComparison
+    join: TQueryExpression | TValidExpressions;
 }

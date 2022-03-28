@@ -7,6 +7,10 @@ import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
 import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {TQueryDelete} from "../Query/Types/TQueryDelete";
+import {TTable} from "../Query/Types/TTable";
+import {TAlias} from "../Query/Types/TAlias";
+import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
+import {TColumn} from "../Query/Types/TColumn";
 
 
 function walkTableColumns(t: TTableWalkInfo, columnName: string) {
@@ -34,7 +38,8 @@ export function findTableNameForColumn(columnName: string,
         if (instanceOfTQuerySelect(currentStatement)) {
             let st = currentStatement as TQuerySelect;
             for (let i = 0; i < st.tables.length; i++) {
-                let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName).table.toUpperCase();});
+
+                let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName as (TAlias | TTable)).table.toUpperCase();});
                 if (t !== undefined) {
                     ret.push(...walkTableColumns(t, columnName));
                 }
@@ -50,7 +55,7 @@ export function findTableNameForColumn(columnName: string,
             }
             if (st.tables !== undefined) {
                 for (let i = 0; i < st.tables.length; i++) {
-                    let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName).table.toUpperCase();});
+                    let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName as (TAlias | TTable)).table.toUpperCase();});
                     if (t !== undefined) {
                         ret.push(...walkTableColumns(t, columnName));
                     }
@@ -61,12 +66,24 @@ export function findTableNameForColumn(columnName: string,
             let st = currentStatement as TQueryDelete;
             if (st.tables !== undefined) {
                 for (let i = 0; i < st.tables.length; i++) {
-                    let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName).table.toUpperCase();});
+
+                    let t = tables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(st.tables[i].tableName as (TAlias | TTable)).table.toUpperCase();});
                     if (t !== undefined) {
                         ret.push(...walkTableColumns(t, columnName));
                     }
                 }
             }
+        }
+        if (instanceOfTColumn(currentStatement)) {
+            let st = currentStatement as TColumn;
+
+            for (let i = 0; i < tables.length; i++) {
+                let t = tables.find((t) => { return t.name.toUpperCase() === tables[i].name.toUpperCase();});
+                if (t !== undefined) {
+                    ret.push(...walkTableColumns(t, columnName));
+                }
+            }
+
         }
     }
     if (ret.length > 0) {

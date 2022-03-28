@@ -16,6 +16,7 @@ import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
 import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
+import {isNumeric} from "../Numeric/isNumeric";
 
 
 export function convertToType(value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime, type: TableColumnType, dest: TableColumnType) {
@@ -64,13 +65,12 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             if (type === TableColumnType.numeric) {
                 return numericDisplay(value as numeric);
             }
-            if (type === TableColumnType.float) {
-                return (value as number).toString();
-            }
+            
             if (type === TableColumnType.boolean) {
                 return (value as boolean) === true ? "TRUE" : "FALSE";
             }
-            if (columnTypeIsInteger(type)) {
+
+            if (columnTypeIsInteger(type) || type === TableColumnType.float || type === TableColumnType.double) {
                 return (value as number).toString();
             }
 
@@ -92,7 +92,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             if (type === TableColumnType.varchar) {
                 return numericLoad(value as string);
             }
-            if (type === TableColumnType.float) {
+            if (type === TableColumnType.float || type === TableColumnType.double) {
                 return numericLoad((value as number).toString());
             }
             if (columnTypeIsInteger(type)) {
@@ -124,6 +124,32 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             }
         }
             break;
+        case TableColumnType.float:
+        {
+            if (type === TableColumnType.varchar) {
+                return parseFloat(value as string);
+            }
+            if (columnTypeIsInteger(type)) {
+                return 0.0 + (value as number);
+            }
+            if (type === TableColumnType.numeric || isNumeric(value)) {
+                return numericToNumber(value as numeric);
+            }
+        }
+        break;
+        case TableColumnType.double:
+        {
+            if (type === TableColumnType.varchar) {
+                return parseFloat(value as string);
+            }
+            if (columnTypeIsInteger(type)) {
+                return 0.0 + (value as number);
+            }
+            if (type === TableColumnType.numeric || isNumeric(value)) {
+                return numericToNumber(value as numeric);
+            }
+        }
+        break;
 
     }
 
@@ -139,7 +165,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             return numericToNumber(value as numeric);
         }
         if (columnTypeIsString(type)) {
-            return parseInt(value as string);
+            ; //return parseInt(value as string);
         }
         if (columnTypeIsBoolean(type)) {
             if ((value as boolean) === true) {

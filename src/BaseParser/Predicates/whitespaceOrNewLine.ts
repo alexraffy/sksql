@@ -5,9 +5,8 @@ import {isSpace} from "./types";
 
 
 export const whitespaceOrNewLine = (s: Stream): ParseResult | ParseError => {
-    //@ts-ignore
-    if (s as string === "isGenerator") {
-        return;
+    if (s.EOF) {
+        return new ParseError(s, "a whitespace", false);
     }
     let character = s.get();
     if (isSpace(character)) {

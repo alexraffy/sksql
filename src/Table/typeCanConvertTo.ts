@@ -65,7 +65,7 @@ export function typeCanConvertTo(val: string | number | numeric | boolean | TDat
             if (columnTypeIsInteger(dest) && ((typeof val === "number") || (isNumeric(val) && val.e === 0))) {
                 return true;
             }
-            if (dest === TableColumnType.float) {
+            if (dest === TableColumnType.float || dest === TableColumnType.double) {
                 return true;
             }
             if (columnTypeIsString(dest)) {

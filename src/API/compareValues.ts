@@ -1,12 +1,9 @@
-import { TDateCmp } from "../Date/TDateCmp";
-import { isNumeric } from "../Numeric/isNumeric";
-import { numeric } from "../Numeric/numeric";
-import { numericCmp } from "../Numeric/numericCmp";
-import { instanceOfTDate } from "../Query/Guards/instanceOfTDate";
-import { instanceOfTNumber } from "../Query/Guards/instanceOfTNumber";
-import { instanceOfTString } from "../Query/Guards/instanceOfTString";
-import { TDate } from "../Query/Types/TDate";
-import { TQueryAnyType } from "../Query/Types/TQueryAnyType";
+import {TDateCmp} from "../Date/TDateCmp";
+import {isNumeric} from "../Numeric/isNumeric";
+import {numeric} from "../Numeric/numeric";
+import {numericCmp} from "../Numeric/numericCmp";
+import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
+import {TDate} from "../Query/Types/TDate";
 import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
@@ -19,10 +16,13 @@ import {TParserError} from "./TParserError";
 import {parseDateTimeString} from "../Date/parseDateTimeString";
 import {numericFromNumber} from "../Numeric/numericFromNumber";
 import {numericLoad} from "../Numeric/numericLoad";
+import {TBooleanResult} from "./TBooleanResult";
+import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
+import {kBooleanResult} from "./kBooleanResult";
 
 
-
-export function compareValues(a: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime, b: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime) {
+export function compareValues(a: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime | TBooleanResult,
+                              b: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime | TBooleanResult) {
     if (b === undefined) {
         if (a === undefined) {
             return 0;
@@ -48,7 +48,10 @@ export function compareValues(a: string | number | boolean | bigint | numeric | 
         if (a > b) {
             return 1;
         }
-        return -1;
+        if (a < b) {
+            return -1;
+        }
+        return 0;
     }
     if (typeof a === "boolean" && typeof b === "boolean") {
         if (a === b) {
@@ -178,6 +181,19 @@ export function compareValues(a: string | number | boolean | bigint | numeric | 
         ad = parseStringAsTTime(a as TTime | string);
         bd = parseStringAsTTime(b as TTime | string);
         return TTimeCmp(ad, bd);
+    }
+
+    if (instanceOfTBooleanResult(a) && instanceOfTBooleanResult(b)) {
+        if (a.value === b.value) {
+            return 0;
+        }
+        if (a.value === kBooleanResult.isTrue && b.value !== kBooleanResult.isTrue) {
+            return 1;
+        }
+        if (a.value !== kBooleanResult.isTrue && b.value === kBooleanResult.isTrue) {
+            return -1;
+        }
+        return -1;
     }
 
 

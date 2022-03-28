@@ -3,13 +3,12 @@ import {TQueryFunctionCall} from "./TQueryFunctionCall";
 import {TVariable} from "./TVariable";
 import {TNumber} from "./TNumber";
 import {TQueryTable} from "./TQueryTable";
-import {TQueryComparison} from "./TQueryComparison";
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TQueryDelete {
     kind: "TQueryDelete",
     tables: TQueryTable[];
-    top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
-    where: TQueryComparison | TQueryComparisonExpression
+    top?: TQueryExpression | TValidExpressions;
+    where: TQueryExpression | TValidExpressions;
 }

@@ -5,7 +5,6 @@ import {ParseResult} from "../BaseParser/ParseResult";
 export function createNewContext(label: string, query: string, parseResult: ParseResult): TExecutionContext {
     return {
         label: label,
-        openTables: [],
         scopedIdentity: undefined,
         breakLoop: false,
         exitExecution: false,
@@ -27,6 +26,7 @@ export function createNewContext(label: string, query: string, parseResult: Pars
         broadcastQuery: false,
         openedTempTables: [],
         stack: [],
+        tables: [],
         returnValue: undefined,
         transactionId: 0,
         currentStatement: undefined

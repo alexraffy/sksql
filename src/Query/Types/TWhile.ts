@@ -1,14 +1,11 @@
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
-import {TQueryComparison} from "./TQueryComparison";
-import {TVariableAssignment} from "./TVariableAssignment";
-import {TReturnValue} from "./TReturnValue";
-import {TQueryFunctionCall} from "./TQueryFunctionCall";
-import {TBeginEnd} from "./TBeginEnd";
+
 import {TValidStatementsInFunction} from "./TValidStatementsInFunction";
+import {TQueryExpression} from "./TQueryExpression";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TWhile {
     kind: "TWhile",
-    test: TQueryComparisonExpression | TQueryComparison;
+    test: TQueryExpression | TValidExpressions;
     op: TValidStatementsInFunction[];
 }

@@ -4,6 +4,9 @@ import {TLiteral} from "./Types/TLiteral";
 import {instanceOfTAlias} from "./Guards/instanceOfTAlias";
 import {instanceOfTLiteral} from "./Guards/instanceOfTLiteral";
 import {instanceOfTTable} from "./Guards/instanceOfTTable";
+import {TQuerySelect} from "./Types/TQuerySelect";
+import {instanceOfTQuerySelect} from "./Guards/instanceOfTQuerySelect";
+import {TParserError} from "../API/TParserError";
 
 export function getValueForLiteralOrString(s: TLiteral | string): string {
     if (typeof s === "string") {
@@ -21,6 +24,9 @@ export function getValueForAliasTableOrLiteral(s: string | TAlias | TTable | TLi
         return { alias: s, table: s};
     }
     if (instanceOfTAlias(s)) {
+        if (instanceOfTQuerySelect(s.name)) {
+            throw new TParserError("SUBQUERY UNEXPECTED");
+        }
         return {
             alias: getValueForAliasTableOrLiteral(s.alias).alias,
             table: getValueForAliasTableOrLiteral(s.name).table
@@ -37,6 +43,9 @@ export function getValueForAliasTableOrLiteral(s: string | TAlias | TTable | TLi
             alias: s.table,
             table: s.table
         }
+    }
+    if (instanceOfTQuerySelect(s)) {
+        throw new TParserError("SUBQUERY UNEXPECTED");
     }
 
 }

@@ -27,12 +27,7 @@ export function processDropTableStatement(db: SKSQL, context: TExecutionContext,
     }
     db.dropTable(tableName);
     context.broadcastQuery = true;
-    for (let i = 0; i < context.openTables.length; i++) {
-        if (context.openTables[i].name.toUpperCase() === tableName) {
-            context.openTables.splice(i, 1);
-            break;
-        }
-    }
+
     if (context.result.dropTable === undefined) {
         context.result.dropTable = [tableName];
     } else {

@@ -1,17 +1,13 @@
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
-import {TVariableDeclaration} from "./TVariableDeclaration";
-import {TReturnValue} from "./TReturnValue";
-import {TQueryFunctionCall} from "./TQueryFunctionCall";
-import {TBeginEnd} from "./TBeginEnd";
-import {TQueryComparison} from "./TQueryComparison";
-import {TVariableAssignment} from "./TVariableAssignment";
+
 import {TValidStatementsInFunction} from "./TValidStatementsInFunction";
+import {TQueryExpression} from "./TQueryExpression";
+import {TValidExpressions} from "./TValidExpressions";
 
 
 export interface TIf {
     kind: "TIf",
     tests: {
-        test: TQueryComparisonExpression | TQueryComparison;
+        test: TQueryExpression | TValidExpressions;
         op: TValidStatementsInFunction[];
     }[];
 }

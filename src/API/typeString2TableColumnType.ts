@@ -30,7 +30,7 @@ export function typeString2TableColumnType(input: string): TableColumnType {
             break;
         case "INT":
         case "INTEGER":
-            type = TableColumnType.int;
+            type = TableColumnType.int32;
             break;
         case "VARCHAR":
             type = TableColumnType.varchar;
@@ -39,7 +39,14 @@ export function typeString2TableColumnType(input: string): TableColumnType {
             type = TableColumnType.boolean;
             break;
         case "NUMERIC":
+        case "DECIMAL":
             type = TableColumnType.numeric;
+            break;
+        case "FLOAT":
+        case "REAL":
+        case "FLOAT32":
+        case "REAL32":
+            type = TableColumnType.float;
             break;
         case "DATE":
             type = TableColumnType.date;

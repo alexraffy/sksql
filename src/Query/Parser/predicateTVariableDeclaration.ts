@@ -1,26 +1,16 @@
 import {predicateTVariable} from "./predicateTVariable";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
-import {predicateTColumn} from "./predicateTColumn";
-import {predicateTString} from "./predicateTString";
-import {predicateTLiteral} from "./predicateTLiteral";
-import {predicateTNumber} from "./predicateTNumber";
-import {literal} from "../../BaseParser/Predicates/literal";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TVariableDeclaration} from "../Types/TVariableDeclaration";
-import {predicateTDate} from "./predicateTDate";
-import {predicateTDateTime} from "./predicateTDateTime";
-import {predicateTTime} from "./predicateTTime";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {predicateTColumnType} from "./predicateTColumnType";
-import {predicateTBoolValue} from "./predicateTBoolValue";
-import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
 import {predicateValidExpressions} from "./predicateValidExpressions";
-import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
+import {predicateTQueryExpressionFAULTY} from "./predicateTQueryExpressionDEPREC";
+
 
 /*
     tries to parse a variable declaration
@@ -46,7 +36,7 @@ export const predicateTVariableDeclaration = function *(callback) {
         yield maybe(atLeast1(whitespaceOrNewLine));
         const eq = yield maybe(str("="));
         yield maybe(atLeast1(whitespaceOrNewLine));
-        const value = yield maybe(oneOf([predicateTQueryExpression, predicateTParenthesisGroup,  predicateValidExpressions], ""));
+        const value = yield predicateTQueryExpression;
         yield maybe(atLeast1(whitespaceOrNewLine));
 
         ret.declarations.push(

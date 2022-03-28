@@ -1,17 +1,10 @@
 import {str} from "../../BaseParser/Predicates/str";
 import {predicateTTableName} from "./predicateTTableName";
-import {whitespace} from "../../BaseParser/Predicates/whitespace";
 import {predicateTColumn} from "./predicateTColumn";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
-import {predicateTBoolValue} from "./predicateTBoolValue";
 import {predicateTVariable} from "./predicateTVariable";
-import {predicateTString} from "./predicateTString";
-import {predicateTLiteral} from "./predicateTLiteral";
 import {predicateTNumber} from "./predicateTNumber";
-import {TQueryComparisonExpression} from "../Types/TQueryComparisonExpression";
-import {TQueryComparison} from "../Types/TQueryComparison";
-import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {returnPred} from "../../BaseParser/Predicates/ret";
@@ -21,21 +14,12 @@ import {kQueryAssignOp} from "../Enums/kQueryAssignOp";
 import {TQueryExpression} from "../Types/TQueryExpression";
 import {TQueryFunctionCall} from "../Types/TQueryFunctionCall";
 import {TVariable} from "../Types/TVariable";
-import {TBoolValue} from "../Types/TBoolValue";
-import {TString} from "../Types/TString";
-import {TLiteral} from "../Types/TLiteral";
 import {TNumber} from "../Types/TNumber";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {TQueryTable} from "../Types/TQueryTable";
 import {kQueryJoin} from "../Enums/kQueryJoin";
-import {TDate} from "../Types/TDate";
-import {predicateTDate} from "./predicateTDate";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
-import {TDateTime} from "../Types/TDateTime";
-import {TTime} from "../Types/TTime";
-import {predicateTDateTime} from "./predicateTDateTime";
-import {predicateTTime} from "./predicateTTime";
 import {TValidExpressions} from "../Types/TValidExpressions";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 
@@ -55,11 +39,11 @@ export const predicateTQueryUpdate = function *(callback) {
     let topNumber: TQueryExpression | TQueryFunctionCall | TVariable | TNumber = undefined;
     if (hasTop) {
         yield maybe(atLeast1(whitespaceOrNewLine));
-        yield str("(");
+        yield maybe(str("("));
         yield maybe(atLeast1(whitespaceOrNewLine));
         topNumber = yield oneOf([predicateTQueryExpression, predicateTQueryFunctionCall, predicateTVariable, predicateTNumber], "");
         yield maybe(atLeast1(whitespaceOrNewLine));
-        yield str(")");
+        yield maybe(str(")"));
         yield atLeast1(whitespaceOrNewLine);
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
@@ -121,11 +105,11 @@ export const predicateTQueryUpdate = function *(callback) {
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
 
-    let whereClause: TQueryComparisonExpression | TQueryComparison = undefined;
+    let whereClause: TQueryExpression | TValidExpressions = undefined;
     const where = yield maybe(str("WHERE"));
     if (where === "WHERE") {
         yield atLeast1(whitespaceOrNewLine);
-        whereClause = yield predicateTQueryComparisonExpression;
+        whereClause = yield predicateTQueryExpression;
     }
     yield maybe(str(";"));
     yield maybe(atLeast1(whitespaceOrNewLine));

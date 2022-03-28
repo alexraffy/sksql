@@ -20,11 +20,11 @@ export interface TExecutionContext {
     returnValue: string | numeric | number | boolean | bigint | TDateTime | TDate | TTime;
     exitExecution: boolean;
     breakLoop: boolean;
-    openTables: TTableWalkInfo[];
     parseResult: ParseResult | ParseError;
     broadcastQuery: boolean;
     result: SQLResult;
     query: string;
+    tables: TTableWalkInfo[];
     openedTempTables: string[];
     scopedIdentity: number;
     transactionId: number;

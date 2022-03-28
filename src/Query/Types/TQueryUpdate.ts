@@ -1,14 +1,9 @@
-import {TQueryComparison} from "./TQueryComparison";
-import {TQueryComparisonExpression} from "./TQueryComparisonExpression";
+
 import {TQueryExpression} from "./TQueryExpression";
 import {TQueryFunctionCall} from "./TQueryFunctionCall";
-import {TBoolValue} from "./TBoolValue";
-import {kQueryExpressionOp} from "../Enums/kQueryExpressionOp";
 import {kQueryAssignOp} from "../Enums/kQueryAssignOp";
 import {TColumn} from "./TColumn";
 import {TVariable} from "./TVariable";
-import {TString} from "./TString";
-import {TLiteral} from "./TLiteral";
 import {TNumber} from "./TNumber";
 import {TQueryTable} from "./TQueryTable";
 import {TTable} from "./TTable";
@@ -20,6 +15,6 @@ export interface TQueryUpdate {
     table: TTable;
     top?: TQueryExpression | TQueryFunctionCall | TVariable | TNumber;
     tables: TQueryTable[];
-    where: TQueryComparison | TQueryComparisonExpression;
+    where: TQueryExpression | TValidExpressions;
     sets: {column: TColumn, operator: kQueryAssignOp, value: TQueryExpression | TValidExpressions}[];
 }

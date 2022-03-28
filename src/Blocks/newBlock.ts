@@ -30,6 +30,7 @@ export function newBlock(blockSize: number = 65536, blockType: BlockType, blockI
     dv.setUint32(kBlockHeaderField.NumRows, 0); ofs += 4;
     // tabledef b21, block dirty
     dv.setUint8(kBlockHeaderField.BlockDirty, 1); ofs += 1;
+
     // 22 - 24, reserved
     return ret;
 }

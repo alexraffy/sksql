@@ -11,20 +11,21 @@ import {writeValue} from "../BlockIO/writeValue";
 import {TEPSortNTop} from "./TEPSortNTop";
 import {bubbleSort} from "../Sort/bubbleSort";
 import {TEPSelect} from "./TEPSelect";
-import {SQLResult} from "../API/SQLResult";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
-import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {TEPGroupBy} from "./TEPGroupBy";
 import {runGroupBy} from "./runGroupBy";
-import {TableColumnType} from "../Table/TableColumnType";
 import {TExecutionContext} from "./TExecutionContext";
 import {SKSQL} from "../API/SKSQL";
-
+import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
+import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
+import {recordSize} from "../Table/recordSize";
+import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
+import {kBooleanResult} from "../API/kBooleanResult";
 
 
 export function run(db: SKSQL, context: TExecutionContext,
@@ -49,7 +50,13 @@ export function run(db: SKSQL, context: TExecutionContext,
             for (let i = 0; i < tep.projection.length; i++) {
                 let col = columns.find((t) => { return t.name.toUpperCase() === tep.projection[i].columnName.toUpperCase();});
                 if (col !== undefined) {
-                    let value = evaluate(db, context, tep.projection[i].output, col);
+                    let value = evaluate(db, context, tep.projection[i].output, walkInfos, col, {currentStep: tep, aggregateMode: "none", aggregateObjects: []});
+                    if (instanceOfTTable(value)) {
+                        value = readFirstColumnOfTable(db, context, value);
+                    }
+                    if (instanceOfTBooleanResult(value)) {
+                        value = value.value === kBooleanResult.isTrue;
+                    }
                     writeValue(resultWI.table, resultWI.def, col, row, value, rowHeaderSize);
                 }
             }
@@ -58,15 +65,21 @@ export function run(db: SKSQL, context: TExecutionContext,
             for (let i = 0; i < tep.a.projection.length; i++) {
                 let col = columns.find((t) => { return t.name.toUpperCase() === tep.a.projection[i].columnName.toUpperCase();});
                 if (col !== undefined) {
-                    let value = evaluate(db, context, tep.a.projection[i].output, col);
+                    let value = evaluate(db, context, tep.a.projection[i].output, context.tables, col, {currentStep: tep, aggregateMode: "none", aggregateObjects: []});
+                    if (instanceOfTTable(value)) {
+                        value = readFirstColumnOfTable(db, context, value);
+                    }
+                    if (instanceOfTBooleanResult(value)) {
+                        value = value.value === kBooleanResult.isTrue;
+                    }
                     writeValue(resultWI.table, resultWI.def, col, row, value, rowHeaderSize);
                 }
             }
         }
         rowsModified++;
         if (statement.top !== undefined) {
-            if (statement.orderBy === undefined || statement.orderBy.length === 0 || (statement.orderBy.length > 0 && instanceOfTLiteral(statement.orderBy[0].column) && statement.orderBy[0].column.value === "ROWID")) {
-                let topValue = evaluate(db, context, statement.top, undefined);
+            if (statement.orderBy === undefined || statement.orderBy.length === 0) {
+                let topValue = evaluate(db, context, statement.top, [], undefined);
                 if ((typeof topValue === "number" && topValue <= rowsModified) || (isNumeric(topValue) && topValue.m <= rowsModified)) {
                     return false;
                 }
@@ -80,7 +93,18 @@ export function run(db: SKSQL, context: TExecutionContext,
         let p = ep[i];
         if (p.kind === "TEPScan") {
             let ps = p as TEPScan;
-            runScan(db, context, ps, runCallback);
+            let tblName = getValueForAliasTableOrLiteral(ps.table);
+            let tblInfo = db.tableInfo.get(tblName.table);
+
+            let info: TTableWalkInfo = {
+                name: tblInfo.def.name.toUpperCase(),
+                table: tblInfo.pointer,
+                def: tblInfo.def,
+                cursor: readFirst(tblInfo.pointer, tblInfo.def),
+                rowLength: recordSize(tblInfo.pointer.data),
+                alias: tblName.alias
+            }
+            runScan(db, context, ps, context.tables,  runCallback);
         }
         if (p.kind === "TEPNestedLoop") {
             let ps = p as TEPNestedLoop;
@@ -95,10 +119,10 @@ export function run(db: SKSQL, context: TExecutionContext,
         }
         if (p.kind === "TEPSortNTop") {
             let ps = p as TEPSortNTop;
-            let resultWI = context.openTables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
-            bubbleSort(resultWI.table,resultWI.def, ps.orderBy);
+            let resultWI = context.tables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
+            bubbleSort(db, context, resultWI.table,resultWI.def, ps.orderBy);
             if (ps.top !== undefined) {
-                let topValue = evaluate(db, context, ps.top, undefined);
+                let topValue = evaluate(db, context, ps.top,  [], undefined);
                 let n = 0;
                 if (typeof topValue === "number") {
                     n = topValue;

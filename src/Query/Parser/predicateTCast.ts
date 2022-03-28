@@ -8,7 +8,6 @@ import {TCast} from "../Types/TCast";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
-import {predicateTParenthesisGroup} from "./predicateTParenthesisGroup";
 
 
 export function * predicateTCast(callback) {
@@ -17,7 +16,7 @@ export function * predicateTCast(callback) {
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("(");
 
-    let exp = yield oneOf([predicateTParenthesisGroup, predicateTQueryExpression, predicateValidExpressions], "");
+    let exp = yield predicateTQueryExpression;
 
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("AS");

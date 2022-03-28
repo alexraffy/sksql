@@ -5,9 +5,9 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {predicateTString} from "./predicateTString";
-import {predicateTQueryComparisonExpression} from "./predicateTQueryComparisonExpression";
-import {predicateTQueryComparison} from "./predicateTQueryComparison";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
+import {predicateTQueryExpressionFAULTY} from "./predicateTQueryExpressionDEPREC";
+import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
 
 export function * predicateTDebugger(callback) {
@@ -29,7 +29,7 @@ export function * predicateTDebugger(callback) {
         yield maybe(atLeast1(whitespaceOrNewLine));
         yield str("=");
         yield maybe(atLeast1(whitespaceOrNewLine));
-        test = yield oneOf([predicateTQueryComparisonExpression, predicateTQueryComparison], "");
+        test = yield predicateTQueryExpression;
         yield maybe(atLeast1(whitespaceOrNewLine));
     }
 

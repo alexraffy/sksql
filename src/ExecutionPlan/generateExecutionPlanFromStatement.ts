@@ -3,7 +3,7 @@ import {TEP} from "./TEP";
 import {TEPScan} from "./TEPScan";
 import {SKSQL} from "../API/SKSQL";
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
-import {openTables} from "../API/openTables";
+import {openTable} from "../API/openTables";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {findExpressionType} from "../API/findExpressionType";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
@@ -32,16 +32,29 @@ import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
 import {ITable} from "../Table/ITable";
 import {TEPUpdate} from "./TEPUpdate";
-import {TQueryComparison} from "../Query/Types/TQueryComparison";
-import {instanceOfTQueryComparison} from "../Query/Guards/instanceOfTQueryComparison";
-import {TQueryComparisonExpression} from "../Query/Types/TQueryComparisonExpression";
-import {instanceOfTQueryComparisonExpression} from "../Query/Guards/instanceOfTQueryComparisonExpression";
 import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 import {instanceOfTString} from "../Query/Guards/instanceOfTString";
 import {kQueryComparison} from "../Query/Enums/kQueryComparison";
 import {TQueryComparisonColumnEqualsString} from "../Query/Types/TQueryComparisonColumnEqualsString";
 import {findTableNameForColumn} from "../API/findTableNameForColumn";
 import {TParserError} from "../API/TParserError";
+import {processSelectStatement} from "./processSelectStatement";
+import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
+import {TAlias} from "../Query/Types/TAlias";
+import {TLiteral} from "../Query/Types/TLiteral";
+import {createNewContext} from "./newContext";
+import {TQueryExpression} from "../Query/Types/TQueryExpression";
+import {TNumber} from "../Query/Types/TNumber";
+import {kOrder} from "../Query/Enums/kOrder";
+import {generateV4UUID} from "../API/generateV4UUID";
+import {instanceOfTQueryColumn} from "../Query/Guards/instanceOfTQueryColumn";
+import {contextTables} from "./contextTables";
+import {findWalkTable} from "./findWalkTable";
+import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
+import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
+import {kSysColumns} from "../Table/kSysColumns";
+import {expressionContainsAggregateFunction} from "./expressionContainsAggregateFunction";
+import {walkTree} from "./walkTree";
 
 
 function addInvisibleColumnsForSorting(db: SKSQL,
@@ -52,20 +65,10 @@ function addInvisibleColumnsForSorting(db: SKSQL,
                                        projections: TEPProjection[],
                                        parameters: {name: string, type: TableColumnType, value: any}[]
                                        ): {projections: TEPProjection[], def: ITableDefinition} {
-    let o: TQueryOrderBy = clause;
-    let colname: string;
-    if (instanceOfTLiteral(o.column)) {
-        colname = o.column.value;
-        if (colname === "ROWID") {
-            return;
-        }
-    }
-    if (instanceOfTColumn(o.column)) {
-        if (o.column.table !== undefined && o.column.table !== "") {
-            colname = o.column.table + "." + o.column.column
-        } else {
-            colname = o.column.column;
-        }
+    let o: TQueryColumn = clause.column;
+    let colname: string = generateV4UUID();
+    if (instanceOfTAlias(o.alias) && typeof o.alias.alias === "string") {
+        colname = o.alias.alias;
     }
 
     let found = false;
@@ -76,12 +79,12 @@ function addInvisibleColumnsForSorting(db: SKSQL,
         }
     }
     if (found === false) {
-        let type = findExpressionType(db, o.column, tables, parameters);
+        let type = findExpressionType(db, o.expression, select, tables, parameters);
         // add the column to the select columns so they are written automatically
         let tcol: TQueryColumn = {
             kind: "TQueryColumn",
-            alias: undefined,
-            expression: o.column
+            alias: {kind: "TAlias", alias: colname, name: colname},
+            expression: o.expression
         }
         select.columns.push(tcol);
         let length = 1;
@@ -104,22 +107,41 @@ function addInvisibleColumnsForSorting(db: SKSQL,
 
     }
     return {projections: projections, def: def};
+
+
+
+
 }
 
-
-export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutionContext, select: TQuerySelect | TQueryUpdate): TEP[] {
+/*
+export function generateExecutionPlanFromStatementDEPREC(db: SKSQL, context: TExecutionContext, select: TQuerySelect | TQueryUpdate): TEP[] {
     let ret: TEP[] = [];
 
-
-    let tables: TTableWalkInfo[] = openTables(db, select);
-    for (let i = 0; i < tables.length; i++) {
-        let exists = context.openTables.find((ot) => { return ot.name.toUpperCase() === tables[i].name.toUpperCase();});
-        if (exists === undefined) {
-            context.openTables.push(tables[i]);
+    // process sub-queries
+    if (instanceOfTQuerySelect(select)) {
+        for (let i = 0; i < select.tables.length; i++) {
+            let newC = createNewContext("subQuery " + i, "", undefined );
+            if (instanceOfTQuerySelect(select.tables[i].tableName)) {
+                let subQuery = select.tables[i].tableName as TQuerySelect;
+                let rt = processSelectStatement(db, newC, subQuery, true);
+                select.tables[i].tableName = rt;
+                context.openedTempTables.push(rt.table);
+            } else if (instanceOfTAlias(select.tables[i].tableName) && instanceOfTQuerySelect((select.tables[i].tableName as TAlias).name)) {
+                let subQuery = (select.tables[i].tableName as TAlias).name as TQuerySelect;
+                let rt = processSelectStatement(db, newC, subQuery, true);
+                (select.tables[i].tableName as TAlias).name = rt;
+                context.openedTempTables.push(rt.table);
+            }
         }
     }
+
+    contextTables(db, context, select, undefined, select);
     let columnsNeeded: {tableName: string, columnName: string}[] = [];
     let returnTableName = "";
+    let projections: TEPProjection[] = [];
+    let hasAggregation = false;
+    let starsColumns: {table: string, index: number}[] = [];
+
     if (instanceOfTQuerySelect(select)) {
         let i = 1;
         returnTableName = "#query" + i;
@@ -127,8 +149,6 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
             returnTableName = "#query" + (++i);
         }
     }
-
-    let projections: TEPProjection[] = [];
 
     let returnTableDefinition = {
         name: returnTableName,
@@ -140,7 +160,16 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         constraints: [],
     } as ITableDefinition
 
-    let hasAggregation = false;
+    let groupByResultTableDef: ITableDefinition = {
+        name: "",
+        columns: [],
+        hasIdentity: false,
+        identityColumnName: '',
+        identitySeed: 1,
+        identityIncrement: 1,
+        constraints: []
+    } as ITableDefinition;
+    let projectionsGroupBy: TEPProjection[] = [];
 
     let recursion_callback = (o: any, key: string, value: string | number | boolean | any) => {
         if (key === "AGGREGATE" && value === true) {
@@ -159,10 +188,21 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                 }
             }
             if (found === false) {
-
+                if (column === "") {
+                    column = "column";
+                }
+                let baseIdx = 0;
+                let baseName = column;
+                let name = baseName;
+                let alreadyExists = returnTableDefinition.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
+                while (alreadyExists !== undefined) {
+                    baseIdx++;
+                    name = baseName + baseIdx;
+                    alreadyExists = returnTableDefinition.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
+                }
                 returnTableDefinition.columns.push(
                     {
-                        name: column,
+                        name: name,
                         type: coldef.type,
                         length: (coldef.type === TableColumnType.varchar) ? 4096 : 1,
                         nullable: true,
@@ -173,11 +213,11 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
 
                 projections.push(
                     {
-                        columnName: column,
+                        columnName: name,
                         output: {
                             kind: "TQueryColumn",
                             alias: undefined,
-                            expression: {kind: "TColumn", table: table, column: column} as TColumn
+                            expression: {kind: "TColumn", table: "", column: column} as TColumn
                         }
                     }
                 )
@@ -187,32 +227,132 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         }
         return true;
     }
-    let starsColumns: {table: string, index: number}[] = [];
+
     if (instanceOfTQuerySelect(select)) {
         for (let i = 0; i < select.columns.length; i++) {
             let col = select.columns[i];
-
+            let hasAggregateInExpression = false;
             if (instanceOfTStar(col.expression)) {
                 let star = col.expression as TStar;
                 let table = "";
-                if (instanceOfTTable(star.table) && star.table.table !== undefined && star.table.table !== "") {
-                    table = star.table.table;
-                } else {
-                    table = getValueForAliasTableOrLiteral(select.tables[0].tableName).table;
+
+                let addAllColumnsForTable = (tblWalk: TTableWalkInfo) => {
+                    if (tblWalk) {
+                        let d = tblWalk.def;
+                        let newColIdx = 0;
+                        for (let x = 0; x < d.columns.length; x++) {
+                            let col = d.columns[x];
+
+                            let found = false;
+                            for (let j = 0; j < returnTableDefinition.columns.length; j++) {
+                                let c = returnTableDefinition.columns[j];
+                                if (c.name.toUpperCase() === col.name.toUpperCase()) {
+                                    if (c.invisible === true) {
+                                        c.invisible = false;
+                                    } else {
+                                        found = true;
+                                    }
+                                }
+                            }
+                            found = false;
+                            if (!found && col.name.toUpperCase() !== kSysColumns.change_xdes_id.toUpperCase()) {
+
+                                let colIndex = 0;
+                                let baseName = col.name;
+                                if (baseName === "") {
+                                    baseName = "column"
+                                }
+                                let name = col.name;
+                                let columnNameExists = returnTableDefinition.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
+                                while (columnNameExists !== undefined) {
+                                    colIndex++;
+                                    name = baseName + colIndex;
+                                    columnNameExists = returnTableDefinition.columns.find((c) => { return c.name.toUpperCase() === name.toUpperCase();});
+                                }
+
+                                returnTableDefinition.columns.push({
+                                    name: name,
+                                    type: col.type,
+                                    length: col.length,
+                                    nullable: col.nullable,
+                                    defaultExpression: col.defaultExpression,
+                                    invisible: false,
+                                    decimal: col.decimal
+                                });
+
+                                groupByResultTableDef.columns.push({
+                                    name: name,
+                                    type: col.type,
+                                    length: col.length,
+                                    nullable: col.nullable,
+                                    defaultExpression: col.defaultExpression,
+                                    invisible: false,
+                                    decimal: col.decimal
+                                });
+
+                                projections.push(
+                                    {
+                                        columnName: name,
+                                        output: {
+                                            kind: "TQueryColumn",
+                                            expression: {
+                                                kind: "TColumn",
+                                                table: tblWalk.name.toUpperCase(),
+                                                column: col.name
+                                            } as TColumn
+                                        } as TQueryColumn
+                                    }
+                                );
+                                projectionsGroupBy.push({
+                                    columnName: name,
+                                    output: {
+                                        kind: "TQueryColumn",
+                                        expression: {
+                                            kind: "TColumn",
+                                            table: "",
+                                            column: col.name
+                                        } as TColumn
+                                    } as TQueryColumn
+                                })
+
+                            }
+
+                        }
+                    }
                 }
 
+
+
+                if (instanceOfTTable(star.table) && star.table.table !== undefined && star.table.table !== "") {
+                    table = star.table.table;
+                    let tblWalk: TTableWalkInfo;
+                    tblWalk = context.tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase()});
+                    addAllColumnsForTable(tblWalk);
+                } else {
+                    for (let x = 0; x < select.tables.length; x++) {
+                        table = getValueForAliasTableOrLiteral(select.tables[x].tableName as (string | TAlias | TLiteral | TTable)).table;
+                        let tblWalk: TTableWalkInfo;
+                        tblWalk = context.tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase()});
+                        addAllColumnsForTable(tblWalk);
+                    }
+                }
                 starsColumns.push({table: table, index: i});
+
                 continue;
             }
+            if (expressionContainsAggregateFunction(db, context, select, context.tables, context.stack, col.expression)) {
+                hasAggregateInExpression = true;
+                hasAggregation = true;
+            }
 
-            let types = findExpressionType(db, col.expression, context.openTables, context.stack, recursion_callback);
+            let types = findExpressionType(db, col.expression, select, context.tables, context.stack, recursion_callback);
             let length = 4096;
             if (instanceOfTColumn(col.expression)) {
                 let name = col.expression.column;
                 let table = col.expression.table;
                 // fix no table
                 if (table === undefined || table === "") {
-                    let tableNames = findTableNameForColumn(name, tables, col.expression);
+                    let tableNames = findTableNameForColumn(name, context.tables, select);
                     if (tableNames.length > 1) {
                         throw new TParserError("Ambiguous column name " + name);
                     }
@@ -221,7 +361,26 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                     }
                     table = tableNames[0];
                 }
-                let t = tables.find((t) => { return t.alias === table;});
+                let t: TTableWalkInfo;
+
+                t = context.tables.find((t) => {
+                    if (t.name === table) {
+                        return true;
+                    }
+                    if (typeof t.alias === "string") {
+                        if (t.alias === table) {
+                            return true;
+                        }
+                    } else if (instanceOfTAlias(t.alias)) {
+                        let val = getValueForAliasTableOrLiteral(t.alias);
+                        if (val.table === table || val.alias === table) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+
+
                 if (t === undefined) {
                     throw new TParserError("Could not find table for column " + name + " from TColumn " + JSON.stringify(col.expression));
                 }
@@ -236,84 +395,79 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
             } else if (typeof col.alias.alias === "string") {
                 name = col.alias.alias as string;
             }
-            returnTableDefinition.columns.push(
-                {
-                    name: name,
-                    type: types,
-                    length: (types === TableColumnType.varchar) ? length : 1,
-                    nullable: true,
-                    defaultExpression: ""
+
+            let colIndex = 0;
+            let baseName = name;
+            if (baseName === "") {
+                baseName = "column"
+            }
+            name = baseName;
+            if (hasAggregateInExpression === false) {
+                let columnNameExists = returnTableDefinition.columns.find((c) => {
+                    return c.name.toUpperCase() === name.toUpperCase();
+                });
+                while (columnNameExists !== undefined) {
+                    colIndex++;
+                    name = baseName + colIndex;
+                    columnNameExists = returnTableDefinition.columns.find((c) => {
+                        return c.name.toUpperCase() === name.toUpperCase();
+                    });
                 }
-            );
-            projections.push({
+
+                returnTableDefinition.columns.push(
+                    {
+                        name: name,
+                        type: types,
+                        length: (types === TableColumnType.varchar) ? length : 1,
+                        nullable: true,
+                        defaultExpression: ""
+                    }
+                );
+                projections.push({
+                    columnName: name,
+                    output: col
+                });
+            }
+            groupByResultTableDef.columns.push({
+                name: name,
+                    type: types,
+                length: (types === TableColumnType.varchar) ? length : 1,
+                nullable: true,
+                defaultExpression: ""
+            });
+            projectionsGroupBy.push({
                 columnName: name,
                 output: col
-            });
+            })
         }
     } else if (instanceOfTQueryUpdate(select)) {
 
     }
-    for (let i = 0; i < starsColumns.length; i ++) {
-        let tblWalk = context.openTables.find((t) => { return t.name.toUpperCase() === starsColumns[i].table.toUpperCase()});
-        if (tblWalk) {
-            let d = tblWalk.def;
-            for (let x = 0; x < d.columns.length; x++) {
-                let col = d.columns[x];
 
-                let found = false;
-                for (let j = 0; j < returnTableDefinition.columns.length; j++) {
-                    let c = returnTableDefinition.columns[j];
-                    if (c.name.toUpperCase() === col.name.toUpperCase()) {
-                        if (c.invisible === true) {
-                            c.invisible = false;
-                        } else {
-                            found = true;
-                        }
-                    }
-                }
-                if (!found) {
-                    returnTableDefinition.columns.push({
-                        name: col.name,
-                        type: col.type,
-                        length: col.length,
-                        nullable: col.nullable,
-                        defaultExpression: col.defaultExpression,
-                        invisible: false,
-                        decimal: col.decimal
-                    });
-                    projections.push(
-                        {
-                            columnName: col.name,
-                            output: {
-                                kind: "TQueryColumn",
-                                expression: {
-                                    kind: "TColumn",
-                                    table: tblWalk.name,
-                                    column: col.name
-                                } as TColumn
-                            } as TQueryColumn
-                        }
-                    )
-                }
-
-            }
-        }
-    }
 
     // add invisible columns for order by clauses
     if (instanceOfTQuerySelect(select)) {
         if (select.orderBy !== undefined && select.orderBy.length > 0) {
             for (let i = 0; i < select.orderBy.length; i++) {
-                let temp = addInvisibleColumnsForSorting(db, context.openTables, select, select.orderBy[i], returnTableDefinition, projections, context.stack);
+                let temp = addInvisibleColumnsForSorting(db, context.tables, select, select.orderBy[i], returnTableDefinition, projections, context.stack);
                 if (temp !== undefined) {
                     returnTableDefinition = temp.def;
                     projections = temp.projections;
                 }
             }
         }
-        if (select.groupBy !== undefined && select.orderBy.length > 0) {
+
+        if (hasAggregation && (select.groupBy === undefined || select.groupBy.length === 0)) {
+            let groupByColumnName = generateV4UUID();
+            select.groupBy.push({
+                column: { kind: "TQueryColumn", expression: {kind: "TNumber", value: "1"} as TNumber, alias: {kind: "TAlias", alias:groupByColumnName } as TAlias } as TQueryColumn,
+                order: kOrder.asc
+            });
+        }
+
+        if (select.groupBy !== undefined && select.groupBy.length > 0) { // && select.orderBy.length > 0) {
             for (let i = 0; i < select.groupBy.length; i++) {
-                let temp = addInvisibleColumnsForSorting(db, context.openTables, select, select.groupBy[i], returnTableDefinition, projections, context.stack)
+                let temp = addInvisibleColumnsForSorting(db, context.tables, select, select.groupBy[i], returnTableDefinition, projections, context.stack)
                 if (temp !== undefined) {
                     returnTableDefinition = temp.def;
                     projections = temp.projections;
@@ -322,7 +476,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         }
 
         if (select.having !== undefined) {
-            findExpressionType(db, select.having, context.openTables, context.stack, recursion_callback, {callbackOnTColumn: true});
+            findExpressionType(db, select.having, select,  context.tables, context.stack, recursion_callback, {callbackOnTColumn: true});
         }
 
 
@@ -343,20 +497,25 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                         table = st.left.table;
                         if (table === "") {
 
-                            let tablesMatch = findTableNameForColumn(name, context.openTables, context.currentStatement, undefined);
+                            let tablesMatch = findTableNameForColumn(name, context.tables, context.currentStatement, undefined);
                             if (tablesMatch.length !== 1) {
-                                if (context.openTables.length === 0) {
+                                if (tablesMatch.length === 0) {
                                     throw new TParserError("Unknown column name " + name);
                                 }
-                                if (context.openTables.length > 1) {
+                                if (tablesMatch.length > 1) {
                                     throw new TParserError("Ambiguous column name " + name);
                                 }
                             }
                             table = tablesMatch[0];
                         }
-                        let tableInfo = context.openTables.find((t) => {
-                            return t.name.toUpperCase() === table.toUpperCase()
+                        let tableInfo: TTableWalkInfo;
+                        tableInfo = context.tables.find((t) => {
+                                return t.name.toUpperCase() === table.toUpperCase()
                         });
+
+                        if (tableInfo === undefined) {
+                            throw new TParserError("Unknown column " + name);
+                        }
                         let columnDef = tableInfo.def.columns.find((c) => {
                             return c.name.toUpperCase() === name.toUpperCase();
                         });
@@ -397,7 +556,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         returnTable = newTable(db, returnTableDefinition);
         returnTableDefinition = db.tableInfo.get(returnTableDefinition.name).def;
         context.openedTempTables.push(returnTableName);
-        context.openTables.push(
+        context.tables.push(
             {
                 name: returnTableName,
                 table: returnTable,
@@ -407,17 +566,22 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                 cursor: readFirst(returnTable, returnTableDefinition)
             }
         );
+
     }
     let currentDestName = returnTableName;
     let currentDestTable = returnTable;
     let currentDestTableDef = returnTableDefinition;
 
     if (instanceOfTQueryUpdate(select)) {
-        let targetTable: TTableWalkInfo = undefined;
+        let targetTable: TTableWalkInfo;
         if (select.table !== undefined) {
-            targetTable = context.openTables.find((t) => { return t.name.toUpperCase() === select.table.table.toUpperCase();})
+            targetTable = findWalkTable(context.tables, select.table);
         } else {
-            targetTable = context.openTables.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(select.tables[0].tableName).table.toUpperCase();})
+            if (instanceOfTQuerySelect(select.tables[0].tableName)) {
+                throw new TParserError("UPDATE TABLE FROM SUBQUERY NOT SUPPORTED.");
+            } else {
+                targetTable = findWalkTable(context.tables, select.tables[0].tableName);
+            }
         }
         currentDestName = targetTable.name;
         currentDestTable = targetTable.table;
@@ -427,9 +591,11 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
     let current: TEPScan | TEPNestedLoop;
     let idx = select.tables.length -1;
     while (idx >= 0) {
+
+
         let scan: TEPScan = {
             kind: "TEPScan",
-            table: select.tables[idx].tableName,
+            table: select.tables[idx].tableName as (TTable | TAlias),
             range: undefined,
             projection: projections,
             predicate: (idx === 0) ? select.where : select.tables[idx].joinClauses,
@@ -468,7 +634,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
         if (select.groupBy !== undefined && select.groupBy.length > 0) {
 
             let groupByResultTableName = currentDestName + "_Grouped";
-            let groupByResultTableDef: ITableDefinition = JSON.parse(JSON.stringify(currentDestTableDef));
+            //let groupByResultTableDef: ITableDefinition = JSON.parse(JSON.stringify(currentDestTableDef));
             for (let i = groupByResultTableDef.columns.length - 1; i > 0; i--) {
                 if (groupByResultTableDef.columns[i].invisible === true) {
                     groupByResultTableDef.columns.splice(i, 1);
@@ -479,7 +645,8 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
             groupByResultTableDef = db.tableInfo.get(groupByResultTableName).def;
 
             context.openedTempTables.push(groupByResultTableName);
-            context.openTables.push(
+
+            context.tables.push(
                 {
                     name: groupByResultTableName,
                     table: groupByResultTable,
@@ -496,9 +663,10 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                 groupBy: select.groupBy,
                 output: select.columns,
                 having: select.having,
-                projections: projections,
+                projections: projectionsGroupBy,
                 source: {kind: "TTable", table: currentDestName, schema: "dbo"} as TTable,
-                dest: {kind: "TTable", table: groupByResultTableName, schema: "dbo"} as TTable
+                dest: {kind: "TTable", table: groupByResultTableName, schema: "dbo"} as TTable,
+                aggregateFunctions: []
             }
             ret.push(stepGroupBy);
 
@@ -509,7 +677,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
 
 
         if (select.orderBy.length > 0) {
-            if (!(instanceOfTLiteral(select.orderBy[0].column) && select.orderBy[0].column.value === "ROWID")) {
+
                 let stepSort: TEPSortNTop = {
                     kind: "TEPSortNTop",
                     source: currentDestName,
@@ -519,7 +687,7 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
                 }
                 ret.push(stepSort);
 
-            }
+
         }
     }
     if (instanceOfTQuerySelect(select)) {
@@ -540,3 +708,5 @@ export function generateExecutionPlanFromStatement(db: SKSQL, context: TExecutio
 
     return ret;
 }
+
+ */

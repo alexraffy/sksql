@@ -6,7 +6,7 @@ import {letter} from "../../BaseParser/Predicates/letter";
 import {digit} from "../../BaseParser/Predicates/digit";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {maybe} from "../../BaseParser/Predicates/maybe";
-import {eof} from "../../BaseParser/Predicates/eof";
+import {isEOF} from "../../BaseParser/Predicates/eof";
 import {literal} from "../../BaseParser/Predicates/literal";
 import {parse} from "../../BaseParser/parse";
 import {Stream} from "../../BaseParser/Stream";
@@ -72,7 +72,7 @@ function * predicateGroup() {
 
 function * predicatePattern() {
     let patterns = [];
-    while ((yield eof) === false) {
+    while ((yield isEOF) === false) {
         patterns.push(yield oneOf([predicateAny, predicateGroup, predicateExactValue, literal],""));
     }
     yield returnPred({

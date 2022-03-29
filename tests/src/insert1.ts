@@ -41,7 +41,7 @@ export function insert1(db: SKSQL, next:()=>void) {
     runTest(db, test2, false, false, undefined);
     runTest(db, "SELECT * from test2", false, false, []);
     runTest(db, "INSERT INTO test2(f1,f3) VALUES(10,-10)", false, false, undefined);
-    runTest(db, "SELECT * FROM test2", false, false, [[10, numericLoad("4.32"), -10, 7]]);
+    runTest(db, "SELECT * FROM test2", false, false, [[10, numericLoad("4.32"), -10, 8]], undefined, {printDebug: false});
     runTest(db, "INSERT INTO test2(f2,f4) VALUES(1.23,-3.45)", false, false, undefined);
     runTest(db, "SELECT * FROM test2 WHERE f1=-111", false, false, [[-111, numericLoad("1.23"), 222, -3]]);
     runTest(db, "INSERT INTO test2(f1,f2,f4) VALUES(77, 1.23,3.45)", false, false, undefined);

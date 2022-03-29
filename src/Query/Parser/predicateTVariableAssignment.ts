@@ -1,7 +1,6 @@
 import {TFuncGen} from "../../BaseParser/parse";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {predicateTVariable} from "./predicateTVariable";
 import {returnPred} from "../../BaseParser/Predicates/ret";
@@ -17,10 +16,7 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
     SELECT ... @variable = EXPRESSION ... FROM ...
  */
 export const predicateTVariableAssignment: TFuncGen = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return "";
-    }
+
     let hasSet = yield maybe(str("SET"));
     yield maybe(atLeast1(whitespaceOrNewLine));
     const varname = yield predicateTVariable;

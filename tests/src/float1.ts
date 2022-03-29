@@ -6,7 +6,7 @@ import {SQLStatement, dumpTable, SQLResult, SKSQL, readTableDefinition} from "sk
 import {runTest} from "./runTest";
 
 // REF: https://stackoverflow.com/questions/4915462/how-should-i-do-floating-point-comparison
-function nearlyEqual(a: number, b: number): boolean {
+export function nearlyEqual(a: number, b: number): boolean {
     const epsilon = 0.0000001;
     let absA = Math.abs(a);
     let absB = Math.abs(b);
@@ -39,6 +39,10 @@ export function float1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT a * 1.5 FROM t1", false, false, [[(a) => { return nearlyEqual(a, 1.95);}]], undefined, {printDebug: false});
     runTest(db, "SELECT a / 1.3 FROM t1", false, false, [[(a) => { return nearlyEqual(a, 1.00);}]], undefined, {printDebug: false});
     runTest(db, "SELECT a + 1.0 * 2.0 FROM t1", false, false, [[(a) => { return nearlyEqual(a, 3.3);}]], undefined, {printDebug: false});
+
+    runTest(db, "DECLARE @v FLOAT = 1.32; SELECT @v from dual;", false, false, [[(a) => { return nearlyEqual(a,1.32); }]], undefined, {printDebug: false});
+    runTest(db, "DECLARE @v FLOAT = 1.2332; SELECT ROUND(@v, 2) FROM DUAL", false, false, [[(a) => { return nearlyEqual(a, 1.23); }]], undefined, {printDebug: false});
+    runTest(db, "SELECT ABS(CAST(-1.23 AS FLOAT)) FROM dual", false, false, [[(a) => { return nearlyEqual(a, 1.23);}]], undefined, {printDebug: false});
 
     next();
 }

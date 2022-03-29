@@ -17,6 +17,7 @@ import {TDateTime} from "../Query/Types/TDateTime";
 import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
 import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 import {isNumeric} from "../Numeric/isNumeric";
+import {numericRound} from "../Numeric/numericRound";
 
 
 export function convertToType(value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime, type: TableColumnType, dest: TableColumnType) {
@@ -133,7 +134,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
                 return 0.0 + (value as number);
             }
             if (type === TableColumnType.numeric || isNumeric(value)) {
-                return numericToNumber(value as numeric);
+                return parseFloat(numericDisplay(value as numeric));
             }
         }
         break;
@@ -146,7 +147,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
                 return 0.0 + (value as number);
             }
             if (type === TableColumnType.numeric || isNumeric(value)) {
-                return numericToNumber(value as numeric);
+                return parseFloat(numericDisplay(value as numeric));
             }
         }
         break;
@@ -162,7 +163,7 @@ export function convertToType(value: number | string | boolean | bigint | numeri
             return parseInt((value as number).toString());
         }
         if (type === TableColumnType.numeric) {
-            return numericToNumber(value as numeric);
+            return numericToNumber(numericRound(value as numeric, 0));
         }
         if (columnTypeIsString(type)) {
             ; //return parseInt(value as string);

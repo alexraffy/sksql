@@ -31,7 +31,7 @@ export function sizeRequiredForColumn(column: TableColumn) {
             valueSize += 1 * column.length;
             break;
         case TableColumnType.numeric:
-            valueSize += 1  + 4 + 2;
+            valueSize += 1  + 8 + 2;
             break;
         case TableColumnType.float:
             valueSize += 4;

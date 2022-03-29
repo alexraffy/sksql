@@ -8,10 +8,7 @@ import {literal} from "../../BaseParser/Predicates/literal";
     @variable
  */
 export const predicateTVariable = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     const arobase = yield str("@");
     const name = yield literal;
     yield returnPred(

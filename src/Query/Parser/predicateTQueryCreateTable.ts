@@ -17,8 +17,7 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {predicateValidExpressions} from "./predicateValidExpressions";
-import {SKSQL} from "../../API/SKSQL";
-import {readTableDefinition} from "../../Table/readTableDefinition";
+
 
 /*
     tries to parse a constraint

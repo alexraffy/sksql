@@ -38,10 +38,7 @@ import {isKeyword} from "../isKeyword";
 
  */
 export const predicateTQuerySelect = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     let parameters: TQueryColumn[] = [];
     yield maybe(atLeast1(whitespaceOrNewLine));
     const command = yield str("SELECT");

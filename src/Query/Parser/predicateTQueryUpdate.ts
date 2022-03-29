@@ -28,10 +28,7 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
     UPDATE [TOP(X)] SET COLUMN = VALUE, ... FROM {TABLENAME} [WHERE CLAUSE]
  */
 export const predicateTQueryUpdate = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("UPDATE");
     yield atLeast1(whitespaceOrNewLine);

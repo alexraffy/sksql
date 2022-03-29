@@ -13,10 +13,7 @@ import {TParserError} from "../../API/TParserError";
                     [TABLE].[COLUMN]
  */
 export const predicateTColumn = function *(callback) {
-    // @ts-ignore
-    if (callback === "isGenerator") {
-        return;
-    }
+
     yield maybe(str("["));
     const a = yield literal;
     yield maybe(str("]"));

@@ -1,5 +1,4 @@
 import {returnPred} from "../../BaseParser/Predicates/ret";
-import {either} from "../../BaseParser/Predicates/either";
 import {str} from "../../BaseParser/Predicates/str";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 

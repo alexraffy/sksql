@@ -77,7 +77,7 @@ export function walkTree(db: SKSQL,
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         }
     } else if (instanceOfTAlias(o)) {
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         walkTree(db, context, currentStatement, tables, parameters, (o as TAlias).name, [o, ...parentsTree], info, perItem, postItem);
         if (postItem !== undefined) {
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
@@ -191,35 +191,47 @@ export function walkTree(db: SKSQL,
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: {name: fnName, data: fnData}});
         }
     } else if (instanceOfTCast(o)) {
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
-        walkTree(db, context, currentStatement, tables, parameters, (o as TCast).exp, [o, ...parentsTree], info, perItem, postItem);
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        if (shouldContinue) {
+            walkTree(db, context, currentStatement, tables, parameters, (o as TCast).exp, [o, ...parentsTree], info, perItem, postItem);
+        }
         if (postItem !== undefined) {
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         }
     } else if (instanceOfTQueryColumn(o)) {
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
-        walkTree(db, context, currentStatement, tables, parameters, o.expression, [o, ...parentsTree], info, perItem, postItem);
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        if (shouldContinue) {
+            walkTree(db, context, currentStatement, tables, parameters, o.expression, [o, ...parentsTree], info, perItem, postItem);
+        }
         if (postItem !== undefined) {
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         }
     } else if (instanceOfTArray(o)) {
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
-        for (let i = 0; i < (o as TArray).array.length; i++) {
-            walkTree(db, context, currentStatement, tables, parameters, (o as TArray).array[i], [o, ...parentsTree], info, perItem, postItem);
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        if (shouldContinue) {
+            for (let i = 0; i < (o as TArray).array.length; i++) {
+                walkTree(db, context, currentStatement, tables, parameters, (o as TArray).array[i], [o, ...parentsTree], info, perItem, postItem);
+            }
         }
         if (postItem !== undefined) {
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         }
     } else if (instanceOfTBetween(o)) {
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
-        walkTree(db, context, currentStatement, tables, parameters, o.a, [o, ...parentsTree], info, perItem, postItem);
-        walkTree(db, context, currentStatement, tables, parameters, o.b, [o, ...parentsTree], info, perItem, postItem);
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        if (shouldContinue) {
+            walkTree(db, context, currentStatement, tables, parameters, o.a, [o, ...parentsTree], info, perItem, postItem);
+            walkTree(db, context, currentStatement, tables, parameters, o.b, [o, ...parentsTree], info, perItem, postItem);
+        }
         if (postItem !== undefined) {
             postItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
         }
     } else if (instanceOfTCaseWhen(o)) {
         info.extra["ignoreType"] = false;
-        perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        let shouldContinue = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
+        if (!shouldContinue) {
+            return false;
+        }
+
         if (o.case !== undefined) {
             info.extra["ignoreType"] = true;
             walkTree(db, context, currentStatement, tables, parameters, o.case, [o, ...parentsTree], info, perItem, postItem);

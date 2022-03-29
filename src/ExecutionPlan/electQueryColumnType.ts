@@ -1,4 +1,5 @@
 import {TableColumnType} from "../Table/TableColumnType";
+import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
 
 
 export function electQueryColumnType(expressionTypes: TableColumnType[]) {
@@ -47,6 +48,7 @@ export function electQueryColumnType(expressionTypes: TableColumnType[]) {
         if (t === TableColumnType.int16 && intSize < 2) {
             intSize = 2;
         }
+
     }
 
     if (isSigned) {

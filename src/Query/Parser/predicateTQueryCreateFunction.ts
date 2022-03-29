@@ -6,26 +6,15 @@ import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTVariable} from "./predicateTVariable";
 import {predicateTColumnType} from "./predicateTColumnType";
 import {TColumnType} from "../Types/TColumnType";
-import {TVariable} from "../Types/TVariable";
 import {literal} from "../../BaseParser/Predicates/literal";
-import {predicateTVariableDeclaration} from "./predicateTVariableDeclaration";
-import {predicateTVariableAssignment} from "./predicateTVariableAssignment";
-import {predicateReturnValue} from "./predicateReturnValue";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {TQueryCreateFunction} from "../Types/TQueryCreateFunction";
-import {TableColumnType} from "../../Table/TableColumnType";
 import {returnPred} from "../../BaseParser/Predicates/ret";
-import {predicateTBeginEnd} from "./predicateTBeginEnd";
-import {predicateTIf} from "./predicateTIf";
-import {predicateTWhile} from "./predicateTWhile";
 import {predicateValidStatementsInFunction} from "./predicateValidStatementsInFunction";
 
 
 export function * predicateTQueryCreateFunction(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
 
     let ret: TQueryCreateFunction = {
         kind: "TQueryCreateFunction",

@@ -6,10 +6,7 @@ import {isAlphaNumeric, isLetter} from "./types";
 
 export function str(equalsTo: string): (input: Stream) => ParseResult | ParseError {
     return (input: Stream): ParseResult | ParseError => {
-        //@ts-ignore
-        if (input as string === "isGenerator") {
-            return;
-        }
+
         if (input.EOF) {
             return new ParseError(input, equalsTo  + " got EOF instead.", false);
         }

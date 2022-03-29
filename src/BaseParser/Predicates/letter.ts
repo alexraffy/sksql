@@ -5,10 +5,6 @@ import {isLetter} from "./types";
 
 
 export const letter = (s: Stream): ParseResult | ParseError => {
-    //@ts-ignore
-    if (s as string === "isGenerator") {
-        return;
-    }
     if (!s.EOF) {
         let character = s.get();
         if (isLetter(character)) {

@@ -5,10 +5,6 @@ import {isAlphaNumeric, isLetter} from "./types";
 
 
 export function literal(input: Stream): ParseResult | ParseError {
-    //@ts-ignore
-    if (input as string === "isGenerator") {
-        return;
-    }
     if (input.EOF) {
         return new ParseError(input, "a literal, got EOF instead.", false);
     }

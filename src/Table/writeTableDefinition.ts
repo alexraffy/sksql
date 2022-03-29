@@ -154,7 +154,7 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition): ITa
                 columnOffset += 1 * c.length;
                 break;
             case TableColumnType.numeric:
-                columnOffset += 1 + 4 + 2;
+                columnOffset += 1 + 8 + 2;
                 break;
             case TableColumnType.float:
                 columnOffset += 4;

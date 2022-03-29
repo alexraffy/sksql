@@ -5,8 +5,6 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {predicateTString} from "./predicateTString";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
-import {predicateTQueryExpressionFAULTY} from "./predicateTQueryExpressionDEPREC";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
 

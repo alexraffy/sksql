@@ -18,10 +18,7 @@ import {exitIf} from "../../BaseParser/Predicates/exitIf";
     myFunction(param1,param2...)
  */
 export const predicateTQueryFunctionCall: TFuncGen = function*(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     const fnName = yield literal;
     let parameters: (TQueryExpression | TValidExpressions)[] = [];
     yield maybe(atLeast1(whitespaceOrNewLine));

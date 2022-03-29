@@ -83,6 +83,7 @@ import {TCaseWhen} from "../Query/Types/TCaseWhen";
 import {numericMul} from "../Numeric/numericMul";
 import {numericDiv} from "../Numeric/numericDiv";
 import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
+import {numericRound} from "../Numeric/numericRound";
 
 export interface TEvaluateOptions {
     aggregateMode: "none" | "init" | "row" | "final";
@@ -160,7 +161,13 @@ export function evaluate(
             let value  = readFirstColumnOfTable(db, context, exp);
             return convertValue(value, t);
         }
-        return convertValue(exp, t);
+        let cv = convertValue(exp, t);
+        if (t === TableColumnType.numeric && isNumeric(cv)) {
+            // do we need to round ?
+            let decimals = evaluate(db, context, struct.cast.dec, tables, colDef, options, withRow);
+            cv = numericRound(cv, decimals as number);
+        }
+        return cv;
     }
 
 

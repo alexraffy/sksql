@@ -2,7 +2,6 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
 import {literal} from "../../BaseParser/Predicates/literal";
 import {returnPred} from "../../BaseParser/Predicates/ret";
-import {TColumn} from "../Types/TColumn";
 import {TTable} from "../Types/TTable";
 
 /*
@@ -10,10 +9,7 @@ import {TTable} from "../Types/TTable";
     [\[SCHEMA\].]\[TABLENAME\]
  */
 export const predicateTTableName = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     yield maybe(str("["));
     const a = yield literal;
     yield maybe(str("]"));

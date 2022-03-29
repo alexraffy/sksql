@@ -1,10 +1,9 @@
-import {predicateTQueryExpression} from "./predicateTQueryExpression";
+
 import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
 import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTCast} from "./predicateTCast";
 import {predicateTVariable} from "./predicateTVariable";
 import {predicateTBoolValue} from "./predicateTBoolValue";
-import {predicateTBreak} from "./predicateTBreak";
 import {predicateTColumn} from "./predicateTColumn";
 import {predicateTLiteral} from "./predicateTLiteral";
 import {predicateTNull} from "./predicateTNull";
@@ -14,9 +13,7 @@ import {predicateTDate} from "./predicateTDate";
 import {predicateTTime} from "./predicateTTime";
 import {predicateTNumber} from "./predicateTNumber";
 import {returnPred} from "../../BaseParser/Predicates/ret";
-import {predicateTArray} from "./predicateTArray";
 import {predicateTQuerySelect} from "./predicateTQuerySelect";
-import {checkAhead} from "../../BaseParser/Predicates/checkAhead";
 import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
 import {str} from "../../BaseParser/Predicates/str";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";

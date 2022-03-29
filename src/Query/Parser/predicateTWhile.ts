@@ -1,7 +1,6 @@
 import {str} from "../../BaseParser/Predicates/str";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TWhile} from "../Types/TWhile";

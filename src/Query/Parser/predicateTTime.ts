@@ -1,4 +1,4 @@
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
+
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {digit} from "../../BaseParser/Predicates/digit";
 import {str} from "../../BaseParser/Predicates/str";
@@ -8,9 +8,7 @@ import {TTime} from "../Types/TTime";
 
 
 export function *predicateTTime (callback) {
-    if (callback === "isGenerator") {
-        return;
-    }
+
     const hours = yield atLeast1(digit);
     yield str(":");
     const minutes = yield atLeast1(digit);

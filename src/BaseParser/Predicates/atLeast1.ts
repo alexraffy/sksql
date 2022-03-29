@@ -10,10 +10,6 @@ import {instanceOfParseResult} from "../Guards/instanceOfParseResult";
 
 export function atLeast1(predicate: TParser | TFuncGen) {
     return (input: Stream) => {
-        //@ts-ignore
-        if (input as string === "isGenerator") {
-            return;
-        }
         let num = 0;
         let value: string | any[] = undefined;
         let match: string = "";

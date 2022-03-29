@@ -23,10 +23,7 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
     DELETE [TOP(X)] FROM {TABLENAME} [WHERE CLAUSES...]
  */
 export const predicateTQueryDelete = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("DELETE");
     yield atLeast1(whitespaceOrNewLine);

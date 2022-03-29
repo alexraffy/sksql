@@ -67,8 +67,8 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 break;
             case TableColumnType.numeric:
                 fullRow.setUint8(column.offset + extraOffset + 1, 0);
-                fullRow.setUint32(column.offset + extraOffset + 2, 0);
-                fullRow.setInt16(column.offset + extraOffset + 2 + 4, 0);
+                fullRow.setBigUint64(column.offset + extraOffset + 2, 0n);
+                fullRow.setInt16(column.offset + extraOffset + 2 + 8, 0);
                 break;
             case TableColumnType.date:
                 let flagUnknownYear = 1;
@@ -169,8 +169,8 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
             case TableColumnType.numeric:
                 let num = value as numeric;
                 fullRow.setUint8(column.offset + extraOffset + 1, num.sign);
-                fullRow.setUint32(column.offset + extraOffset + 2, num.m);
-                fullRow.setInt16(column.offset + extraOffset + 2 + 4, num.e);
+                fullRow.setBigUint64(column.offset + extraOffset + 2, BigInt.asUintN(64, BigInt(num.m)));
+                fullRow.setInt16(column.offset + extraOffset + 2 + 8, num.e);
                 break;
             case TableColumnType.date:
                 let val = value as TDate;

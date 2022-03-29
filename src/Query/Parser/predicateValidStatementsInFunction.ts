@@ -14,18 +14,7 @@ import {checkAhead} from "../../BaseParser/Predicates/checkAhead";
 import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
 import {str} from "../../BaseParser/Predicates/str";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
-import {maybe} from "../../BaseParser/Predicates/maybe";
-import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
-import {predicateTQueryCreateTable} from "./predicateTQueryCreateTable";
-import {predicateTQueryCreateFunction} from "./predicateTQueryCreateFunction";
-import {predicateTQueryCreateProcedure} from "./predicateTQueryCreateProcedure";
-import {predicateTQueryDelete} from "./predicateTQueryDelete";
-import {predicateTQueryDrop} from "./predicateTQueryDrop";
-import {predicateTExecute} from "./predicateTExecute";
-import {predicateTGO} from "./predicateTGO";
-import {predicateTQueryInsert} from "./predicateTQueryInsert";
 import {predicateTQuerySelect} from "./predicateTQuerySelect";
-import {predicateTQueryUpdate} from "./predicateTQueryUpdate";
 import {eof} from "../../BaseParser/Predicates/eof";
 
 

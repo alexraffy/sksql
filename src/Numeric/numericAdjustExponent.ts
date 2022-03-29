@@ -1,9 +1,14 @@
 import {numeric, NUMERIC_MAX} from "./numeric";
+import {TParserError} from "../API/TParserError";
+import {isNumeric} from "./isNumeric";
 
 /*
     adjust two numeric so they have the same exponent
  */
 export function numericAdjustExponent(a: numeric, b: numeric): {a: numeric, b: numeric} {
+    if (!isNumeric(a) || !isNumeric(b)) {
+        throw new TParserError("numericAdjustExponent expects two numerics.");
+    }
     let swapped = false;
     let newA: numeric = {
         sign: a.sign,

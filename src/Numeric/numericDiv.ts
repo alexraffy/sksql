@@ -1,8 +1,7 @@
-import {numeric, NUMERIC_MAX_EXP, NUMERIC_NAN_EXP} from "./numeric";
+import {numeric, NUMERIC_MAX, NUMERIC_MAX_EXP, NUMERIC_NAN_EXP} from "./numeric";
 import {numericRound} from "./numericRound";
 import {numericWillOverflow} from "./numericMulOverflow";
 
-const TENTH_MAX = (2147483647/10);
 
 export function numericDiv(A: numeric, B: numeric, d: number = 2): numeric {
     let a: numeric = {
@@ -49,7 +48,7 @@ export function numericDiv(A: numeric, B: numeric, d: number = 2): numeric {
     if( a.m==0 ){
         return a;
     }
-    while( a.m < TENTH_MAX ){
+    while( a.m < NUMERIC_MAX ){
         a.m *= 10;
         a.e--;
     }

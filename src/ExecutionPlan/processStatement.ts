@@ -95,7 +95,7 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
             if (instanceOfTTable(val)) {
                 val = readFirstColumnOfTable(db, context, val);
             }
-            if (isNumeric(val) && columnTypeIsInteger(varExists.type)) {
+            if (isNumeric(val) && (columnTypeIsInteger(varExists.type) || varExists.type === TableColumnType.float || varExists.type === TableColumnType.double)) {
                 varExists.value = numericToNumber(val);
             } else if (typeof val === "number" && varExists.type === TableColumnType.numeric) {
                 varExists.value = numericFromNumber(val);
@@ -135,7 +135,20 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
                 } else {
                     type = op.declarations[i].type;
                 }
-                context.stack.push({name: op.declarations[i].name.name, type: typeString2TableColumnType(type), value: value})
+                let t = typeString2TableColumnType(type);
+                if (isNumeric(value) && (columnTypeIsInteger(t) || t === TableColumnType.float || t === TableColumnType.double)) {
+                    value = numericToNumber(value);
+                } else if (typeof value === "number" && t === TableColumnType.numeric) {
+                    value = numericFromNumber(value);
+                } else {
+                    if (instanceOfTBooleanResult(value)) {
+                        value = value.value === kBooleanResult.isTrue;
+                        return;
+                    }
+                    value = value;
+                }
+
+                context.stack.push({name: op.declarations[i].name.name, type: t, value: value})
             }
         }
         return;

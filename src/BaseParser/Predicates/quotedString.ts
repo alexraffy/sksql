@@ -5,10 +5,7 @@ import {ParseResult} from "../ParseResult";
 
 
 export const quotedString: TParser = function (input: Stream) {
-    //@ts-ignore
-    if (input as string === "isGenerator") {
-        return;
-    }
+
     if (input.EOF) {
         return new ParseError(input, "a quoted string, got EOF instead.", false);
     }

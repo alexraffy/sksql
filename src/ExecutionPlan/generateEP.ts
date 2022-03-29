@@ -61,6 +61,8 @@ import {TQueryExpression} from "../Query/Types/TQueryExpression";
 import {kQueryExpressionOp} from "../Query/Enums/kQueryExpressionOp";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {dumpTable} from "../Table/dumpTable";
+import {instanceOfTCast} from "../Query/Guards/instanceOfTCast";
+import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
 
 /*
     generateEP
@@ -204,6 +206,10 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                         }
                     }
 
+            }
+            if (instanceOfTCast(obj) && info.status.extra["inFunction"] === undefined && info.status.extra["ignoreType"] !== true) {
+                expressionTypes.push(typeString2TableColumnType(obj.cast.type));
+                return false;
             }
             if (instanceOfTNumber(obj) && info.status.extra["inFunction"] === undefined && info.status.extra["ignoreType"] !== true) {
                 if (obj.value.indexOf(".") > -1) {

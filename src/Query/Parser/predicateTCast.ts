@@ -5,9 +5,7 @@ import {returnPred} from "../../BaseParser/Predicates/ret";
 import {str} from "../../BaseParser/Predicates/str";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {TCast} from "../Types/TCast";
-import {predicateValidExpressions} from "./predicateValidExpressions";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
 
 
 export function * predicateTCast(callback) {

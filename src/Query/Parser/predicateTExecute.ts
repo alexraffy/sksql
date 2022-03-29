@@ -9,7 +9,7 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {TExecute} from "../Types/TExecute";
-import {TLiteral} from "../Types/TLiteral";
+
 
 
 export function* predicateTExecute(callback) {

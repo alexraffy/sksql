@@ -1,15 +1,13 @@
 import {predicateTVariable} from "./predicateTVariable";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
-import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TVariableDeclaration} from "../Types/TVariableDeclaration";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
 import {predicateTColumnType} from "./predicateTColumnType";
-import {predicateValidExpressions} from "./predicateValidExpressions";
-import {predicateTQueryExpressionFAULTY} from "./predicateTQueryExpressionDEPREC";
+
 
 
 /*
@@ -17,9 +15,7 @@ import {predicateTQueryExpressionFAULTY} from "./predicateTQueryExpressionDEPREC
     DECLARE @variable TYPE = EXPRESSION
  */
 export const predicateTVariableDeclaration = function *(callback) {
-    if (callback === "isGenerator") {
-        return;
-    }
+
     let ret : TVariableDeclaration = {
         kind: "TVariableDeclaration",
         declarations: []

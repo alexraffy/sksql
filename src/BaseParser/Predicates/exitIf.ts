@@ -8,10 +8,6 @@ import {ParseError} from "../ParseError";
 
 export const exitIf = function (parser: TFuncGen | TParser): TParser {
     return (s: Stream) => {
-        //@ts-ignore
-        if (s as string === "isGenerator") {
-            return;
-        }
         let results = undefined;
         if (isGeneratorFunction(parse)) {
             results = parse((name, value) => {}, parser as TFuncGen, s)

@@ -1,6 +1,7 @@
-import {SQLStatement, readTableAsJSON, kResultType, dumpTable, SKSQL, SQLResult} from "sksql";
+import {SQLStatement, readTableAsJSON, kResultType, numericLoad, SKSQL, SQLResult} from "sksql";
 import assert = require("assert");
 import {runTest} from "./runTest";
+
 
 
 
@@ -76,6 +77,18 @@ export function test_functions(db: SKSQL, next: ()=>void )  {
 
 
     }
+
+    runTest(db, "SELECT POWER(44, 0) FROM dual", false, false, [[1]]);
+    runTest(db, "SELECT POWER(44.0, 0) FROM dual", false, false, [[numericLoad("1")]]);
+    runTest(db, "DECLARE @b INT32 = 44; SELECT POWER(@b, 0) FROM dual", false, false, [[1]]);
+    runTest(db, "DECLARE @b FLOAT = 44.0; SELECT POWER(@b, 0) FROM dual", false, false, [[1]]);
+    runTest(db, "DECLARE @b NUMERIC(18,2) = 44.0; SELECT POWER(@b, 0) FROM dual", false, false, [[numericLoad("1")]]);
+
+    runTest(db, "SELECT ROUND(1.2332, 2) FROM dual", false, false, [[numericLoad("1.23")]]);
+    runTest(db, "SELECT ROUND(1.2332, 0) FROM dual", false, false, [[numericLoad("1")]]);
+
+    runTest(db, "SELECT ROUND(12312, 0) FROM dual", false, false, [[12312]]);
+
 
 
     next();

@@ -7,10 +7,7 @@ import {TString} from "../Types/TString";
     tries to parse a string starting with double or single quotes
  */
 export const predicateTString: TFuncGen = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     const value = yield quotedString;
     yield returnPred({kind: "TString", value: value} as TString);
 }

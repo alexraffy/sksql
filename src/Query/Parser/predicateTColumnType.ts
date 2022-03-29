@@ -13,9 +13,7 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
     tries to parse the column type and if it is nullable in a CREATE TABLE statement
  */
 export const predicateTColumnType = function *(callback) {
-    if (callback === "isGenerator") {
-        return;
-    }
+
     let size: TNumber = {kind: "TNumber", value: "1" }
     let dec: TNumber = {kind: "TNumber", value: "0"}
     const type = yield oneOf([str("int8"), str("int16"), str("int32"), str("int64"),

@@ -90,10 +90,10 @@ export function registerFunctions(db: SKSQL) {
     db.declareFunction(kFunctionType.scalar, "DATEADD", [{name: "DATEPART", type: TableColumnType.varchar},
         { name: "NUMBER", type: TableColumnType.int32}, {name: "DATE", type: TableColumnType.datetime}], TableColumnType.datetime, date_dateadd);
     // NUMERIC
-    db.declareFunction(kFunctionType.scalar, "ABS", [{name: "NUMERIC", type: TableColumnType.numeric}], TableColumnType.numeric, scalar_abs);
-    db.declareFunction(kFunctionType.scalar, "POWER", [{name: "BASE", type: TableColumnType.numeric}, {name: "EXP", type: TableColumnType.numeric}], TableColumnType.numeric, scalar_power );
+    db.declareFunction(kFunctionType.scalar, "ABS", [{name: "NUMERIC", type: TableColumnType.any}], TableColumnType.any, scalar_abs, false, 0);
+    db.declareFunction(kFunctionType.scalar, "POWER", [{name: "BASE", type: TableColumnType.any}, {name: "EXP", type: TableColumnType.any}], TableColumnType.any, scalar_power, false, 0 );
     db.declareFunction(kFunctionType.scalar, "RAND", [], TableColumnType.numeric, scalar_rand);
-    db.declareFunction(kFunctionType.scalar, "ROUND", [{name: "NUMERIC", type: TableColumnType.numeric}, {name: "DECIMALS", type: TableColumnType.uint8}], TableColumnType.numeric, scalar_round);
+    db.declareFunction(kFunctionType.scalar, "ROUND", [{name: "NUMERIC", type: TableColumnType.any}, {name: "DECIMALS", type: TableColumnType.uint8}], TableColumnType.any, scalar_round, false, 0);
 
     // STRING
     db.declareFunction(kFunctionType.scalar, "CONCAT", [{name: "STR_A", type: TableColumnType.varchar}, {name: "STR_B", type: TableColumnType.varchar}],

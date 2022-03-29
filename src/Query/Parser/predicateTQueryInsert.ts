@@ -22,10 +22,7 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
     INSERT INTO {TABLENAME} [(COLUMNS,...)] SELECT ...
  */
 export const predicateTQueryInsert = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     yield maybe(atLeast1(whitespaceOrNewLine));
     yield str("INSERT");
     yield atLeast1(whitespaceOrNewLine);

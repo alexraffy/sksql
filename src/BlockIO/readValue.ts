@@ -76,8 +76,9 @@ export function readValue(table: ITable, tableDef: ITableDefinition,
                 approx: 0
             } as numeric;
             value.sign = fullRow.getUint8(column.offset + offset + 1);
-            value.m = fullRow.getUint32(column.offset + offset + 2);
-            value.e = fullRow.getInt16(column.offset + offset + 2 + 4);
+            let bm = fullRow.getBigUint64(column.offset + offset + 2);
+            value.m = Number(BigInt.asUintN(64, bm));
+            value.e = fullRow.getInt16(column.offset + offset + 2 + 8);
             value.approx = 0;
         }
         break;

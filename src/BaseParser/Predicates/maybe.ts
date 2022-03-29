@@ -8,10 +8,6 @@ import {isGeneratorFunction} from "../isGenerator";
 
 export function maybe(predicate: TParser | TFuncGen): TParser {
     return (input: Stream) => {
-        //@ts-ignore
-        if (input as string === "isGenerator") {
-            return;
-        }
         let results: ParseResult | ParseError;
         if (isGeneratorFunction(predicate)) {
             results = parse((name, value) => {}, predicate as TFuncGen, input);

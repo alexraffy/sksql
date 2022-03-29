@@ -5,10 +5,6 @@ import {isSpace} from "./types";
 
 
 export const newLine = (s: Stream): ParseResult | ParseError => {
-    //@ts-ignore
-    if (s as string === "isGenerator") {
-        return;
-    }
     let character = s.get();
     if (character === '\r') {
         let s2 = s.next();

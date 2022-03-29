@@ -16,8 +16,6 @@ import {TNumber} from "../Types/TNumber";
 import {TBetween} from "../Types/TBetween";
 import {instanceOfTBetween} from "../Guards/instanceOfTBetween";
 import {predicateTArray} from "./predicateTArray";
-import {predicateTQuerySelect} from "./predicateTQuerySelect";
-
 
 
 

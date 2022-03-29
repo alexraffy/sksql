@@ -50,17 +50,28 @@ export function numericAdjustExponent(a: numeric, b: numeric): {a: numeric, b: n
             b: (swapped) ? newA : newB
         };
     }
-    while (newA.e > newB.e && newB.m % 10 === 0) {
-        newB.m /= 10;
-        newB.e++;
+
+    while (newA.e !== newB.e) {
+        if (newA.e > newB.e) {
+            newA.m *= 10;
+            newA.e--;
+        } else if (newA.e < newB.e) {
+            newB.m *= 10;
+            newB.e--;
+        }
     }
-    while (newA.e > newB.e && newA.m <= NUMERIC_MAX) {
+
+    while (newA.e < newB.e && newB.m % 10 === 0) {
         newB.m *= 10;
         newB.e--;
     }
-    while (newA.e > newB.e) {
-        newB.m /= 10;
-        newB.e++;
+    while (newA.e < newB.e && newA.m <= NUMERIC_MAX) {
+        newB.m *= 10;
+        newB.e--;
+    }
+    while (newA.e < newB.e) {
+        newB.m *= 10;
+        newB.e--;
         newB.approx = 1;
     }
     return {

@@ -9,6 +9,7 @@ import {Stream} from "../BaseParser/Stream";
 import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
 import {numericRound} from "./numericRound";
 import {TParserError} from "../API/TParserError";
+import {numericWillOverflow} from "./numericMulOverflow";
 
 /*
     parse a string and returns a numeric
@@ -66,6 +67,6 @@ export function numericLoad(value: string, p: number = undefined, d: number = un
     }
 
 
-    return ret;
+    return numericWillOverflow(ret);
 }
 

@@ -1,6 +1,7 @@
 import {numeric, NUMERIC_MAX_EXP} from "./numeric";
 import {numericSub} from "./numericSub";
 import {numericAdjustExponent} from "./numericAdjustExponent";
+import {numericWillOverflow} from "./numericMulOverflow";
 
 /*
     returns the sum of two numerics
@@ -55,5 +56,5 @@ export function numericAdd(a: numeric, b: numeric): numeric {
         }
         a.m += b.m / 10;
     }
-    return a;
+    return numericWillOverflow(a);
 }

@@ -1,6 +1,7 @@
 import {numeric, NUMERIC_MAX_EXP, NUMERIC_NAN_EXP} from "./numeric";
 import {numericAdjustExponent} from "./numericAdjustExponent";
 import {numericAdd} from "./numericAdd";
+import {numericWillOverflow} from "./numericMulOverflow";
 
 /*
     substract two numerics
@@ -31,10 +32,10 @@ export function numericSub(a: numeric, b: numeric): numeric {
         b = t;
         a.sign = 1-a.sign;
     }
-    return {
+    return numericWillOverflow({
         sign: a.sign,
         m: a.m - b.m,
         e: a.e,
         approx: a.approx | b.approx
-    } as numeric
+    } as numeric);
 }

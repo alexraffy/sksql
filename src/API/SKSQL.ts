@@ -161,6 +161,7 @@ export class SKSQL {
                     }
                 }
                 if (msg.message === WSROK) {
+                    db.tableInfo.syncAll();
                     compileNewRoutines(db);
                     if (connectionInfo.delegate !== undefined && connectionInfo.delegate.ready !== undefined) {
                         db.tableInfo.syncAll();

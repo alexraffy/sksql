@@ -1,4 +1,5 @@
 import {numeric, NUMERIC_NAN_EXP} from "./numeric";
+import {numericWillOverflow} from "./numericMulOverflow";
 
 
 export function numericRound(a: numeric, decimals: number) {
@@ -23,5 +24,5 @@ export function numericRound(a: numeric, decimals: number) {
     }
     newA.m = parseInt(((newA.m+5)/10).toString());
     newA.e++;
-    return newA;
+    return numericWillOverflow(newA);
 }

@@ -33,7 +33,7 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
     assert(numericDisplay(num3) === "3", "Multiplying two numeric is broken.");
 
     let numDiv = numericDiv(numericLoad("3"), numericLoad("3"));
-    assert(numDiv !== undefined && numDiv.m === 100 && numDiv.e === -2, "numericDiv error");
+    assert(numDiv !== undefined && numDiv.m === 1 && numDiv.e === 0, "numericDiv error");
 
 
     let st1 = new SQLStatement(db, "SELECT 0.1 + 0.2 as ret FROM dual")
@@ -42,7 +42,7 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
     assert(numericCmp(ret[0]["ret"], check) === 0, "Adding two numeric");
 
     runTest(db, "SELECT 1.0 * 5 FROM dual", false, false, [[numericLoad("5")]], undefined, {printDebug: false});
-    runTest(db, "SELECT 2.0 * 5 FROM dual", false, false, [[numericLoad("10")]]);
+    runTest(db, "SELECT 2.0 * 5 FROM dual", false, false, [[numericLoad("10")]], undefined, {printDebug: false});
     runTest(db, "SELECT 33.0 * 4 + 10 FROM dual", false, false, [[numericLoad("142")]], undefined, {printDebug: false});
     runTest(db, "SELECT 10.0 + 8.0 * 4 FROM dual", false, false, [[numericLoad("42")]]);
     runTest(db, "SELECT 2.0 * 0.5 FROM dual", false, false, [[numericLoad("1")]]);
@@ -50,11 +50,18 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
 
     runTest(db, "SELECT 3 * 0.3 FROM dual", false, false, [[numericLoad("0.9")]]);
     runTest(db, "SELECT 3.0 / 3.0 FROM dual", false, false, [[numericLoad("1")]], undefined, {printDebug: false});
-    runTest(db, "SELECT 1.0 / 3.0 FROM dual", false, false, [[numericLoad("0.33")]], undefined, {printDebug: false});
+    runTest(db, "SELECT 1.0 / 3.0 FROM dual", false, false, [[numericLoad("0.333333333")]], undefined, {printDebug: true});
     runTest(db, "SELECT 1.25 * 2 FROM dual", false, false, [[numericLoad("2.50")]]);
-    runTest(db, "SELECT 90 / 3.5 FROM dual", false, false, [[numericLoad("25.71")]]);
+    runTest(db, "SELECT 90 / 3.5 FROM dual", false, false, [[numericLoad("25.714285")]], undefined, {printDebug: true});
 
+    runTest(db, "SELECT 1.0 + 125.25 FROM dual", false, false, [[numericLoad("126.25")]], undefined, {printDebug: false});
+    runTest(db, "SELECT 1.2134 + 1.3 FROM dual", false, false, [[numericLoad("2.5134")]], undefined, {printDebug: false});
+    runTest(db, "SELECT 1.0 - 2.23 FROM dual", false, false, [[numericLoad("-1.23")]]);
+    runTest(db, "SELECT 1.23 - 2.23 FROM dual", false, false, [[numericLoad("-1.0")]]);
 
+    runTest(db, "SELECT 1.232 * 2.568 FROM dual", false, false, [[numericLoad("3.163776")]], undefined, {printDebug: true});
+
+    runTest(db, "SELECT 1.0 * 2.0  / 3 + 50 FROM dual", false, false, [[numericLoad("50.6666666")]], undefined, {printDebug: true});
 
     let st2 = new SQLStatement(db, "CREATE TABLE numSum(val NUMERIC(8,2))");
     st2.run();

@@ -1,5 +1,5 @@
 import {numeric, NUMERIC_MAX_EXP} from "./numeric";
-import {numericMulOverflow} from "./numericMulOverflow";
+import {numericWillOverflow} from "./numericMulOverflow";
 
 
 export function numericMul(A: numeric, B: numeric): numeric {
@@ -53,19 +53,10 @@ export function numericMul(A: numeric, B: numeric): numeric {
     }
     ret.sign = a.sign ^ b.sign;
     ret.approx = a.approx | b.approx;
-    while(false) { // numericMulOverflow(a.m, b.m) ){
-        ret.approx = 1;
-        if( a.m > b.m ){
-            a.m = parseInt((a.m / 10).toString());
-            a.e++;
-        }else{
-            b.m = parseInt((b.m / 10).toString());
-            b.e++;
-        }
-    }
+
     ret.m = parseInt((a.m * b.m).toString());
     ret.e = parseInt((a.e + b.e).toString());
-    return ret;
+    return numericWillOverflow(ret);
 
 
 }

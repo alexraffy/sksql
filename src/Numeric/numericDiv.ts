@@ -1,7 +1,8 @@
 import {numeric, NUMERIC_MAX_EXP, NUMERIC_NAN_EXP} from "./numeric";
 import {numericRound} from "./numericRound";
+import {numericWillOverflow} from "./numericMulOverflow";
 
-const TENTH_MAX = (Number.MAX_SAFE_INTEGER/10);
+const TENTH_MAX = (2147483647/10);
 
 export function numericDiv(A: numeric, B: numeric, d: number = 2): numeric {
     let a: numeric = {
@@ -59,10 +60,16 @@ export function numericDiv(A: numeric, B: numeric, d: number = 2): numeric {
     ret.sign = a.sign ^ b.sign;
     ret.approx = a.approx | b.approx;
     if( ret.approx==0 && a.m % b.m!=0 ) ret.approx = 1;
-    ret.m = a.m / b.m;
+    ret.m = parseInt((a.m / b.m).toString());
     ret.e = a.e - b.e;
 
-    return numericRound(ret, d );
+    while (ret.m % 10 === 0) {
+        ret.m /= 10;
+        ret.e++;
+    }
+
+
+    return numericWillOverflow(ret);
 
 
 }

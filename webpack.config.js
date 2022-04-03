@@ -12,7 +12,7 @@ module.exports = {
         library: 'sksql'
     },
     optimization: {
-        minimize: false
+        minimize: true
     },
     resolve: {
         fallback: {

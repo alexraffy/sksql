@@ -48,6 +48,7 @@ import {recordSize} from "../Table/recordSize";
 import {dumpTable} from "../Table/dumpTable";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {TBooleanResult} from "../API/TBooleanResult";
+import {updateTableTimestamp} from "../API/updateTableTimestamp";
 
 
 function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecutionContext, insert: TQueryInsert, rowLength: number, tbl: ITable, def: ITableDefinition, rowData: any[]) {
@@ -69,7 +70,7 @@ function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecution
             if (def.identityValue === def.identitySeed && numberOfRows(tbl, def) === 0) {
                 value = def.identitySeed;
             } else {
-                value = def.identityValue + def.identityIncrement;
+                value = ((def.identityValue===undefined) ? 0 : def.identityValue) + def.identityIncrement;
             }
             newKey = value;
             def.identityValue = value;
@@ -272,6 +273,10 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
     if (def.hasIdentity) {
         updateTableIdentityValue(tbl, newKey);
     }
+    if (numberOfRowsAdded > 0) {
+        updateTableTimestamp(db, def.name.toUpperCase());
+    }
+
     context.broadcastQuery = true;
     context.result.rowsInserted += numberOfRowsAdded;
 

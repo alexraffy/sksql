@@ -33,6 +33,7 @@ import {TAlias} from "../Query/Types/TAlias";
 import {TTable} from "../Query/Types/TTable";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {checkConstraint} from "./checkConstraint";
+import {updateTableTimestamp} from "../API/updateTableTimestamp";
 
 
 
@@ -40,6 +41,7 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
                     statement: TQueryUpdate, ep: TEP[]) {
 
     let rowsModified = 0;
+    let tableModified = undefined;
     let runCallback = function (tep: TEPScan | TEPNestedLoop, walkInfos: TTableWalkInfo[]) {
 
 
@@ -50,6 +52,9 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
                 targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === statement.table.table.toUpperCase();})
             } else {
                 targetTable = walkInfos.find((t) => { return t.name.toUpperCase() === getValueForAliasTableOrLiteral(statement.tables[0].tableName as (TAlias | TTable)).table.toUpperCase();})
+            }
+            if (tableModified === undefined) {
+                tableModified = targetTable.name.toUpperCase();
             }
             // mark the block as dirty
             let b = targetTable.table.data.blocks[targetTable.cursor.blockIndex];
@@ -97,7 +102,7 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
             // we write the row to the block
             copyBytesBetweenDV(targetTable.cursor.rowLength, row, dv, rowHeaderSize, rowHeaderSize);
 
-
+            rowsModified++;
             context.result.rowsModified += 1;
         }
         if (tep.kind === "TEPNestedLoop") {
@@ -160,7 +165,9 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
 
         }
     }
-
+    if (rowsModified > 0) {
+        updateTableTimestamp(db, tableModified);
+    }
 
 
 }

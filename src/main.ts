@@ -39,6 +39,7 @@ export * from "./API/findExpressionType";
 export * from "./API/findTableNameForColumn";
 export * from "./API/getColumnDefinition";
 export * from "./API/generateV4UUID";
+export * from "./API/genStatsForTable";
 export * from "./API/kResultType";
 export * from "./API/openTables";
 export * from "./API/readTableAsJSON";
@@ -50,6 +51,7 @@ export * from "./API/TError";
 export * from "./API/TParserError";
 export * from "./API/TTableWalkInfo";
 export * from "./API/typeString2TableColumnType";
+export * from "./API/vacuum";
 
 
 export * from "./Table/addRow";

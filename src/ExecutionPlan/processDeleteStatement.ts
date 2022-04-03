@@ -25,6 +25,7 @@ import {openTable} from "../API/openTables";
 import {recordSize} from "../Table/recordSize";
 import {findWalkTable} from "./findWalkTable";
 import {contextTables} from "./contextTables";
+import {updateTableTimestamp} from "../API/updateTableTimestamp";
 
 
 export function processDeleteStatement(db: SKSQL, context: TExecutionContext, statement: TQueryDelete) {
@@ -94,6 +95,9 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
 
         return cont;
     });
+    if (numberOfRowsModified > 0) {
+        updateTableTimestamp(db, def.name.toUpperCase());
+    }
 
     context.broadcastQuery = true;
     context.result.rowsDeleted += numberOfRowsModified;

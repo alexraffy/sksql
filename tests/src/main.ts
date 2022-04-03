@@ -23,6 +23,7 @@ import {strings} from "./strings";
 import {blocks1} from "./blocks1";
 import {float1} from "./float1";
 import {int1} from "./int1";
+import {stats1} from "./stats";
 
 console.log("SKSQL TEST SUITE");
 console.log("Loading sksql.min.js: ");
@@ -36,7 +37,7 @@ db.initWorkerPool(4, sksqlData);
 
 const tests: ((db: SKSQL, next:()=>void) => void)[] = [
     blocks1, test_compress, int1, float1, test_numeric, strings, test_date, select1, where, in1, case1, groupby1, check, coalesce,
-    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker
+    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1
 ]
 
 let idx = -1;

@@ -49,6 +49,7 @@ import {aggregate_avg} from "./Aggregate/aggregate_avg";
 import {aggregate_count} from "./Aggregate/aggregate_count";
 import {logical_coalesce} from "./Logical/coalesce";
 import {logical_nullif} from "./Logical/nullif";
+import {genStatsForTable} from "../API/genStatsForTable";
 
 
 export function registerFunctions(db: SKSQL) {
@@ -176,5 +177,8 @@ export function registerFunctions(db: SKSQL) {
     db.declareFunction(kFunctionType.scalar, "NULLIF", [{name: "EXPRESSION", type: TableColumnType.any},
         {name: "EXPRESSION", type: TableColumnType.any}],
         TableColumnType.any, logical_nullif, false, 0);
+
+
+
 
 }

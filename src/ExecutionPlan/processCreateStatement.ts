@@ -17,6 +17,7 @@ import {recordSize} from "../Table/recordSize";
 import {readFirst} from "../Cursor/readFirst";
 import {TTableConstraint} from "../Table/TTableConstraint";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
+import {genStatsForTable} from "../API/genStatsForTable";
 
 
 export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): SQLResult {
@@ -27,8 +28,8 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
             columns: [],
             hasIdentity: c.hasIdentity,
             identityColumnName: c.identityColumnName,
-            identitySeed: c.identitySeed,
-            identityIncrement: c.identityIncrement,
+            identitySeed: parseInt(c.identitySeed.toString()),
+            identityIncrement: parseInt(c.identityIncrement.toString()),
             constraints: c.constraints
         } as ITableDefinition;
         for (let i = 0; i < c.columns.length; i++) {
@@ -110,6 +111,10 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
 
 
         newTable(db, tblDef);
+        if (!["DUAL", "ROUTINES", "SYS_TABLE_STATISTICS"].includes(tblDef.name.toUpperCase())) {
+            genStatsForTable(db, tblDef.name);
+        }
+
 
         if (context.result.messages === undefined) {
             context.result.messages = "CREATE TABLE";

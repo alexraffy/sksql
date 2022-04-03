@@ -16,6 +16,10 @@ export enum kBlockHeaderField {
     TableDefMagic = 25,
     TableDefVersion = 29,
     TableDefFlag1 = 30,
+    TableDefFlag1_BitOK = 0,
+    TableDefFlag1_BitWriteLocked = 1,
+    TableDefFlag1_BitReadLocked = 2,
+
 
     TableDefFlag2 = 31,
     TableDefFlag3 = 32,

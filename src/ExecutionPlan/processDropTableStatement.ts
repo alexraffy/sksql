@@ -6,6 +6,7 @@ import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLi
 import {TParserError} from "../API/TParserError";
 import {rollback} from "./rollback";
 import {SQLResult} from "../API/SQLResult";
+import {genStatsForTable} from "../API/genStatsForTable";
 
 
 export function processDropTableStatement(db: SKSQL, context: TExecutionContext, st: TQueryDropTable) {
@@ -26,6 +27,9 @@ export function processDropTableStatement(db: SKSQL, context: TExecutionContext,
         }
     }
     db.dropTable(tableName);
+
+
+
     context.broadcastQuery = true;
 
     if (context.result.dropTable === undefined) {

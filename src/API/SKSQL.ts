@@ -4,7 +4,7 @@ import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
 import {
-    compileNewRoutines, decompress,
+    compileNewRoutines, decompress, genStatsForTable,
     ITableDefinition,
     TableColumnType,
     TWSRDataResponse,
@@ -93,9 +93,16 @@ export class SKSQL {
 
         let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
         dual.run();
+
+        let stats = new SQLStatement(this, "CREATE TABLE master.sys_table_statistics(id uint32 identity(1,1), timestamp datetime, table VARCHAR(255), active_rows UINT32, dead_rows UINT32, header_size UINT32, total_size UINT32, largest_block_size UINT32, table_timestamp DATETIME);", false);
+        stats.run();
+
         let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
         routines.run();
         registerFunctions(this);
+
+
+
     }
 
     /*
@@ -356,6 +363,7 @@ export class SKSQL {
         if (idx > -1) {
             this.allTables.splice(idx, 1);
             this.tableInfo.remove(tableName);
+            genStatsForTable(this, tableName.toUpperCase());
         }
     }
 
@@ -477,7 +485,20 @@ export class SKSQL {
                             }
                                 break;
                             case "DB": {
-                                this.allTables = e.d;
+                                for (let i = 0; i < e.d.length; i++) {
+                                    let d: ITable = e.d[i];
+                                    let name = readTableName(d.data);
+                                    if (!["dual", "routines", "sys_table_statistics"].includes(name)) {
+                                        let exists = this.allTables.find((at) => { let n = readTableName(at.data); return (n.toUpperCase() === name.toUpperCase());});
+                                        if (exists) {
+                                            exists.data.tableDef = d.data.tableDef;
+                                            exists.data.blocks = d.data.blocks;
+                                        } else {
+                                            this.allTables.push(d);
+                                        }
+                                    }
+                                }
+
                             }
                                 break;
                         }

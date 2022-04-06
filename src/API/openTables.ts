@@ -25,6 +25,7 @@ import {ITableDefinition} from "../Table/ITableDefinition";
 import {processSelectStatement} from "../ExecutionPlan/processSelectStatement";
 import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 
+// Read a table definition and open a cursor
 export function openTable(db: SKSQL, context: TExecutionContext, table: TAlias | TTable | TQuerySelect | TQueryUpdate): TTableWalkInfo[] {
     let ret : TTableWalkInfo[] = [];
     let tableToOpen = "";

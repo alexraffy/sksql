@@ -5,7 +5,7 @@ import {ParseResult} from "../ParseResult";
 import {Stream} from "../Stream";
 import {ParseError} from "../ParseError";
 
-
+// returns a boolean if a predicate is successful without consuming the characters.
 export const exitIf = function (parser: TFuncGen | TParser): TParser {
     return (s: Stream) => {
         let results = undefined;

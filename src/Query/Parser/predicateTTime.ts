@@ -6,6 +6,7 @@ import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {TTime} from "../Types/TTime";
 
+// parse a time
 
 export function *predicateTTime (callback) {
 

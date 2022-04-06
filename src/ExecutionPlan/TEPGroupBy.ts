@@ -10,6 +10,9 @@ import {TQueryExpression} from "../Query/Types/TQueryExpression";
 import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
+// Group by stage
+//
+
 export interface TEPGroupBy extends TEP {
     kind: "TEPGroupBy";
     source: TAlias | TTable;

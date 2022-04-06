@@ -1,5 +1,7 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function RTRIM
+
 
 export function string_rtrim(context: TExecutionContext, input: string) {
     if (input === undefined) { return undefined; }

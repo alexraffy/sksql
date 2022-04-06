@@ -3,6 +3,7 @@ import {Stream} from "../Stream";
 import {ParseError} from "../ParseError";
 import {isAlphaNumeric, isLetter} from "./types";
 
+// consume a literal, a series of letters, digits and underscore
 
 export function literal(input: Stream): ParseResult | ParseError {
     if (input.EOF) {

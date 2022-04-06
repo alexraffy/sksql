@@ -7,6 +7,7 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {TCast} from "../Types/TCast";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
+// parse a CAST(EXPRESSION AS TYPE) op in T-SQL
 
 export function * predicateTCast(callback) {
 

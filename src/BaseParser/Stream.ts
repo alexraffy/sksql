@@ -1,5 +1,7 @@
 
 
+// Represent a Stream of text character and the current position of the parser on this stream
+
 
 export class Stream {
     kind: string = "ParseStream";
@@ -11,7 +13,7 @@ export class Stream {
     constructor(buffer: string, cursor: number) {
         this.input = buffer;
         this.cursor = cursor;
-        Object.freeze(this);
+        //Object.freeze(this);
     }
 
     next(): Stream {

@@ -28,6 +28,14 @@ import {contextTables} from "./contextTables";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
 
 
+// Process a DELETE FROM statement
+//
+// This does not use an execution plan, but it should...
+// At the moment, we scan the table and evaluate the WHERE clause
+// If the WHERE clause evaluates to TRUE, we mark the row as deleted.
+//
+// To completely remove a row, VACUUM must be called.
+
 export function processDeleteStatement(db: SKSQL, context: TExecutionContext, statement: TQueryDelete) {
 
     let del = statement as TQueryDelete;
@@ -35,6 +43,9 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
     let def: ITableDefinition;
     let rowLength = 0;
     let tblInfo = db.tableInfo.get(getValueForAliasTableOrLiteral(statement.tables[0].tableName as TAlias | TTable).table);
+    if (tblInfo === undefined) {
+        throw new TParserError("TABLE " + getValueForAliasTableOrLiteral(statement.tables[0].tableName as TAlias | TTable).table + " NOT FOUND.");
+    }
     tbl = tblInfo.pointer;
     def = tblInfo.def;
     rowLength = recordSize(tbl.data);

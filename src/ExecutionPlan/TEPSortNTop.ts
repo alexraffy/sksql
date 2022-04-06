@@ -5,6 +5,8 @@ import {TNumber} from "../Query/Types/TNumber";
 import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
 import {TEP} from "./TEP";
 
+// Sort stage
+// if a TOP(X) is present it will be evaluated after the sort
 
 export interface TEPSortNTop extends TEP {
     kind: "TEPSortNTop",

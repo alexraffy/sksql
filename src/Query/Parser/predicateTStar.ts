@@ -4,6 +4,7 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {str} from "../../BaseParser/Predicates/str";
 import {TStar} from "../Types/TStar";
 
+// parse * or table.*
 
 export function *predicateTStar(callback) {
     const table = yield maybe(predicateTTableName);

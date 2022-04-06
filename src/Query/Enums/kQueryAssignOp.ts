@@ -1,4 +1,5 @@
 
+// replaced with kQueryExpressionOp
 
 export enum kQueryAssignOp {
     assign = "=",

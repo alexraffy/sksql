@@ -53,6 +53,8 @@ import {predicateTQuerySelect} from "../Query/Parser/predicateTQuerySelect";
 import {cloneContext} from "../ExecutionPlan/cloneContext";
 import {predicateTGO} from "../Query/Parser/predicateTGO";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
+import {predicateVacuum} from "../Query/Parser/predicateVacuum";
+
 
 let performance = undefined;
 try {
@@ -64,6 +66,55 @@ try {
 } catch (e) {
     performance = require('perf_hooks').performance;
 }
+
+
+// Prepare an SQL query and execute it
+// Only Statements/Procedures that contain CREATE/UPDATE/DELETE/INSERT are broadcast
+// Set broadcast to false, if the query is NOT to be sent to the remote server after running locally.
+
+// SELECT queries and subqueries generate temp tables that must be deleted after use
+// call <SQLStatement instance>.close(); after reading the data
+
+// <SQLStatement instance>.run parses the query and executes it.
+// it can THROW a TParserError If a parser error occurs or if the query breaks a constraint.
+
+// Simple example
+// let st = new SQLStatement(db, "SELECT 'Hello' as greetings FROM dual");
+// let ret = st.run(kResultType.JSON);
+// ret[0]["greetings"] === "Hello"
+// // delete the result table
+// ret.close();
+
+// With a parameter
+// let st = new SQLStatement(db, "SELECT FirstName FROM users WHERE Lastname = @lastname");
+// st.setParameter("@lastname", "Doe");
+// let ret = st.run(kResultType.JSON);
+// ret[0]["FirstName"] === "John";
+// // delete the result table
+// ret.close();
+
+// Open a cursor on the result table and loop through all records
+// let st = new SQLStatement(db, "SELECT FirstName, Lastname FROM users");
+// let ret = st.run() as SQLResult;
+// // get the result table
+// if (ret.error !== undefined) { throw "Error: " + ret.error; }
+// let tableData = db.getTable(ret.resultTableName);
+// let tableDef = readTableDefinition(tableData.data);
+// // open a cursor
+// let cursor = readFirst(tableData, tableDef);
+// // loop while we still have records
+// while (!cursorEOF(cursor)) {
+//  // get the row
+//  let row = new DataView(tableData.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
+//  // read the first column
+//  let value = readValue(tableData, tableDef, tableDef.columns[0], row, rowHeaderSize) as string;
+//  console.log(value); // John
+//  // read the next row
+//  cursor = readNext(tableData, tableDef, cursor);
+// }
+// // delete the result table
+// ret.close();
+
 export class SQLStatement {
     db: SKSQL;
     query: string = "";
@@ -174,7 +225,8 @@ export class SQLStatement {
                     checkSequence([str("SET"), whitespaceOrNewLine]),
                     checkSequence([str("TRUNCATE"), whitespaceOrNewLine]),
                     checkSequence([str("UPDATE"), whitespaceOrNewLine]),
-                    checkSequence([str("WHILE"), whitespaceOrNewLine])
+                    checkSequence([str("WHILE"), whitespaceOrNewLine]),
+                    checkSequence([str("VACUUM"), endOfStatement])
                 ], "")], "");
 
                 if (stType !== undefined) {
@@ -296,6 +348,9 @@ export class SQLStatement {
                             break;
                         case "WHILE":
                             result = yield predicateTWhile;
+                            break;
+                        case "VACUUM":
+                            result = yield predicateVacuum;
                             break;
                     }
                 }

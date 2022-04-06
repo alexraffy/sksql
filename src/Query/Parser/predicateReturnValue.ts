@@ -18,6 +18,7 @@ import {predicateTVariable} from "./predicateTVariable";
 import {predicateTQueryFunctionCall} from "./predicateTQueryFunctionCall";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 
+// parse a RETURN op in T-SQL
 
 export function * predicateReturnValue(callback) {
 

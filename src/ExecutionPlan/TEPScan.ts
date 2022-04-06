@@ -9,6 +9,8 @@ import {TQueryExpression} from "../Query/Types/TQueryExpression";
 import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
+// Scan stage
+
 export interface TEPScan extends TEP {
     kind: "TEPScan";
     table: TAlias | TTable;

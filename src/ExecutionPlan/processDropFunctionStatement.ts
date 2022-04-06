@@ -3,6 +3,10 @@ import {TQueryDropFunction} from "../Query/Types/TQueryDropFunction";
 import {SKSQL} from "../API/SKSQL";
 import {SQLStatement} from "../API/SQLStatement";
 
+// Process a DROP FUNCTION statement
+//
+// The function is deleted right away from the SQL engine and the function definition is removed from table routines.
+
 
 export function processDropFunctionStatement(db: SKSQL, context: TExecutionContext, st: TQueryDropFunction) {
 

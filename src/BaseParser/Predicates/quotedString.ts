@@ -4,6 +4,8 @@ import {ParseError} from "../ParseError";
 import {ParseResult} from "../ParseResult";
 
 
+// Try to parse a string starting with " or '
+
 export const quotedString: TParser = function (input: Stream) {
 
     if (input.EOF) {

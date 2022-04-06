@@ -52,6 +52,8 @@ import {logical_nullif} from "./Logical/nullif";
 import {genStatsForTable} from "../API/genStatsForTable";
 
 
+// Add all SQL functions to the SQL engine.
+
 export function registerFunctions(db: SKSQL) {
 
     // AGGREGATE

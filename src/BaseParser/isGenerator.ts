@@ -1,4 +1,8 @@
 
+
+// Is the function a generator function
+// a generator function yield other function
+
 function isGenerator(obj) {
     return 'function' == typeof obj.next && 'function' == typeof obj.throw;
 }

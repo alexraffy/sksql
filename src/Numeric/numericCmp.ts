@@ -4,7 +4,7 @@ import {isNumeric} from "./isNumeric";
 import {TParserError} from "../API/TParserError";
 
 
-
+// compare two numerics
 
 export function numericCmp(n1: numeric, n2: numeric): number {
 

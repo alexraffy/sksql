@@ -28,6 +28,10 @@ import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult
 import {kBooleanResult} from "../API/kBooleanResult";
 
 
+// Run an execution plan.
+
+
+
 export function run(db: SKSQL, context: TExecutionContext,
                     statement: TQuerySelect, ep: TEP[]) {
     let returnTable = "";

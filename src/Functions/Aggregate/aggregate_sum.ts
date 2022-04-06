@@ -6,6 +6,8 @@ import {isNumeric} from "../../Numeric/isNumeric";
 import {TableColumnType} from "../../Table/TableColumnType";
 import {numericCmp} from "../../Numeric/numericCmp";
 
+// Aggregate function SUM
+// Returns the sum of all non-NULL values
 
 export function aggregate_sum(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: numeric | number): any {
     if (mode === "init") {

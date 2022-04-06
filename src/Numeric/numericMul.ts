@@ -1,6 +1,7 @@
 import {numeric, NUMERIC_MAX_EXP} from "./numeric";
 import {numericWillOverflow} from "./numericMulOverflow";
 
+// return the product of two numerics
 
 export function numericMul(A: numeric, B: numeric): numeric {
 

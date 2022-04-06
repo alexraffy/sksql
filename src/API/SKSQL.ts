@@ -74,47 +74,53 @@ interface TConnectionData {
 }
 
 
+// Initialize a local database
+
+// let db = new SKSQL();
+// db.initWorkerPool(0, "");
+// let st = new SQLStatement(db, "CREATE TABLE users(FirstName VARCHAR(255), Lastname VARCHAR(255))");
+// st.run();
+
 export class SKSQL {
 
+    // All tables and temp results are stored here
     allTables: ITable[];
+    // The connection to the server
     public connections: TConnectionData[] = [];
-
+    // webworkers instances
     private workers: Worker[] = [];
+    // list of queries that need to be processed
     private pendingQueries: {id: string, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
+    // SQL and js functions
     functions: TRegisteredFunction[] = [];
+    // SQL procs
     procedures: TQueryCreateProcedure[] = [];
-
+    // Cached info about all tables
     tableInfo: CTableInfoManager;
+    // callbacks to hook DROP TABLE and VACUUM events
+    // used in skserver to delete/rename physical tables
+    callbackDropTable: (db: SKSQL, tableName: string) => void = (db, tableName) => {};
+    callbackRenameTable: (db: SKSQL, tableName: string, newName: string) => void = (db, tableName, newName) => {};
 
     constructor() {
         this.allTables = [];
-        //SKSQL._instance = this;
         this.tableInfo = new CTableInfoManager(this);
-
+        // SELECT without a FROM is not supported. you can use SELECT ... FROM DUAL instead
         let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
         dual.run();
-
+        // store number of active/dead rows in tables,
         let stats = new SQLStatement(this, "CREATE TABLE master.sys_table_statistics(id uint32 identity(1,1), timestamp datetime, table VARCHAR(255), active_rows UINT32, dead_rows UINT32, header_size UINT32, total_size UINT32, largest_block_size UINT32, table_timestamp DATETIME);", false);
         stats.run();
-
+        // functions and procedures definitions are stored in the routines table.
         let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
         routines.run();
         registerFunctions(this);
-
-
-
     }
 
-    /*
-    static get instance(): SKSQL {
-        if (SKSQL._instance === undefined) {
-            new SKSQL();
-        }
-        return SKSQL._instance;
-    }
-     */
 
-
+    // Connect to a remote database
+    // databaseHashId can be a sksql.com database or a websocket
+    // implement TDBEventsDelegate if you want to get notifications about disconnection, SQL statements from other clients connected to the same DB.
     connectToDatabase(databaseHashId: string, delegate: TDBEventsDelegate) {
 
         let connectionEntry: TConnectionData = {
@@ -291,6 +297,7 @@ export class SKSQL {
 
     }
 
+    // Connect to a websocket
     connectToServer(address: string, delegate: TDBEventsDelegate) {
         if (address !== undefined && address.startsWith("ws")) {
             this.connectToDatabase(address, delegate);
@@ -299,7 +306,18 @@ export class SKSQL {
         }
     }
 
-
+    // Make a javascript/typescript function callable in SQL
+    // scalar function must have the signature (context: TExecutionContext, param1: any, ...): returnType
+    // aggregate function must have the signature (context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, param1: any, ...)
+    //  the function will be called for each group with mode = "init" and must initialize and return a JSON dictionary for groupInfo
+    //  for each row in the group, the function will be called with mode = "row" and must store/update data in groupInfo and return groupInfo
+    //  at the end of each group, the function will be called with mode = "final" and must return a scalar value
+    //
+    // functions added directly with declareFunction are not saved between sessions. You must use CREATE FUNCTION to persist a SQL function.
+    //
+    // For functions that take different types, use TableColumnType.any in the parameter list.
+    // To return different type, use TableColumnType.any in returnType. You must in this case set returnTypeSameTypeHasParameterX to the index
+    // of the parameter to use for the evaluation of the return type.
     declareFunction(type: kFunctionType,
                     name: string,
                     parameters: {name: string, type: TableColumnType}[],
@@ -329,15 +347,18 @@ export class SKSQL {
         }
     }
 
+
+    // remove the function for the session
+    // to remove a function definitely use the SQL statement DROP FUNCTION
     dropFunction(fnName: string) {
         let exists = this.functions.findIndex((f) => { return f.name.toUpperCase() === fnName.toUpperCase();});
         if (exists > -1) {
             this.functions.splice(exists, 1);
         }
-
     }
 
-
+    // add a procedure
+    // use CREATE PROCEDURE for persistence.
     declareProcedure(proc: TQueryCreateProcedure) {
         let exists = this.procedures.find((p) => { return p.procName === proc.procName;});
         if (exists) {
@@ -348,6 +369,7 @@ export class SKSQL {
         }
     }
 
+    // disconnect from a socket
     disconnect(databaseHashId: string) {
         let cn  = this.getConnectionInfoForDB(databaseHashId);
         if (cn !== undefined) {
@@ -355,6 +377,8 @@ export class SKSQL {
         }
     }
 
+    // remove a table from the local session
+    // to broadcast use the SQL statement DROP TABLE xxx
     dropTable(tableName: string) {
         let idx = this.allTables.findIndex((t) => {
             let tb = readTableName(t.data);
@@ -367,6 +391,10 @@ export class SKSQL {
         }
     }
 
+    // Reserve the next identity for a table from the remote server
+    // do not expect locally-generated identity to be safe if multiple users access the same table.
+    // if a UUID is used as identity, make sure to generate it in JAVASCRIPT code before passing it to a SQLStatement as a string param.
+    // Important: calling NEWID() in SQL will generate a different UUID locally and remotely.
     getNextId(databaseHashId: string, table: string, count: number = 1): Promise<(number | number[])> {
         return new Promise<(number | number[])> ( (resolve, reject) => {
             let ci = this.getConnectionInfoForDB(databaseHashId);
@@ -385,18 +413,22 @@ export class SKSQL {
             });
             ci.socket.send(WSRGNID, { uid: uid, table: table, count: count });
 
-
         });
     }
 
+    // Connection data
     getConnectionInfoForDB(databaseHashId: string) {
         return this.connections.find((c) => { return c.databaseHashId === databaseHashId;});
     }
 
+    // Get the function data
     getFunctionNamed(name: string): TRegisteredFunction {
         return this.functions.find((f) => { return f.name.toUpperCase() === name.toUpperCase();});
     }
 
+    // get the ITable for a table.
+    // if you need the table declaration, you will have to call readTableDefinition with the ITable
+    // this is quite slow, use <SKSQL instance>.tableInfo.get to get the cached version
     getTable(tableName: string) {
         let at = this.allTables;
         for (let i = 0; i < at.length; i++ ) {
@@ -407,6 +439,7 @@ export class SKSQL {
         }
         return undefined;
     }
+    // return the ITable and the index of the table
     getTableDataAndIndex(tableName: string): {index: number, table: ITable} {
         let at = this.allTables;
         for (let i = 0; i < at.length; i++ ) {
@@ -418,10 +451,11 @@ export class SKSQL {
         return undefined;
     }
 
-
+    // send the list of Buffers to a WebWorker
     updateWorkerDB(idx: number) {
         this.workers[idx].postMessage({c:"DB", d: this.allTables});
     }
+
     sendWorkerQuery(idx: number, query: SQLStatement, reject, resolve) {
         let queryId = generateV4UUID();
         this.pendingQueries.push({
@@ -437,6 +471,7 @@ export class SKSQL {
         this.workers[idx].postMessage(msg);
     }
 
+    // internal, callback from a WebWorker
     receivedResult(id: string, result: SQLResult) {
         let idx = this.pendingQueries.findIndex((pq) => { return pq.id === id;});
         if (idx > -1) {
@@ -450,6 +485,7 @@ export class SKSQL {
     }
 
 
+    // dump all tables information
     tablesInfo() {
         let at = this.allTables;
         for (let i = 0; i < at.length; i++ ) {
@@ -464,6 +500,9 @@ export class SKSQL {
         }
     }
 
+
+    // Initialize multiple (poolSize) WebWorker
+    // sksqlLib must contain the minified string of this library
     initWorkerPool(poolSize: number, sksqlLib: string) {
 
         let blob_src = sksqlLib + "\n\n"+workerJavascript;
@@ -551,7 +590,7 @@ export class SKSQL {
 
 
 
-
+    // Are SharedArrayBuffers supported?
     private static _sharedArrayBufferSupported: boolean = undefined;
     static get supportsSharedArrayBuffers(): boolean {
         try {

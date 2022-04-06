@@ -6,6 +6,8 @@ import {isNumeric} from "../../Numeric/isNumeric";
 import {numeric} from "../../Numeric/numeric";
 import {numericCmp} from "../../Numeric/numericCmp";
 
+// Aggregate function COUNT
+// Count non-NULL values
 
 export function aggregate_count(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: any) {
     if (mode === "init") {

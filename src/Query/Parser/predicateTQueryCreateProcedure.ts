@@ -17,6 +17,7 @@ import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 import {predicateValidStatementsInProcedure} from "./predicateValidStatementsInProcedure";
 
+// parse a CREATE PROCEDURE statement
 
 export function * predicateTQueryCreateProcedure(callback) {
     let ret: TQueryCreateProcedure = {

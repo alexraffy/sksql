@@ -12,6 +12,7 @@ import {TQueryCreateFunction} from "../Types/TQueryCreateFunction";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateValidStatementsInFunction} from "./predicateValidStatementsInFunction";
 
+// parse a CREATE FUNCTION functionName(param1 TYPE, ...) RETURNS TYPE AS BEGIN BODY END
 
 export function * predicateTQueryCreateFunction(callback) {
 

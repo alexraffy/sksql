@@ -6,6 +6,8 @@ import {instanceOfTDate} from "../../Query/Guards/instanceOfTDate";
 import {TDateTime} from "../../Query/Types/TDateTime";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function MONTH
+// return the month part of a DATE or DATETIME
 
 export function date_month(context: TExecutionContext, input: TDate | TDateTime) {
     if (input === undefined) { return undefined; }

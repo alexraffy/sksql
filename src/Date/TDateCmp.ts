@@ -1,5 +1,6 @@
 import {TDate} from "../Query/Types/TDate";
 
+// Compare two dates together
 
 export function TDateCmp(a: TDate, b: TDate) {
 

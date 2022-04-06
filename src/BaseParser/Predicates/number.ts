@@ -4,6 +4,8 @@ import {ParseResult} from "../ParseResult";
 import {Stream} from "../Stream";
 
 
+// parse a signed number, with a decimal point "."
+
 export function number(input: Stream): ParseResult | ParseError {
     if (input.EOF) {
         return new ParseError(input, "a literal, got EOF instead.", false);

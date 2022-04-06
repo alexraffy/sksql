@@ -1,5 +1,7 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function REPLICATE
+
 
 export function string_replicate(context: TExecutionContext, input: string, num: number) {
     if (input === undefined) { return undefined; }

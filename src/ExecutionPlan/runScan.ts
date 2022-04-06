@@ -13,6 +13,10 @@ import {evaluate} from "../API/evaluate";
 import {TBooleanResult} from "../API/TBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 
+// SCAN a table
+// this goes through all records in a table.
+// if a predicate is present, we evaluate it
+// finally if the record is wanted, we call back onRowSelected
 
 export function runScan(db: SKSQL, context: TExecutionContext,
                         tep: TEPScan,
@@ -22,17 +26,6 @@ export function runScan(db: SKSQL, context: TExecutionContext,
     let tblInfo = db.tableInfo.get(tableName.table);
 
     let walk = findWalkTable(tables, tep.table);
-    /*
-    {
-        name: tableName.table.toUpperCase(),
-        alias: tableName.alias.toUpperCase(),
-        table: tblInfo.pointer,
-        def: tblInfo.def,
-        cursor: undefined,
-        rowLength: recordSize(tblInfo.pointer.data) +  rowHeaderSize
-    } as TTableWalkInfo;
-
-     */
 
     walk.cursor = readFirst(walk.table, walk.def);
     while (!cursorEOF(walk.cursor)) {

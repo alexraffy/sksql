@@ -20,6 +20,10 @@ import {kTableConstraintType} from "../Table/kTableConstraintType";
 import {genStatsForTable} from "../API/genStatsForTable";
 
 
+// Process a CREATE TABLE statement
+//
+//
+
 export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): SQLResult {
     if (instanceOfTQueryCreateTable(statement)) {
         let c: TQueryCreateTable = statement;

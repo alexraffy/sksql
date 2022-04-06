@@ -1,5 +1,7 @@
 
-
+// Result of a SQLStatement.run
+// if the statement contains a SELECT, the data can be found in the table resultTableName
+// if error is set, then the query could not be parsed successfully
 export interface SQLResult {
     error?: string;
     messages?: string;

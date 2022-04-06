@@ -10,6 +10,7 @@ import { padLeft } from "../Date/padLeft";
 import { numericToNumber } from "../Numeric/numericToNumber";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 
+// Read a table and return a JSON array of JSON dictionaries
 
 export function readTableAsJSON(db: SKSQL, table: string): any[] {
     let ret: any[] = [];

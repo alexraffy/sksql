@@ -2,6 +2,7 @@ import {str} from "../../BaseParser/Predicates/str";
 import {anyCharacter} from "../../BaseParser/Predicates/anyCharacter";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 
+// parse a single line comment
 
 export function * predicateTComment(callback) {
     let comment = "";

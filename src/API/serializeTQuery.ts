@@ -1,23 +1,14 @@
 import {TQueryExpression} from "../Query/Types/TQueryExpression";
-import {TQueryFunctionCall} from "../Query/Types/TQueryFunctionCall";
 import {instanceOfTNumber} from "../Query/Guards/instanceOfTNumber";
 import {instanceOfTString} from "../Query/Guards/instanceOfTString";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
-import {TColumn} from "../Query/Types/TColumn";
-import {TString} from "../Query/Types/TString";
-import {TLiteral} from "../Query/Types/TLiteral";
-import {TNumber} from "../Query/Types/TNumber";
-import {TBoolValue} from "../Query/Types/TBoolValue";
 import {instanceOfTBoolValue} from "../Query/Guards/instanceOfTBoolValue";
 import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
 import {instanceOfTQueryExpression} from "../Query/Guards/instanceOfTQueryExpression";
 import {instanceOfTQueryColumn} from "../Query/Guards/instanceOfTQueryColumn";
-import {TNull} from "../Query/Types/TNull";
 import {instanceOfTNull} from "../Query/Guards/instanceOfTNull";
-import { TArray } from "../Query/Types/TArray";
 import { instanceOfTArray } from "../Query/Guards/instanceOfTArray";
-import { TDate } from "../Query/Types/TDate";
 import { instanceOfTDate } from "../Query/Guards/instanceOfTDate";
 import { padLeft } from "../Date/padLeft";
 import { TVariable } from "../Query/Types/TVariable";
@@ -28,7 +19,7 @@ import {instanceOfTVariable} from "../Query/Guards/instanceOfTVariable";
 import {TValidExpressions} from "../Query/Types/TValidExpressions";
 
 
-
+// serialize an AST structure
 
 export function serializeTQuery(a: TQueryExpression | TValidExpressions | numeric | string): string {
     if (instanceOfTNumber(a)) {

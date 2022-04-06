@@ -17,6 +17,13 @@ import {TBetween} from "../Types/TBetween";
 import {instanceOfTBetween} from "../Guards/instanceOfTBetween";
 import {predicateTArray} from "./predicateTArray";
 
+// parse an expression
+//
+// We read elements pushing them in an array first, stopping when a reserved keyword is found;
+// we then identity subgroups (parenthesis), operation between two operands, boolean expressions...
+// and sort them so the right order of operation is respected.
+// returning at the end a single TQueryExpression that can be evaluated at runtime.
+
 
 
 export function * predicateTQueryExpression() {
@@ -73,18 +80,20 @@ export function * predicateTQueryExpression() {
         if (bisEOF === true) {
             break;
         }
+        // do we have a keyword next?
         let breakNow = yield exitIf(oneOf(stopAt, ""));
         if (breakNow) {
             break;
         }
 
         if (numParenthesisGroup === 0) {
+            // The expression is followed by a SELECT, we stop parsing here.
             const hasSelect = yield exitIf(checkSequence([str("SELECT"), whitespaceOrNewLine]));
             if (hasSelect === true) {
                 break;
             }
         }
-
+        // do we have a sub-query?
         let gotSubSelect = yield exitIf(checkSequence([str("("), maybe(atLeast1(whitespaceOrNewLine)), str("SELECT"), atLeast1(whitespaceOrNewLine)] ));
         if (gotSubSelect) {
             let subSelect = yield predicateValidExpressions;

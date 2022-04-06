@@ -6,6 +6,7 @@ import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult"
 import {TDateTime} from "../Query/Types/TDateTime";
 import {predicateTDateTime} from "../Query/Parser/predicateTDateTime";
 
+// Attempt to parse a string as a datetime
 
 export function parseDateTimeString(input: string): TDateTime {
     let result = parse(

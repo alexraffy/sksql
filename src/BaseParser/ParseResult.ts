@@ -1,6 +1,8 @@
 import {Stream} from "./Stream";
 
 
+// A Positive result returned by a parser function
+
 export class ParseResult {
     kind: string = "ParseResult";
     value: any;
@@ -13,6 +15,6 @@ export class ParseResult {
         this.next = next;
         this.start = start;
         this.matched = matched;
-        Object.freeze(this);
+        //Object.freeze(this);
     }
 }

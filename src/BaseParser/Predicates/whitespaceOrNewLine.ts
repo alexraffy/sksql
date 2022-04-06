@@ -3,6 +3,7 @@ import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
 import {isSpace} from "./types";
 
+// try to parse a space, tab or new line
 
 export const whitespaceOrNewLine = (s: Stream): ParseResult | ParseError => {
     if (s.EOF) {

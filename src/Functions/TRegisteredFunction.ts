@@ -2,6 +2,7 @@ import {kFunctionType} from "./kFunctionType";
 import {TableColumnType} from "../Table/TableColumnType";
 import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
 
+// Struct to store info about a SQL function
 
 export interface TRegisteredFunction {
     type: kFunctionType,

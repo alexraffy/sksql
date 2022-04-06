@@ -19,6 +19,8 @@ export function getValueForLiteralOrString(s: TLiteral | string): string {
 }
 
 
+// extract the value from a TAlias/TTable/TLiteral
+
 export function getValueForAliasTableOrLiteral(s: string | TAlias | TTable | TLiteral): { alias: string, table: string} {
     if (typeof s === "string") {
         return { alias: s, table: s};

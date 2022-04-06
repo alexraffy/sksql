@@ -46,6 +46,10 @@ import {TBooleanResult} from "../API/TBooleanResult";
 import {instanceOfTQueryDropFunction} from "../Query/Guards/instanceOfTQueryDropFunction";
 import {processDropFunctionStatement} from "./processDropFunctionStatement";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
+import {instanceOfTVacuum} from "../Query/Guards/instanceOfTVacuum";
+import {readTableName} from "../Table/readTableName";
+import {vacuumTable} from "../API/vacuum";
+import {genStatsForTable} from "../API/genStatsForTable";
 
 
 export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure, options: {printDebug: boolean} = {printDebug: false}) {
@@ -262,6 +266,31 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
     if (instanceOfTQueryDropFunction(op)) {
         processDropFunctionStatement(db, context, op);
         return;
+    }
+    if (instanceOfTVacuum(op)) {
+        let list: string[] = [];
+        for (let i = 0; i < db.allTables.length; i++) {
+            let name = readTableName(db.allTables[i].data).toUpperCase();
+            if (name.startsWith("#") || name.startsWith("@")) {
+                continue;
+            }
+            if (name !== "SYS_TABLE_STATISTICS") {
+                list.push(name);
+            }
+        }
+        for (let i = 0; i < list.length; i++) {
+
+            vacuumTable(db, list[i], (tableName: string, cb: () => {}) => {
+                    cb();
+                });
+            genStatsForTable(db, list[i]);
+
+        }
+        vacuumTable(db, "SYS_TABLE_STATISTICS", (tableName: string, cb: () => {
+
+        }) => {
+            cb();
+        });
     }
 
 }

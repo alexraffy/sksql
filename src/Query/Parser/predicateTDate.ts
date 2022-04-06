@@ -3,7 +3,7 @@ import {returnPred} from "../../BaseParser/Predicates/ret";
 import {digit} from "../../BaseParser/Predicates/digit";
 import {str} from "../../BaseParser/Predicates/str";
 
-
+// parse a date in a string
 
 const dateYYYYMMDD = function *(callback) {
     let y1, y2, y3, y4, m1, m2, d1, d2;

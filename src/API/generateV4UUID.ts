@@ -1,6 +1,6 @@
 
 
-
+// returns a GUID
 export function generateV4UUID(){
     let d = new Date().getTime();
     // @ts-ignore

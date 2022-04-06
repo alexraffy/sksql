@@ -1,6 +1,6 @@
 
 /*
-    This enum contains offsets value of different fields in a block or table header
+    This enum contains offset values of different fields in a block or table header
 
  */
 export enum kBlockHeaderField {

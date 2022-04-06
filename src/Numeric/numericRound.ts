@@ -1,7 +1,7 @@
 import {numeric, NUMERIC_NAN_EXP} from "./numeric";
 import {numericWillOverflow} from "./numericMulOverflow";
 
-
+// round a numeric to the number of decimals specified
 export function numericRound(a: numeric, decimals: number) {
     let newA: numeric = {
         sign: a.sign,

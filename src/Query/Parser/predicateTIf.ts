@@ -7,6 +7,7 @@ import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateValidStatementsInProcedure} from "./predicateValidStatementsInProcedure";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
+// parse a IF <EXPRESSION> BODY ELSE BODY
 
 export function * predicateTIf(callback) {
 

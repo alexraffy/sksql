@@ -1,6 +1,8 @@
 import {readStringFromUtf8Array} from "./readStringFromUtf8Array";
 
 
+// Decompress an ArrayBuffer compressed with compressAB
+
 export function decompress(ab: ArrayBuffer, returnSharedArrayBuffer: boolean): ArrayBuffer {
     let dv = new DataView(ab);
     let idx = 0;

@@ -1,6 +1,6 @@
 
 
-
+// read a 0 terminated UTF8 string from a DataView
 
 export function readStringFromUtf8Array(v: DataView, offset: number, length: number = -1, compareWith: string = undefined) {
     var out = [], pos = offset, c = 0;

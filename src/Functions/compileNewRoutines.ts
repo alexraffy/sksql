@@ -7,6 +7,8 @@ import {readValue} from "../BlockIO/readValue";
 import {SQLStatement} from "../API/SQLStatement";
 
 
+// recompile all procedures in the routines table.
+
 export function compileNewRoutines(db: SKSQL) {
     // routines definitions are 65k, we need to use a cursor
     let tblRoutines = db.getTable("routines");

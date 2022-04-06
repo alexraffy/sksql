@@ -5,6 +5,7 @@ import {blockInfo} from "../Blocks/blockInfo";
 import {recordSize} from "../Table/recordSize";
 import {ITable} from "../Table/ITable";
 
+// Position the cursor on the next record
 
 export function readNext(table: ITable, tableDef: ITableDefinition, cursor: ITableCursor): ITableCursor {
 

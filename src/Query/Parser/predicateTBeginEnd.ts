@@ -9,6 +9,8 @@ import {TParserCallback} from "../../BaseParser/parse";
 import {Stream} from "../../BaseParser/Stream";
 import {predicateValidStatementsInProcedure} from "./predicateValidStatementsInProcedure";
 
+// parse a BEGIN...END op in T-SQL
+
 export function * predicateTBeginEnd(callback: TParserCallback | Stream) {
 
     let ret: TBeginEnd = {

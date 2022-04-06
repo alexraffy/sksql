@@ -37,6 +37,9 @@ import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {rowHeaderSize} from "../Table/addRow";
 
 
+// Walk an SQL statement AST tree for Tables and add them to a list.
+
+
 export function addTable2Context(db, context, tableName: string, alias: TAlias) {
     let a = "";
     if (alias === undefined || (typeof alias !== "string" && !instanceOfTAlias(alias))) {

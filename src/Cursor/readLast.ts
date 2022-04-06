@@ -3,6 +3,7 @@ import {ITableDefinition} from "../Table/ITableDefinition";
 import {ITableCursor} from "./ITableCursor";
 import {blockInfo} from "../Blocks/blockInfo";
 
+// Position the cursor on the last record
 
 export function readLast(table: ITable, tableDef: ITableDefinition, cursor: ITableCursor): ITableCursor {
     cursor.blockIndex = table.data.blocks.length -1;

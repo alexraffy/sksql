@@ -24,6 +24,7 @@ export interface TFindExpressionTypeOptions {
     table?: TTableWalkInfo;
 }
 
+// Calculate the type of expression o
 
 export function findExpressionType(db: SKSQL,
                                    o: any,

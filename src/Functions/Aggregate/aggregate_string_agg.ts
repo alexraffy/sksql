@@ -1,6 +1,11 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
+// Aggregate function STRING_AGG
+// concat strings together with a separator
+
+// TODO: DISTINCT?
+
 export function aggregate_string_agg(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: string, sep: string) {
     if (mode === "init") {
         groupInfo = {

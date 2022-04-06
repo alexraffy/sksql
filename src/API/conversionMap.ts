@@ -12,6 +12,7 @@ import {TBooleanResult} from "./TBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 
 
+// Compare two values and returns a common Column type if possible
 export function conversionMap(a: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint | TBooleanResult,
                               b: string | number | numeric | boolean | TDateTime | TDate | TTime | bigint | TBooleanResult
                               ): TableColumnType {

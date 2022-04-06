@@ -1,5 +1,7 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function REVERSE
+
 
 export function string_reverse(context: TExecutionContext, input: string) {
     if (input === undefined) { return undefined; }

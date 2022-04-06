@@ -9,6 +9,8 @@ import {processStatement} from "./processStatement";
 import {SKSQL} from "../API/SKSQL";
 
 
+// Run a SQL function
+
 export function runFunction(db: SKSQL, context: TExecutionContext, fn: TQueryCreateFunction) {
 
 

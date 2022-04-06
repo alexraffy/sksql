@@ -1,6 +1,7 @@
 import {TExecutionContext} from "./TExecutionContext";
 import {ParseResult} from "../BaseParser/ParseResult";
 
+// create a new execution context
 
 export function createNewContext(label: string, query: string, parseResult: ParseResult): TExecutionContext {
     return {

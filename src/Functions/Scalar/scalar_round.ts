@@ -3,6 +3,8 @@ import {numericRound} from "../../Numeric/numericRound";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 import {isNumeric} from "../../Numeric/isNumeric";
 
+// SQL function ROUND
+// round the numeric or number to the number of decimals provided.
 
 export function scalar_round(context: TExecutionContext, num: number | numeric, decimals: number) {
     if (num === undefined) { return undefined;}

@@ -5,6 +5,8 @@ import {TQueryColumn} from "../Query/Types/TQueryColumn";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {TEPProjection} from "./TEPProjection";
 
+// Add all columns from a table to a list of projections
+// This is used to process SELECT *
 
 export function addAllColumnsForTable (tblWalk: TTableWalkInfo, returnTableDefinition: ITableDefinition, groupByResultTableDef: ITableDefinition, projections: TEPProjection[], projectionsGroupBy: TEPProjection[] ) {
     if (tblWalk) {

@@ -6,13 +6,20 @@ import {isGeneratorFunction} from "./isGenerator";
 import {TParserError} from "../API/TParserError";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 
-
+// callback signature
 export type TParserCallback = (name, value) => void;
 
+// parser function signature
+// can be a generator that yield other functions
+// or an array of functions that return ParserResult/ParserError
 export type TFuncGen = ((value: TParserCallback) => IterableIterator<TParser | TFuncGen>) | TParser[];
 
-let parse_inception: number = 0;
 
+
+// Parse a string
+// callback passed to generator functions for debugging
+// genFunc accepts a generator function or array of functions
+// input the current stream (query and text position in that query) to parse
 export function parse(callback: TParserCallback,
                       genFunc: TFuncGen
                       , input: Stream): ParseResult | ParseError {
@@ -20,7 +27,6 @@ export function parse(callback: TParserCallback,
     let success: boolean = true;
     let s = input;
     let maxChar = 0;
-    parse_inception++;
 
     let cursorPos = s.cursor;
 
@@ -35,18 +41,8 @@ export function parse(callback: TParserCallback,
              if (isGeneratorFunction(nextParser.value)) {
                 let ret: ParseResult | ParseError = parse(callback, nextParser.value, s);
                 if (ret.kind === "ParseResult" ) {
-                    /*
-                    if (typeof (ret as ParseResult).value === "object") {
-                        ((ret as ParseResult).value as TDebugInfo).debug = {
-                            start: cursorPos,
-                            end: (ret as ParseResult).next.cursor
-                        }
-                    }
-
-                     */
                     results.push(ret);
                     s = (ret as ParseResult).next;
-                    //cursorPos = s.cursor;
                 } else {
                     results.push(ret);
                     success = false;
@@ -61,18 +57,8 @@ export function parse(callback: TParserCallback,
                  }
                  let ret: ParseResult | ParseError = p(s);
                  if (ret.kind === "ParseResult") {
-                     /*
-                     if (typeof (ret as ParseResult).value === "object") {
-                         ((ret as ParseResult).value as TDebugInfo).debug = {
-                             start: cursorPos,
-                             end: (ret as ParseResult).next.cursor
-                         }
-                     }
-
-                      */
                      results.push(ret);
                      s = (ret as ParseResult).next;
-                     //cursorPos = s.cursor;
                  } else {
                      results.push(ret);
                      success = false;
@@ -84,23 +70,10 @@ export function parse(callback: TParserCallback,
      } else {
          for (let i = 0; i < genFunc.length; i++) {
              let p = genFunc[i];
-             //if (s.EOF) {
-             //    break;
-            // }
              let ret: ParseResult | ParseError = p(s);
              if (ret.kind === "ParseResult") {
-                 /*
-                 if (typeof (ret as ParseResult).value === "object") {
-                     ((ret as ParseResult).value as TDebugInfo).debug = {
-                         start: cursorPos,
-                         end: (ret as ParseResult).next.cursor
-                     }
-                 }
-
-                  */
                  results.push(ret);
                  s =  (ret as ParseResult).next;
-                 //cursorPos = s.cursor;
              } else {
                  results.push(ret);
                  success = false;
@@ -108,7 +81,6 @@ export function parse(callback: TParserCallback,
              }
          }
      }
-     parse_inception--;
      if (results.length > 0) {
          let ret = results[results.length - 1];
          if (ret.kind === "ParseResult") {
@@ -117,7 +89,6 @@ export function parse(callback: TParserCallback,
                      start: cursorPos,
                      end: (ret as ParseResult).next.cursor
                  };
-
              }
          }
          return ret;

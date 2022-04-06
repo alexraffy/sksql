@@ -18,42 +18,8 @@ import {TEPUpdate} from "./TEPUpdate";
 import {TTable} from "../Query/Types/TTable";
 import {generateEP} from "./generateEP";
 
-
-export function addTable2Plan(db: SKSQL, tables: TTableWalkInfo[], table: string, alias: string) {
-    if (table === undefined || table === "") {
-        return tables;
-    }
-    if (alias === undefined || alias === "") {
-        alias = table;
-    }
-    let exists = tables.find((t) => { return t.name.toUpperCase() === table.toUpperCase();});
-    if (!exists) {
-        let tbl: ITable;
-        let def: ITableDefinition;
-        let info: TTableInfo = db.tableInfo.get(table);
-        if (info !== undefined) {
-            tbl = info.pointer;
-            def = info.def;
-        } else {
-            tbl = db.getTable(table);
-            if (tbl === undefined) {
-                throw new TParserError("Table " + table + " not found.");
-            }
-            def = readTableDefinition(tbl.data, true);
-        }
-        let cursor = readFirst(tbl, def);
-        let rowLength = recordSize(tbl.data) + 5;
-        tables.push({
-            name: table,
-            alias: alias,
-            table: tbl,
-            def: def,
-            cursor: cursor,
-            rowLength: rowLength
-        });
-    }
-    return tables;
-}
+// Process a SELECT statement
+// generate an execution plan and run it.
 
 export function processSelectStatement(db: SKSQL, context: TExecutionContext,
                                        statement: TQuerySelect, isSubQuery: boolean = false, options: { printDebug: boolean} = {printDebug: false}) {
@@ -63,53 +29,7 @@ export function processSelectStatement(db: SKSQL, context: TExecutionContext,
 
     let planDescription = "";
     let plan: TEP[] = generateEP(db, context, select, options);
-    /*
-    let recur = function (plan: TEP) {
-        planDescription += "\t"
-        if (plan.kind === "TEPScan") {
-            let p = plan as TEPScan;
-            let tblName = getValueForAliasTableOrLiteral(p.table);
-            context.openTables = addTable2Plan(db, context.openTables, tblName.table, tblName.alias);
-            context.openTables = addTable2Plan(db, context.openTables, p.result, p.result);
-            planDescription += "[SCAN " + tblName.table + "";
-            if (p.result !== undefined && p.result !== "" && p.result !== tblName.table) {
-                planDescription += "=>" + p.result;
-            }
-            planDescription += "]";
-        }
-        if (plan.kind === "TEPNestedLoop") {
-            let p = plan as TEPNestedLoop;
-            planDescription += "[NESTED LOOP]\n"
-            recur(p.a);
-            planDescription += "\n";
-            recur(p.b);
-        }
-        if (plan.kind === "TEPGroupBy") {
-            let p = plan as TEPGroupBy;
-            let src = getValueForAliasTableOrLiteral(p.source);
-            let dest = getValueForAliasTableOrLiteral(p.dest);
-            context.openTables = addTable2Plan(db, context.openTables, src.table, src.alias);
-            context.openTables = addTable2Plan(db, context.openTables, dest.table, dest.alias);
-            planDescription += "[GroupBy " + src.table + "=>" + dest.table + "]";
-        }
-        if (plan.kind === "TEPSortNTop") {
-            let p = plan as TEPSortNTop;
-            planDescription += "[SortNTop]";
-            context.openTables = addTable2Plan(db, context.openTables, p.source, p.source);
-            context.openTables = addTable2Plan(db, context.openTables, p.dest, p.dest);
-        }
-        if (plan.kind === "TEPSelect") {
-            let p = plan as TEPSelect;
-            planDescription += "[Select " + p.dest + "]";
-        }
-    }
-    for (let i = 0; i < plan.length; i++) {
-        recur(plan[i]);
-    }
 
-     */
-
-    //console.log(planDescription);
 
     run(db, context, select, plan);
     context.result.queries.push({

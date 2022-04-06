@@ -1,5 +1,7 @@
 import {TTime} from "../Query/Types/TTime";
 
+// Compare two hours together
+
 
 export function TTimeCmp(a: TTime, b: TTime) {
     if (a.hours > b.hours) {

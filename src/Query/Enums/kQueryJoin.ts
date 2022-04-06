@@ -1,4 +1,5 @@
 
+// type of join in a SELECT statement
 
 export enum kQueryJoin {
     from = "from",

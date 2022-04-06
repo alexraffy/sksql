@@ -6,6 +6,7 @@ import {ParseError} from "../ParseError";
 import {isGeneratorFunction} from "../isGenerator";
 
 
+// try different predicates
 
 export function oneOf(params: (TFuncGen | TParser)[], error: string) {
     return (s: Stream) => {

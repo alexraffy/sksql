@@ -1,5 +1,6 @@
 import {BlockType} from "./BlockType";
 
+// struct about a block
 
 export interface IBlockInfo {
     blockId: number;

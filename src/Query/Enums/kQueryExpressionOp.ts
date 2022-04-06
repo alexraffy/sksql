@@ -1,6 +1,6 @@
 
 
-
+// contains all possible operations
 
 export enum kQueryExpressionOp {
     add = "+",

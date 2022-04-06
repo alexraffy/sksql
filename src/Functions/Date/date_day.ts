@@ -4,7 +4,8 @@ import {instanceOfTDate} from "../../Query/Guards/instanceOfTDate";
 import {TDateTime} from "../../Query/Types/TDateTime";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
-
+// SQL function DAY
+// returns the day part of a DATE
 export function date_day(context: TExecutionContext, input: TDate | TDateTime) {
     if (input === undefined) { return undefined; }
     if (instanceOfTDateTime(input)) {

@@ -36,6 +36,11 @@ import {checkConstraint} from "./checkConstraint";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
 
 
+// Execute an execution plan for an UPDATE statement
+// For each record that needs to be updated, we create a copy in a temp buffer
+// update new columns in that temp buffer and check all constraints.
+// Finally, the temp buffer is copied to the existing record.
+
 
 export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
                     statement: TQueryUpdate, ep: TEP[]) {

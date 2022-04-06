@@ -1,5 +1,6 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function CONCAT_WS
 
 export function string_concat_ws(context: TExecutionContext, sep: string, ...args: string[]) {
     let ret: string = "";

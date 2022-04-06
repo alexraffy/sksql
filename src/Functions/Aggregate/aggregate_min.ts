@@ -6,6 +6,9 @@ import {isNumeric} from "../../Numeric/isNumeric";
 import {TableColumnType} from "../../Table/TableColumnType";
 
 
+// Aggregate function MIN
+// returns the minimum value
+
 export function aggregate_min(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: numeric | number) {
     if (mode === "init") {
         groupInfo = {

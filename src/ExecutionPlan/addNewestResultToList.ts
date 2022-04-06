@@ -1,5 +1,7 @@
 import {TExecutionContext} from "./TExecutionContext";
 
+// Copy the result table from a context into a new one.
+// This is used when a query calls a stored proc and that stored proc contains a SELECT statement
 
 export function addNewestResultToList(context: TExecutionContext, newContext: TExecutionContext) {
     if (newContext.result.error !== undefined) {

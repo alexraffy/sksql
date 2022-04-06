@@ -19,6 +19,12 @@ import {cloneContext} from "./cloneContext";
 import {addNewestResultToList} from "./addNewestResultToList";
 import {swapContext} from "./swapContext";
 
+// Process a EXECUTE/EXEC statement
+//
+// Execute the procedure in a new context and switch back after
+// If the procedure returns data with a SELECT statement, we add the result to the calling context
+// If OUTPUT is specified for a parameter, we update the variable in the calling context afterward.
+
 
 export function processExecuteStatement(db: SKSQL,
                                         context: TExecutionContext,

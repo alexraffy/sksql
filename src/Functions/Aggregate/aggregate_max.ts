@@ -5,6 +5,8 @@ import {isNumeric} from "../../Numeric/isNumeric";
 import {TableColumnType} from "../../Table/TableColumnType";
 import {numericLoad} from "../../Numeric/numericLoad";
 
+// Aggregate function MAX
+// returns the maximum value
 
 export function aggregate_max(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: numeric | number) {
     if (mode === "init") {

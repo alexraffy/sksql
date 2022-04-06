@@ -7,6 +7,9 @@ import {TableColumnType} from "../../Table/TableColumnType";
 import {numericCmp} from "../../Numeric/numericCmp";
 
 
+// Aggregate function AVG
+// Average non-NULL values
+
 export function aggregate_avg(context: TExecutionContext, mode: "init" | "row" | "final", isDistinct: boolean, groupInfo: any, input: numeric | number) {
     if (mode === "init") {
         groupInfo = {

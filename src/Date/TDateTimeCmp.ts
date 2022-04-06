@@ -2,6 +2,7 @@ import {TDateCmp} from "./TDateCmp";
 import {TTimeCmp} from "./TTimeCmp";
 import {TDateTime} from "../Query/Types/TDateTime";
 
+// Compare two dateTime together
 
 export function TDateTimeCmp(a: TDateTime, b: TDateTime) {
     let tdate = TDateCmp(a.date, b.date);

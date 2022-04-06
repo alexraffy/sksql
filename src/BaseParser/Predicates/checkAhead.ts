@@ -5,6 +5,7 @@ import {isGeneratorFunction} from "../isGenerator";
 import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
 
+// Check what's coming ahead in the stream without consuming the characters.
 
 export function checkAhead(params: (TFuncGen | TParser)[], error: string) {
     return (s: Stream) => {

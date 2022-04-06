@@ -43,6 +43,10 @@ interface PPP {
     ptr: TQueryExpression | TValidExpressions;
 }
 
+// Test constraint CHECK, UNIQUE, FOREIGN KEY
+// This may trigger a Table SCAN
+
+
 function buildConstraintComparison(ret: PPP,
                            foreignTableName: string,
                            foreignColumn: { name: string, ascending: boolean},

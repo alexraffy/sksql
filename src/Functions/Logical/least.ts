@@ -16,6 +16,9 @@ import {TDateCmp} from "../../Date/TDateCmp";
 import {TTimeCmp} from "../../Date/TTimeCmp";
 import {columnTypeIsInteger} from "../../Table/columnTypeIsInteger";
 
+// SQL function LEAST
+// Return the smallest value found in the parameters
+// https://docs.microsoft.com/en-us/sql/t-sql/functions/logical-functions-least-transact-sql?view=azure-sqldw-latest
 
 export function logical_least(context: TExecutionContext, ...params: any) {
     let type: TableColumnType = undefined;

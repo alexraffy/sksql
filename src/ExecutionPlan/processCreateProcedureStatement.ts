@@ -13,6 +13,10 @@ import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {TExecutionContext} from "./TExecutionContext";
 
 
+// Process a CREATE/ALTER PROCEDURE statement
+//
+// The procedure is saved in the routines table.
+
 export function processCreateProcedureStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateProcedure): SQLResult {
     if (instanceOfTQueryCreateProcedure(statement)) {
         let c: TQueryCreateProcedure = statement;

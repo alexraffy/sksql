@@ -2,6 +2,7 @@ import {TExecutionContext} from "./TExecutionContext";
 import {createNewContext} from "./newContext";
 import {ParseResult} from "../BaseParser/ParseResult";
 
+// Clone an execution context
 
 export function cloneContext(context: TExecutionContext, label: string, keepStack: boolean, keepTables: boolean): TExecutionContext {
 

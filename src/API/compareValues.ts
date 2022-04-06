@@ -21,6 +21,8 @@ import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult
 import {kBooleanResult} from "./kBooleanResult";
 
 
+// Compare two values together, if they are identical returns 0. 1 if the first parameter is greater, -1 if the first parameter is lower
+// NULL(undefined) values IN SQL are returned before
 export function compareValues(a: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime | TBooleanResult,
                               b: string | number | boolean | bigint | numeric | TDate | TTime | TDateTime | TBooleanResult) {
     if (b === undefined) {

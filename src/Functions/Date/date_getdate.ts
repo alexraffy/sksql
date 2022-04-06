@@ -2,6 +2,8 @@ import {TDate} from "../../Query/Types/TDate";
 import {TTime} from "../../Query/Types/TTime";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function GETDATE
+// Return the current system DATETIME
 
 export function date_getdate(context: TExecutionContext) {
     let now = new Date();

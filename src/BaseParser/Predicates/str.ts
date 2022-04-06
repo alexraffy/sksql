@@ -3,6 +3,7 @@ import {ParseError} from "../ParseError";
 import {Stream} from "../Stream";
 import {isAlphaNumeric, isLetter} from "./types";
 
+// try to parse an exact string
 
 export function str(equalsTo: string): (input: Stream) => ParseResult | ParseError {
     return (input: Stream): ParseResult | ParseError => {

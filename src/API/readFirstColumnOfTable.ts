@@ -14,7 +14,7 @@ import {TDate} from "../Query/Types/TDate";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {TTime} from "../Query/Types/TTime";
 
-
+// return the first column of the first row in a table
 export function readFirstColumnOfTable(db: SKSQL, context: TExecutionContext, t: TTable): string | boolean | number | numeric | TDate | TDateTime | TTime | bigint {
 
     let tbl: ITable;

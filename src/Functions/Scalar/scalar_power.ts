@@ -4,6 +4,8 @@ import {numericToNumber} from "../../Numeric/numericToNumber";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 import {isNumeric} from "../../Numeric/isNumeric";
 
+// SQL function POWER
+// Raise base to the specified power
 
 export function scalar_power(context: TExecutionContext, base: numeric | number, exponent: numeric | number): number | numeric {
     let b = 0;

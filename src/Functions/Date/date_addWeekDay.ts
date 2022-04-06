@@ -1,6 +1,6 @@
 
 
-
+// add value number of working days to a Javascript Date
 export function date_addWeekDay(d: Date, value: number) {
     const date = new Date(d.getTime());
     const startedOnWeekend = [6,0].includes(d.getDay())

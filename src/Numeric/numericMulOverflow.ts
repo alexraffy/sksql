@@ -1,5 +1,6 @@
 import {numeric, NUMERIC_MAX} from "./numeric";
 
+// reduce a numeric value until it stops from overflowing
 
 export function numericWillOverflow(x: numeric): numeric {
 

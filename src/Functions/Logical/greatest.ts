@@ -16,6 +16,10 @@ import {TTimeCmp} from "../../Date/TTimeCmp";
 import {TParserError} from "../../API/TParserError";
 import {columnTypeIsInteger} from "../../Table/columnTypeIsInteger";
 
+// SQL function GREATEST
+// return the greatest value found in the parameters
+// https://docs.microsoft.com/en-us/sql/t-sql/functions/logical-functions-greatest-transact-sql?view=azure-sqldw-latest
+
 export function logical_greatest(context: TExecutionContext, ...params: any) {
     let type: TableColumnType = undefined;
     let ret: any[] = [];

@@ -6,6 +6,7 @@ import {oneOf} from "../../BaseParser/Predicates/oneOf";
 import {predicateTTime} from "./predicateTTime";
 import {TDateTime} from "../Types/TDateTime";
 
+// parse a datetime in a string
 
 export function *predicateTDateTime (callback) {
     if (callback === "isGenerator") {

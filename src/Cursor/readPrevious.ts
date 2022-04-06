@@ -3,6 +3,7 @@ import {ITableDefinition} from "../Table/ITableDefinition";
 import {ITableCursor} from "./ITableCursor";
 import {blockInfo} from "../Blocks/blockInfo";
 
+// Rewind back to the previous record
 
 export function readPrevious(table: ITable, tableDef: ITableDefinition, cursor: ITableCursor): ITableCursor {
 

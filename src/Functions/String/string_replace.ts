@@ -1,5 +1,7 @@
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function REPLACE
+
 
 export function string_replace(context: TExecutionContext, input: string, replace: string, withString: string) {
     if (input === undefined) { return undefined; }

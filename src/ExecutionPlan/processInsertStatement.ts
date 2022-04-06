@@ -165,6 +165,8 @@ function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecution
 }
 
 
+// Process a INSERT INTO statement
+
 export function processInsertStatement(db: SKSQL, context: TExecutionContext, statement: TQueryInsert) {
     let insert: TQueryInsert = statement;
     let tbl: ITable;
@@ -172,6 +174,9 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
     let rowLength: number;
     let newContext: TExecutionContext = cloneContext(context, "insert", true, true);
     let tblInfo = db.tableInfo.get(insert.table.table);
+    if (tblInfo === undefined) {
+        throw new TParserError("TABLE " + insert.table.table + " NOT FOUND.");
+    }
     tbl = tblInfo.pointer;
     def = tblInfo.def;
     rowLength = recordSize(tbl.data) + rowHeaderSize;

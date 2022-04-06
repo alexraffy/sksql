@@ -14,6 +14,9 @@ import {openTable} from "../API/openTables";
 import {generateEP} from "./generateEP";
 
 
+// Process a UPDATE statement
+
+
 export function processUpdateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryUpdate) {
 
     let update = statement as TQueryUpdate;

@@ -11,6 +11,7 @@ import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {TExecute} from "../Types/TExecute";
 
 
+// parse a EXECUTE/EXEC op
 
 export function* predicateTExecute(callback) {
     let ret: TExecute = {

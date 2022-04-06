@@ -5,6 +5,7 @@ import {findTableNameForColumn} from "./findTableNameForColumn";
 import {TableColumn} from "../Table/TableColumn";
 import {TParserError} from "./TParserError";
 
+// Get a column definition from a list of open tables
 
 export function getColumnDefinition(column: TColumn, tables: TTableWalkInfo[]): TableColumn {
     let table = column.table;

@@ -1,5 +1,6 @@
 import {TExecutionContext} from "./TExecutionContext";
 
+// swap back to an old context
 
 export function swapContext(backToContext: TExecutionContext, fromContext: TExecutionContext) {
 

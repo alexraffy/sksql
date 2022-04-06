@@ -3,6 +3,7 @@ import {ParseError} from "../ParseError";
 import {Stream} from "../Stream";
 import {isDigit} from "./types";
 
+// consume a digit
 
 export const digit = (s: Stream): ParseResult | ParseError => {
     if (!s.EOF) {

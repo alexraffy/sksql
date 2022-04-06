@@ -1,6 +1,6 @@
 
 
-
+// replace with kQueryExpressionOp
 
 export enum kQueryComparison {
     equal = "=",

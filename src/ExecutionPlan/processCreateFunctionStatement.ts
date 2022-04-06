@@ -11,6 +11,11 @@ import {kResultType} from "../API/kResultType";
 import {TExecutionContext} from "./TExecutionContext";
 
 
+// Process a CREATE/ALTER FUNCTION statement
+//
+// The function code is saved in the routines table.
+
+
 export function processCreateFunctionStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateFunction): SQLResult {
     if (instanceOfTQueryCreateFunction(statement)) {
         let c: TQueryCreateFunction = statement;

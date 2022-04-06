@@ -1,5 +1,6 @@
 import {Stream} from "./Stream";
 
+// A Negative result by a parser function.
 
 export class ParseError extends Error {
     kind: string = "ParseError";
@@ -39,9 +40,18 @@ export class ParseError extends Error {
     get description(): string {
         let ret: string = "";
         this.errors.forEach((e) => {
-            const line = 0;
+            let line = 1;
+            let column = 0;
             const position = this.origin.cursor;
-            ret += `Error at line ${line} position ${position}: Expected ${e}\n`;
+            for (let i = 0; i <= this.origin.cursor; i++) {
+                if (this.origin.input[i] === "\r" || this.origin.input[i] === "\n") {
+                    line++;
+                    column = 0;
+                }
+                column++;
+            }
+
+            ret += `Error at line ${line} column ${column} position ${position}: Expected ${e}\n`;
         });
         return ret;
     }

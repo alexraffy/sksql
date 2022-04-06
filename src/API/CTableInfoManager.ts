@@ -17,6 +17,9 @@ export interface TTableInfo {
 }
 
 
+// Cache Manager for table information
+// Do not use directly
+
 export class CTableInfoManager {
 
     private tablesInfos: TTableInfo[] = [];

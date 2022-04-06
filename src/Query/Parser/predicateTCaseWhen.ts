@@ -7,6 +7,9 @@ import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {maybe} from "../../BaseParser/Predicates/maybe";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 
+// parse a CASE WHEN op in T-SQL
+// supports CASE WHEN <BOOLEAN EXPRESSION> THEN OP WHEN... ELSE ... END
+// and CASE <EXPRESSION> WHEN <VALUE> THEN ...
 
 export function * predicateTCaseWhen() {
 

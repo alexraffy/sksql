@@ -1,5 +1,6 @@
 import {TParserError} from "../API/TParserError";
 
+// check if a string is a reserved keyword.
 
 const keyWords = ["ADD", "EXTERNAL", "PROCEDURE", "ALL", "FETCH" , "PUBLIC", "ALTER", "FILE", "RAISERROR", "AND", "FILLFACTOR",
     "READ", "ANY", "FOR", "READTEXT", "AS", "FOREIGN", "RECONFIGURE", "ASC", "FREETEXT", "REFERENCES", "AUTHORIZATION",

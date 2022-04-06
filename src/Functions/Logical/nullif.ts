@@ -8,6 +8,10 @@ import {TDateTimeCmp} from "../../Date/TDateTimeCmp";
 import {TTimeCmp} from "../../Date/TTimeCmp";
 import {numericCmp} from "../../Numeric/numericCmp";
 
+// SQL function NULLIF
+// return NULL if param a is NULL or if a == b
+// else return a
+// https://docs.microsoft.com/en-us/sql/t-sql/language-elements/nullif-transact-sql?view=sql-server-ver15
 
 export function logical_nullif (context: TExecutionContext, a: any, b: any) {
     if (a === undefined) {

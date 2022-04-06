@@ -7,6 +7,8 @@ import {instanceOfTDate} from "../../Query/Guards/instanceOfTDate";
 import {TDateTime} from "../../Query/Types/TDateTime";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function YEAR
+// return the year part of a DATE or DATETIME
 
 export function date_year(context: TExecutionContext, input: TDate | TDateTime) {
     if (input === undefined) { return undefined; }

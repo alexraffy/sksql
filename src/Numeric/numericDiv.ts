@@ -2,6 +2,7 @@ import {numeric, NUMERIC_MAX, NUMERIC_MAX_EXP, NUMERIC_NAN_EXP} from "./numeric"
 import {numericRound} from "./numericRound";
 import {numericWillOverflow} from "./numericMulOverflow";
 
+// divide a numeric
 
 export function numericDiv(A: numeric, B: numeric, d: number = 2): numeric {
     let a: numeric = {

@@ -6,6 +6,9 @@ import {TExecutionContext} from "./TExecutionContext";
 import {SKSQL} from "../API/SKSQL";
 
 
+// run a nested loop stage from an execution plan.
+
+
 export function runNestedLoop(db: SKSQL, context: TExecutionContext,
                               tep: TEPNestedLoop,
                               onRowSelected: (tep: TEPNestedLoop, walkInfos: TTableWalkInfo[]) => boolean) {

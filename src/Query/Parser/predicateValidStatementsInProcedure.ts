@@ -27,6 +27,7 @@ import {predicateTQueryCreateFunction} from "./predicateTQueryCreateFunction";
 import {predicateTQueryCreateProcedure} from "./predicateTQueryCreateProcedure";
 import {predicateTGO} from "./predicateTGO";
 import {eof} from "../../BaseParser/Predicates/eof";
+import {predicateVacuum} from "./predicateVacuum";
 
 
 export function * predicateValidStatementsInProcedure(callback) {
@@ -55,7 +56,8 @@ export function * predicateValidStatementsInProcedure(callback) {
         checkSequence([str("SET"), whitespaceOrNewLine]),
         checkSequence([str("TRUNCATE"), whitespaceOrNewLine]),
         checkSequence([str("UPDATE"), whitespaceOrNewLine]),
-        checkSequence([str("WHILE"), whitespaceOrNewLine])
+        checkSequence([str("WHILE"), whitespaceOrNewLine]),
+        checkSequence([str("VACUUM"), endOfStatement])
     ], "")], "");
 
     if (stType !== undefined) {
@@ -177,6 +179,9 @@ export function * predicateValidStatementsInProcedure(callback) {
                 break;
             case "WHILE":
                 result = yield predicateTWhile;
+                break;
+            case "VACUUM":
+                result = yield predicateVacuum;
                 break;
         }
     } else {

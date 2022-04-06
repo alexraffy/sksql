@@ -7,6 +7,17 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
 import {predicateTString} from "./predicateTString";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 
+// parse a DEBUGGER op in T-SQL
+// This will print on the console a dump of the current context.
+//
+// a Label can be specified, to more easily identify the frame.
+// ex: DEBUGGER LABEL = 'LABEL';
+//
+// a condition can be required
+// ex: DEBUGGER WHEN = @VARIABLE = 3;
+//
+// ex: DEBUGGER LABEL = 'LABEL' WHEN = @VARIABLE = 3;
+
 
 export function * predicateTDebugger(callback) {
 

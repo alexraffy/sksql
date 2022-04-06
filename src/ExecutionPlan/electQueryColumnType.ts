@@ -1,6 +1,11 @@
 import {TableColumnType} from "../Table/TableColumnType";
-import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
 
+
+// elect a column type for a result column from a list of column types in an expression
+
+// ex: 1 + 1.0 will return a NUMERIC
+// ex: FLOAT_COLUMN + 1 will return a FLOAT
+// ex: INT32_COLUMN + UINT8_COLUMN will return a INT32
 
 export function electQueryColumnType(expressionTypes: TableColumnType[]) {
     if (expressionTypes.length === 0) {

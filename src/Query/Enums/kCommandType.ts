@@ -1,6 +1,6 @@
 
 
-
+// type of SQL statement
 
 export enum kCommandType {
     create = "create",

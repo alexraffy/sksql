@@ -5,6 +5,11 @@ import {instanceOfTDateTime} from "../../Query/Guards/instanceOfTDateTime";
 import {instanceOfTTime} from "../../Query/Guards/instanceOfTTime";
 import {isNumeric} from "../../Numeric/isNumeric";
 
+// SQL function IIF
+// return the second parameter if the first parameter evaluates to true. if not return the third parameter
+// https://docs.microsoft.com/en-us/sql/t-sql/functions/logical-functions-iif-transact-sql?view=sql-server-ver15
+
+// return the column type
 export function helper_getParametersType(...params: any[]): {type: TableColumnType, valid: boolean} {
     let type: TableColumnType = undefined;
     for (let i = 0; i < params.length; i++) {

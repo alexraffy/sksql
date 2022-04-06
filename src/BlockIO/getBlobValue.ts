@@ -1,6 +1,7 @@
 import {blockInfo} from "../Blocks/blockInfo";
 import {ITable} from "../Table/ITable";
 
+// Read a blob buffer from a block
 
 export function getBlobValue(table: ITable, blockId: number): DataView {
     for (let i = 0; i < table.data.blocks.length; i++) {

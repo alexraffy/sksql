@@ -2,6 +2,9 @@ import {SQLStatement} from "./SQLStatement";
 import {SKSQL} from "./SKSQL";
 
 
+// Update the table timestamp in sys_table_statistics
+// this is called on CREATE/DELETE/UPDATE/INSERT
+
 export function updateTableTimestamp(db: SKSQL, table: string) {
     if (table.startsWith("#")) {
         return;

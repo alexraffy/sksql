@@ -1,5 +1,5 @@
 
-
+// add value number of months to a Javascript Date
 export function date_addMonth(d: Date, value: number) {
     let ret = new Date(d.getTime());
     const dayOfMonth = d.getDate();

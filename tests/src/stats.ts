@@ -17,14 +17,14 @@ export function stats1(db: SKSQL, next:()=>void) {
         "END\n", false, false, undefined);
     runTest(db, "SELECT count(*) FROM table1", false, false, [[200]]);
     genStatsForTable(db, "table1");
-    console.log(dumpTable(db.getTable("sys_table_statistics")));
+
     runTest(db, "SELECT active_rows, dead_rows, header_size, total_size, largest_block_size FROM sys_table_statistics WHERE table = UPPER('table1')", false, false, [
         [200, 0, 65536, 655360, 655360]
     ], undefined, {printDebug: false});
 
     runTest(db, "DELETE FROM table1 WHERE f1 % 2 = 0", false, false, undefined);
     genStatsForTable(db, "table1");
-    console.log(dumpTable(db.getTable("sys_table_statistics")));
+
     runTest(db, "SELECT active_rows, dead_rows, header_size, total_size, largest_block_size FROM sys_table_statistics WHERE table = UPPER('table1')", false, false, [
         [100, 100, 65536, 655360, 655360]
     ], undefined, {printDebug: false});

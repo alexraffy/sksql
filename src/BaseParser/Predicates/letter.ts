@@ -3,6 +3,7 @@ import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
 import {isLetter} from "./types";
 
+// consume a letter
 
 export const letter = (s: Stream): ParseResult | ParseError => {
     if (!s.EOF) {

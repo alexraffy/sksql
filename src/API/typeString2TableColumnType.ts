@@ -1,5 +1,6 @@
 import {TableColumnType} from "../Table/TableColumnType";
 
+// Convert a column type to an enum
 
 export function typeString2TableColumnType(input: string): TableColumnType {
     let type: TableColumnType;

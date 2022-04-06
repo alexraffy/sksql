@@ -7,9 +7,10 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {readNext} from "../Cursor/readNext";
 import {SQLStatement} from "./SQLStatement";
 import {kResultType} from "./kResultType";
-import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
-import {dumpTable} from "../Table/dumpTable";
 
+
+
+// Gather information about a table and update sys_table_statistics
 
 export function genStatsForTable(db: SKSQL, tableName: string): number {
     if (tableName.startsWith("#")) {
@@ -21,7 +22,11 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
         let sql = "DELETE TOP(1) FROM sys_table_statistics WHERE table = @tableName";
         let stDelete = new SQLStatement(db, sql, false);
         stDelete.setParameter("@tableName", tableName.toUpperCase());
-        stDelete.run();
+        try {
+            stDelete.run();
+        } catch (eDelete) {
+            return;
+        }
         stDelete.close();
         return 0;
     }

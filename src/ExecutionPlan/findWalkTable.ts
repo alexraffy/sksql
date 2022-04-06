@@ -4,6 +4,7 @@ import {TTable} from "../Query/Types/TTable";
 import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 
+// find a table in a list of open tables
 
 export function findWalkTable(tables: TTableWalkInfo[], table: TTable | TAlias) {
     let val = getValueForAliasTableOrLiteral(table);

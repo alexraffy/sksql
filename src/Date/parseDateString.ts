@@ -5,6 +5,7 @@ import {Stream} from "../BaseParser/Stream";
 
 import {predicateTDate} from "../Query/Parser/predicateTDate";
 
+// Attempt to parse a string as a date
 
 export function parseDateString(input: string) {
     let result = parse(

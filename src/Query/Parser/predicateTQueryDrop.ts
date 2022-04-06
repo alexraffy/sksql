@@ -9,6 +9,8 @@ import {literal} from "../../BaseParser/Predicates/literal";
 import {TQueryDropFunction} from "../Types/TQueryDropFunction";
 import {TQueryDropProcedure} from "../Types/TQueryDropProcedure";
 
+// parse DROP TABLE/FUNCTION/PROCEDURE
+
 
 export function * predicateTQueryDrop(callback) {
 

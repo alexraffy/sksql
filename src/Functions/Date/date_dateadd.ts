@@ -17,6 +17,8 @@ import {date_addWeekDay} from "./date_addWeekDay";
 
 
 
+// SQL Function DATEADD
+
 
 export function date_dateadd(context: TExecutionContext, what: string, value: number, fromDate: TDateTime | TDate) {
     let d: Date;

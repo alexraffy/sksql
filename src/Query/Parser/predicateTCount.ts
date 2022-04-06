@@ -12,6 +12,8 @@ import {predicateTStar} from "./predicateTStar";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {TParserError} from "../../API/TParserError";
 
+// parse a COUNT aggregate
+// supports *, ALL and DISTINCT
 
 export function * predicateTCount() {
 

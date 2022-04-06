@@ -12,7 +12,7 @@ import {TBooleanResult} from "./TBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 import {kBooleanResult} from "./kBooleanResult";
 
-
+// Convert a value to a new Column Type
 export function convertValue(value: string | number | numeric | boolean | TDate | TDateTime | TTime | bigint | TBooleanResult,
                              type: TableColumnType ): string | number | numeric | boolean | TDate | TDateTime | TTime | bigint {
     let val2Write: string | number | numeric | boolean | TDate | TDateTime | TTime | bigint = undefined;

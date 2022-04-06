@@ -1,8 +1,13 @@
 
 
+// Compress an array buffer
+// Scan the buffer for a sequence of 0s
+// If a sequence is at least 9 characters long, we replace it with a delimiter and the number of 0s
+// This is used by the server to send table blocks to connected clients.
+
 
 export function compressAB(ab: ArrayBuffer | SharedArrayBuffer): ArrayBuffer {
-    let newBuffer = new ArrayBuffer(ab.byteLength + 3);
+    let newBuffer = new ArrayBuffer(ab.byteLength + 10);
     let dvdest = new DataView(newBuffer);
     let dvsrc = new DataView(ab);
 

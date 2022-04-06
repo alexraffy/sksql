@@ -24,6 +24,9 @@ import {blocks1} from "./blocks1";
 import {float1} from "./float1";
 import {int1} from "./int1";
 import {stats1} from "./stats";
+import {performance} from "perf_hooks";
+
+let start = performance.now();
 
 console.log("SKSQL TEST SUITE");
 console.log("Loading sksql.min.js: ");
@@ -44,7 +47,12 @@ let idx = -1;
 const next = () => {
     idx++;
     if (idx === tests.length) {
-        console.log("ALL DONE.");
+        let end = performance.now();
+        let millis = end - start;
+        let minutes = Math.floor(millis / 60000);
+        let seconds = ((millis % 60000) / 1000).toFixed(0);
+
+        console.log("ALL DONE IN " + minutes + " MINUTES " + seconds + " SECONDS.");
         process.exit(0);
     }
     tests[idx](db, next);

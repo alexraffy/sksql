@@ -94,6 +94,14 @@ export interface TEvaluateOptions {
 }
 
 
+
+// Evaluate a structure passed from the Parser
+// context contain info about the current SQL context
+// tables is a list of open tables and cursors
+// colDef is the current column definition if available, if not undefined
+// options contains information about the current execution plan, aggregate data
+// withRow if set contains the current record of the table scanned
+
 export function evaluate(
     db: SKSQL,
     context: TExecutionContext,
@@ -155,6 +163,7 @@ export function evaluate(
         return struct;
     }
     if (instanceOfTCast(struct)) {
+        // CAST( EXPRESSION AS TYPE )
         let t = typeString2TableColumnType(struct.cast.type);
         let exp = evaluate(db, context, struct.exp, tables, colDef, options, withRow);
         if (instanceOfTTable(exp)) {
@@ -198,6 +207,7 @@ export function evaluate(
         return struct.value.substr(1, struct.value.length - 2);
     }
     if (instanceOfTNumber(struct)) {
+        // A number, if a decimal point is present, we return a numeric
         if (struct.value[0] === "'" || (struct.value[0] === '"')) {
             if (struct.value.indexOf(".") > -1) {
                 return numericLoad(struct.value.substr(1, struct.value.length - 2));
@@ -212,6 +222,10 @@ export function evaluate(
         }
     }
     if (instanceOfTLiteral(struct) || instanceOfTColumn(struct)) {
+        // A column name, if the name is not in the form table.column, we look it up.
+        // If a row is specified we look for that column value in the row with the offset in colDef
+        // If not, we look at all open tables and takes the column value from the cursor
+        // If we can't find the column in any tables or if we encounter multiple columns with the same name, we throw
         let name = "";
         let table = "";
         if (instanceOfTLiteral(struct)) {
@@ -271,9 +285,12 @@ export function evaluate(
         }
     }
     if (instanceOfTQueryColumn(struct)) {
+        // EXPRESSION AS ALIAS
         return evaluate(db, context, struct.expression, tables, colDef, options, withRow);
     }
     if (instanceOfTQueryExpression(struct)) {
+        // evaluate expressions a + b, a = b, a AND B
+        // if one of the element is a subquery we use the first column of the first row
         let left = evaluate(db, context, struct.value.left, tables, undefined, options, withRow);
         let right;
         let op = struct.value.op;
@@ -468,6 +485,7 @@ export function evaluate(
                 }
 
             }
+            // evaluate left IN (Array) or left IN (SUBQUERY)
             if (op === kQueryExpressionOp.in || op === kQueryExpressionOp.notIn) {
                 let rightArray: TArray;
                 if (!(instanceOfTArray(struct.value.right) || instanceOfTTable(struct.value.right) || instanceOfTQuerySelect(struct.value.right))) {
@@ -645,6 +663,7 @@ export function evaluate(
     }
 
     if (instanceOfTCaseWhen(struct)) {
+        // Evaluate CASE expression WHEN value and CASE WHEN booleanValue
         let obj = struct as TCaseWhen;
         let caseValue = undefined;
         if (obj.case !== undefined) {
@@ -691,6 +710,7 @@ export function evaluate(
     }
 
     if (instanceOfTVariableAssignment(struct)) {
+        // @VARIABLE = EXPRESSION
         //@ts-ignore
         let value = evaluate(db, context, struct.value, colDef, options, withRow);
         if (instanceOfTTable(value)) {
@@ -708,6 +728,7 @@ export function evaluate(
     }
 
     if (instanceOfTQueryFunctionCall(struct)) {
+        // call a function
         let fnName = struct.value.name;
         let fnData = db.getFunctionNamed(fnName);
 

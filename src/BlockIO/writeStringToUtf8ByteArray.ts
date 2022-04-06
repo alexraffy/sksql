@@ -1,5 +1,6 @@
 
-
+// Write a 0 terminated UTF8 string to a DataView
+// erasing maxLengthInBytes
 
 export function writeStringToUtf8ByteArray (dataView: DataView, offset: number, str: string, maxLengthInBytes: number) {
     let p = offset;

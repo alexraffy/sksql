@@ -5,6 +5,10 @@ import {isGeneratorFunction} from "../isGenerator";
 import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
 
+// Consume a sequence of predicates
+
+// example: yield checkSequence([literal, whitespace]);
+// will return a positive result if a literal is followed by a whitespace
 
 export function checkSequence(params: (TFuncGen | TParser)[]) {
     return (s: Stream) => {

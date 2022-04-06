@@ -7,6 +7,7 @@ import {isAlphaNumeric, isLetter, isSpace} from "./types";
 import {isGeneratorFunction} from "../isGenerator";
 import {instanceOfParseResult} from "../Guards/instanceOfParseResult";
 
+// Consume one or more of the predicate
 
 export function atLeast1(predicate: TParser | TFuncGen) {
     return (input: Stream) => {

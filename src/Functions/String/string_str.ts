@@ -3,6 +3,8 @@ import {numericDisplay} from "../../Numeric/numericDisplay";
 import {numeric} from "../../Numeric/numeric";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
+// SQL function STR
+
 
 export function string_str(context: TExecutionContext, input: number | numeric) {
     if (input === undefined) { return undefined; }

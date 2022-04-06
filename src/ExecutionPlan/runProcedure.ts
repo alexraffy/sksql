@@ -12,32 +12,14 @@ import {cloneContext} from "./cloneContext";
 import {swapContext} from "./swapContext";
 import {SKSQL} from "../API/SKSQL";
 
+// run all operations in a stored proc
 
 export function runProcedure(db: SKSQL, context: TExecutionContext, st: TExecute,
                              proc: TQueryCreateProcedure
                              ) {
     let ret: string | numeric | number | boolean | bigint | TDateTime | TDate | TTime = undefined;
 
-    /*
-    let newContext = {
-        label: proc.procName,
-        stack: context.stack,
-        breakLoop: false,
-        exitExecution: false,
-        returnValue: undefined,
-        openTables: context.openTables,
-        scopedIdentity: context.scopedIdentity,
-        openedTempTables: context.openedTempTables,
-        broadcastQuery: context.broadcastQuery,
-        results: [],
-        query: context.query,
-        parseResult: context.parseResult
-    } as TExecutionContext
-
-     */
-
     let newContext = cloneContext(context, proc.procName, true, true);
-
 
     for (let i = 0; i < proc.ops.length; i++) {
         newContext.currentStatement = proc.ops[i];

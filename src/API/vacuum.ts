@@ -9,6 +9,8 @@ import {addRow, rowHeaderSize} from "../Table/addRow";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {writeStringToUtf8ByteArray} from "../BlockIO/writeStringToUtf8ByteArray";
 
+// Remove deleted rows from a table
+
 
 export function vacuumTable(db: SKSQL, tableName: string, cbWriteTable: (tableName, cb) => void) {
     let allLocked = false;
@@ -42,7 +44,7 @@ export function vacuumTable(db: SKSQL, tableName: string, cbWriteTable: (tableNa
             let dv = new DataView(table.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
             let rowFlag = dv.getUint8(kBlockHeaderField.DataRowFlag);
             const isDeleted = ((rowFlag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
-            if (isDeleted) {
+            if (isDeleted || rowFlag === 1) {
                 cursor = readNext(table, def, cursor);
                 continue;
             }

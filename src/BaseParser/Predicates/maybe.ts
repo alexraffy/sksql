@@ -5,6 +5,7 @@ import {parse, TFuncGen} from "../parse";
 import {TParser} from "../TParser";
 import {isGeneratorFunction} from "../isGenerator";
 
+// try to parse with a predicate, if it fails, we continue at the current position in the stream
 
 export function maybe(predicate: TParser | TFuncGen): TParser {
     return (input: Stream) => {

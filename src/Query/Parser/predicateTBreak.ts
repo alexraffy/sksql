@@ -5,6 +5,7 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TBreak} from "../Types/TBreak";
 
+// parse a BREAK op in T-SQL
 
 export function * predicateTBreak(callback) {
 

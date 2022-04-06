@@ -14,7 +14,7 @@ import {rowHeaderSize} from "../Table/addRow";
 import {readValue} from "../BlockIO/readValue";
 import {readNext} from "../Cursor/readNext";
 
-
+// return the first column of each row in a table
 export function readAllFirstColumns(db: SKSQL, context: TExecutionContext, t: TTable): (string | boolean | number | numeric | TDate | TDateTime | TTime | bigint)[] {
 
 

@@ -1,8 +1,8 @@
 import {Stream} from "../Stream";
 import {ParseResult} from "../ParseResult";
 import {ParseError} from "../ParseError";
-import {isSpace} from "./types";
 
+// Consume any character
 
 export const anyCharacter = (s: Stream): ParseResult | ParseError => {
     let character = s.get();

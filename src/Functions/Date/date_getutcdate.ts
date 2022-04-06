@@ -3,6 +3,9 @@ import {TTime} from "../../Query/Types/TTime";
 import {TExecutionContext} from "../../ExecutionPlan/TExecutionContext";
 
 
+// SQL function GETUTCDATE
+// Return the system DATETIME in UTC
+
 export function date_getutcdate(context: TExecutionContext) {
     let now = new Date();
     return {

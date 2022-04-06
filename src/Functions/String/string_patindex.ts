@@ -81,6 +81,8 @@ function * predicatePattern() {
     })
 }
 
+// SQL function PATINDEX
+
 
 export function string_patindex(context: TExecutionContext, pattern: string, input: string) {
     if (input === undefined) { return undefined; }

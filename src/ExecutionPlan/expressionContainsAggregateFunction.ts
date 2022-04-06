@@ -6,6 +6,7 @@ import {TableColumnType} from "../Table/TableColumnType";
 import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
 import {kFunctionType} from "../Functions/kFunctionType";
 
+// Check if an expression contains an aggregate function
 
 export function expressionContainsAggregateFunction(db: any,
                                                     context: TExecutionContext,

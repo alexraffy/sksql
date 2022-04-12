@@ -387,7 +387,9 @@ export class SKSQL {
         if (idx > -1) {
             this.allTables.splice(idx, 1);
             this.tableInfo.remove(tableName);
-            genStatsForTable(this, tableName.toUpperCase());
+            if (!["DUAL", "SYS_TABLE_STATISTICS"].includes(tableName.toUpperCase())) {
+                genStatsForTable(this, tableName.toUpperCase());
+            }
         }
     }
 

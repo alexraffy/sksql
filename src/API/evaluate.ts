@@ -712,7 +712,7 @@ export function evaluate(
     if (instanceOfTVariableAssignment(struct)) {
         // @VARIABLE = EXPRESSION
         //@ts-ignore
-        let value = evaluate(db, context, struct.value, colDef, options, withRow);
+        let value = evaluate(db, context, struct.value, tables, colDef, options, withRow);
         if (instanceOfTTable(value)) {
             value = readFirstColumnOfTable(db, context, value);
         }

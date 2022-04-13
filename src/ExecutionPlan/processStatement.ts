@@ -65,7 +65,10 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
     context.tables = [];
 
     if (instanceOfTDebugger(op)) {
-        let shouldDisplay: TBooleanResult;
+        let shouldDisplay: TBooleanResult = {
+            kind: "TBooleanResult",
+            value: kBooleanResult.isTrue
+        };
         if (op.test !== undefined) {
             shouldDisplay = evaluate(db, context, op.test,  [], undefined, {aggregateMode: "none", aggregateObjects: [], forceTable: ""}) as TBooleanResult;
         }

@@ -1,6 +1,6 @@
 {
   "name": "sksql",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "A SQL database for the web and nodejs written in Typescript.",
   "author": {
     "name": "ARaffy"

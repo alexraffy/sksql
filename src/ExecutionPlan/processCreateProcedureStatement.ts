@@ -37,7 +37,7 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
         doesItExist.setParameter("@name", c.procName);
         let exists = doesItExist.run(kResultType.JSON);
         doesItExist.close();
-        if ((exists as any[]).length > 0 && exists[0].true !== true) {
+        if ((exists as any[]).length > 0 && exists[0]["true"].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
             let stUpdate = new SQLStatement(db, sqlUpdate, false);
             stUpdate.setParameter("@text", text);

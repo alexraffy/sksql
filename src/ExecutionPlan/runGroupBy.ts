@@ -219,13 +219,19 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
     } else {
         if (group === undefined) {
             // reset data for aggregate functions
+            let hasCount = false;
             for (let i = 0; i < aggregateFunctions.length; i++) {
+                if (aggregateFunctions[i].name.toUpperCase() === "COUNT") {
+                    hasCount = true;
+                }
                 if (!instanceOfTQueryCreateFunction(aggregateFunctions[i].fn.fn)) {
                     //@ts-ignore
                     aggregateFunctions[i].data = aggregateFunctions[i].fn.fn(context, "init", aggregateFunctions[i].funcCall.distinct, undefined);
                 }
             }
-            writeRow(db, context, tw, td, tep, aggregateFunctions);
+            if (hasCount === true) {
+                writeRow(db, context, tw, td, tep, aggregateFunctions);
+            }
         }
     }
 

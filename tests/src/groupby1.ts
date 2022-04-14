@@ -48,6 +48,26 @@ export function groupby1(db: SKSQL, next:()=>void) {
         ["United States"]
     ]);
 
+    runTest(db, "CREATE TABLE tokens(database_id INT, token VARCHAR(36), validity DATETIME);", false, false, undefined);
+    runTest(db, "INSERT INTO tokens(database_id, token, validity) VALUES(0, '456123789', DATEADD('mi', 1, GETDATE()))", false, false, undefined);
+    runTest(db, "INSERT INTO tokens(database_id, token, validity) VALUES(1, '123456789', DATEADD('mi', 1, GETDATE()))", false, false, undefined);
+    runTest(db, "INSERT INTO tokens(database_id, token, validity) VALUES(1, '987654321', DATEADD('mi', 1, GETDATE()))", false, false, undefined);
+    runTest(db, "INSERT INTO tokens(database_id, token, validity) VALUES(1, '654789153', DATEADD('mi', -1, GETDATE()))", false, false, undefined);
+    runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens GROUP BY database_id", false, false, [
+        [0, '456123789'],
+        [1, '123456789,987654321,654789153']
+    ]);
+    runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens WHERE database_id = 0 GROUP BY database_id", false, false, [
+        [0, '456123789']
+    ]);
+    runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens WHERE database_id = 1 GROUP BY database_id", false, false, [
+        [1, '123456789,987654321,654789153']
+    ]);
+    runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens WHERE database_id = 2 GROUP BY database_id", false, false, [
+    ], undefined, {printDebug: false});
+    runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens WHERE database_id = 1 AND validity > GETDATE() GROUP BY database_id", false, false, [
+        [1, '123456789,987654321']
+    ]);
 
     next();
 

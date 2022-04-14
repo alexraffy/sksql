@@ -270,8 +270,10 @@ export function evaluate(
             if (columnDef === undefined) {
                 throw new TParserError("Unknown column " + name + ". Could not find column definition in table " + table);
             }
+            if (tableInfo.cursor.blockIndex < 0 || tableInfo.cursor.offset === -1) {
+                return undefined;
+            }
             let dv = new DataView(tableInfo.table.data.blocks[tableInfo.cursor.blockIndex], tableInfo.cursor.offset, tableInfo.rowLength);
-
             let val = readValue(tableInfo.table, tableInfo.def, columnDef, dv, 5, options.compareColumnToStringValue);
             return val;
         } else {

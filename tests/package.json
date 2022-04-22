@@ -6,7 +6,8 @@
     "sksql-04-run-tests": "node build/main.js"
   },
   "dependencies": {
-    "sksql": "file:.."
+    "sksql": "file:..",
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
     "@types/node": "^15.12.5",

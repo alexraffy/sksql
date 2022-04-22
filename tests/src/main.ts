@@ -2,6 +2,11 @@ import {test_numeric} from "./numeric";
 import {test_parser} from "./parser";
 import {test_db_university} from "./db_university";
 import {test_worker} from "./worker";
+
+import fetch from "node-fetch";
+// @ts-ignore
+global["fetch"] = fetch;
+
 import {SKSQL} from "sksql";
 import * as fs from "fs";
 import {test_date} from "./test_date";
@@ -25,6 +30,7 @@ import {float1} from "./float1";
 import {int1} from "./int1";
 import {stats1} from "./stats";
 import {performance} from "perf_hooks";
+import {remote1} from "./remote1";
 
 let start = performance.now();
 
@@ -40,7 +46,7 @@ db.initWorkerPool(4, sksqlData);
 
 const tests: ((db: SKSQL, next:()=>void) => void)[] = [
     blocks1, test_compress, int1, float1, test_numeric, strings, test_date, select1, where, in1, case1, groupby1, check, coalesce,
-    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1
+    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1, remote1
 ]
 
 let idx = -1;

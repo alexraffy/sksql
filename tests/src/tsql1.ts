@@ -37,6 +37,12 @@ export function tsql1(db: SKSQL, next: ()=>void) {
     runTest(db, "SELECT aabbcc('string') FROM dual", true, true, undefined);
     runTest(db, "DROP FUNCTION aabbcc;", false, false, undefined);
 
+    runTest(db, "CREATE TABLE TTT(a int, b int, c int); insert into ttt values(1, 2, 3);", false, false, undefined);
+    runTest(db, "declare @a int, @b int, @c int; SELECT TOP(1) @a = a, @b = b, @c = c from ttt; select @a, @b, @c from dual;", false, false, [
+        [1, 2, 3]
+    ]);
+    runTest(db, "DROP TABLE TTT;", false, false, undefined);
+
     next();
 
 }

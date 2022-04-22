@@ -4,8 +4,9 @@ import {SQLStatement} from "./SQLStatement";
 import {SQLResult} from "./SQLResult";
 import {generateV4UUID} from "./generateV4UUID";
 import {
-    compileNewRoutines, decompress, genStatsForTable,
-    ITableDefinition,
+    compileNewRoutines,
+    decompress,
+    genStatsForTable,
     TableColumnType,
     TWSRDataResponse,
     TWSRGNIDResponse,
@@ -20,9 +21,13 @@ import {TWebSocketDelegate} from "../WebSocket/TWebSocketDelegate";
 import {TSocketResponse} from "../WebSocket/TSocketResponse";
 import {
     TWSRAuthenticateRequest,
-    TWSRAuthenticateResponse, TWSRDataRequest, TWSRSQL,
+    TWSRAuthenticateResponse,
+    TWSRDataRequest,
+    TWSRSQL,
     WSRAuthenticate,
-    WSRAuthenticatePlease, WSRDataRequest, WSRSQL
+    WSRAuthenticatePlease,
+    WSRDataRequest,
+    WSRSQL
 } from "../WebSocket/TMessages";
 import {TAuthSession} from "../WebSocket/TAuthSession";
 import {TDBEventsDelegate} from "./TDBEventsDelegate";
@@ -30,6 +35,7 @@ import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
 import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {readTableName} from "../Table/readTableName";
 import {CTableInfoManager} from "./CTableInfoManager";
+import {breakerFailure, breakerSuccess, flowCallback, flowExit, flowNext, kBreakerState, newFlow} from "flowbreaker";
 
 let workerJavascript = "";
 workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
@@ -259,39 +265,113 @@ export class SKSQL {
                 dbHashId: databaseHashId,
                 token: token
             };
+            let json = { response: {}};
+            newFlow("sksqlConnection", [
+                    {
+                        name: "connect",
+                        run: (flowId: number, breakerId: number, attemptId: number) => {
+                            if (attemptId > 5) {
+                                flowExit(flowId);
+                                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + status);
+                                }
+                                return;
+                            }
+                            fetch("https://sksql.com/api/v1/connect", {
+                                method: 'post',
+                                body: JSON.stringify(payload),
+                                headers: {'Content-Type': 'application/json'}
+                            }).then((value: Response) => {
+                                try {
+                                    value.json().then((json) => {
+                                        if (json.valid !== true) {
+                                            return flowCallback(flowId, false, "Rejected");
+                                        }
+                                        json.response = json;
+                                        return flowCallback(flowId, true, json.address);
+
+                                    }).catch((err) => {
+                                        return flowCallback(flowId, false, "Rejected: " + err.message);
+                                    });
+                                } catch (jsonERROR) {
+                                    return flowCallback(flowId, false, "Rejected: " + jsonERROR.message);
+                                }
+                            }).catch((reason) => {
+                                return flowCallback(flowId, false, "Rejected: " + reason.message);
+                            });
+                        }
+                    },
+                    {
+                        name: "waitForServer",
+                        run: (flowId, breakerId, attemptId) => {
+                            connectionEntry.socket.connect(json.response["address"]).then((v) => {
+                                if (v === false) {
+                                    return flowCallback(flowId, false, "Rejected");
+                                }
+                                return flowCallback(flowId, true, "");
+                            }).catch((e) => {
+                                return flowCallback(flowId, false, "Rejected: " + e.message);
+                            });
+                        }
+                    }
+
+                ],
+                (flowId: number, breakerStatus: kBreakerState, status: string) => {
+                    if (breakerStatus === kBreakerState.opened) {
+                        flowExit(flowId);
+                        if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + status);
+                        }
+                    }
+                },
+                () => {
+
+                });
+            /*
             fetch("https://sksql.com/api/v1/connect", {
                 method: 'post',
                 body: JSON.stringify(payload),
                 headers: {'Content-Type': 'application/json'}
             }).then((value: Response) => {
-                value.json().then((json) => {
-                    if (json.valid === false) {
-                        if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
-                        }
-                        return;
-                    }
-                    connectionEntry.socket.connect(json.address).then( (v) => {
-                        if (v === false) {
+                try {
+                    value.json().then((json) => {
+                        if (json.valid === false) {
                             if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
                                 connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
                             }
+                            return;
                         }
-                    }).catch((e) => {
+
+                        connectionEntry.socket.connect(json.address).then((v) => {
+                            if (v === false) {
+                                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
+                                }
+                            }
+                        }).catch((e) => {
+                            if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
+                                connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
+                            }
+                        });
+
+
+                    }).catch((err) => {
                         if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
+                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + err.message);
                         }
-                    })
-                }).catch ((err) => {
+                    });
+                } catch (jsonError) {
                     if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                        connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + err.message);
+                        connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + jsonError.message);
                     }
-                })
+                }
             }).catch ((reason) => {
                 if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
                     connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + reason.message);
                 }
             })
+
+             */
         }
 
 

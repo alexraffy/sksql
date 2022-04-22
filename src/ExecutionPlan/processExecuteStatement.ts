@@ -40,6 +40,7 @@ export function processExecuteStatement(db: SKSQL,
         newContext.label = proc.procName;
         newContext.stack = [];
         newContext.currentStatement = proc;
+
         let gotOutput = false;
         for (let i = 0; i < proc.parameters.length; i++) {
             let p = proc.parameters[i];

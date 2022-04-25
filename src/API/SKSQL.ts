@@ -146,8 +146,11 @@ export class SKSQL {
             },
             on(db: SKSQL, databaseHashId: string, msg: TSocketResponse) {
                 let connectionInfo: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
+                if (connectionInfo === undefined) {
+                    return;
+                }
                 if (msg.message === WSRAuthenticatePlease) {
-                    if (connectionInfo.delegate !== undefined) {
+                    if (connectionInfo.delegate !== undefined && connectionInfo.delegate.authRequired !== undefined) {
                         connectionInfo.auth = connectionInfo.delegate.authRequired(db, databaseHashId);
 
                         connectionInfo.socket.send(WSRAuthenticate, {
@@ -230,13 +233,13 @@ export class SKSQL {
                     }
                 }
 
-                if (connectionInfo.delegate !== undefined) {
+                if (connectionInfo.delegate !== undefined && connectionInfo.delegate.on !== undefined) {
                     connectionInfo.delegate.on(db, databaseHashId, msg.message, msg.param);
                 }
             },
             connectionLost(db: SKSQL, databaseHashId: string) {
                 let t: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
-                if (t.delegate !== undefined) {
+                if (t !== undefined && t.delegate !== undefined) {
                     t.delegate.connectionLost(db, databaseHashId);
                 }
             }
@@ -265,7 +268,7 @@ export class SKSQL {
                 dbHashId: databaseHashId,
                 token: token
             };
-            let json = { response: {}};
+
             newFlow("sksqlConnection", [
                     {
                         name: "connect",
@@ -287,8 +290,7 @@ export class SKSQL {
                                         if (json.valid !== true) {
                                             return flowCallback(flowId, false, "Rejected");
                                         }
-                                        json.response = json;
-                                        return flowCallback(flowId, true, json.address);
+                                        return flowCallback(flowId, true, json.address, json);
 
                                     }).catch((err) => {
                                         return flowCallback(flowId, false, "Rejected: " + err.message);
@@ -303,8 +305,8 @@ export class SKSQL {
                     },
                     {
                         name: "waitForServer",
-                        run: (flowId, breakerId, attemptId) => {
-                            connectionEntry.socket.connect(json.response["address"]).then((v) => {
+                        run: (flowId, breakerId, attemptId, payload) => {
+                            connectionEntry.socket.connect(payload["address"]).then((v) => {
                                 if (v === false) {
                                     return flowCallback(flowId, false, "Rejected");
                                 }
@@ -451,9 +453,15 @@ export class SKSQL {
 
     // disconnect from a socket
     disconnect(databaseHashId: string) {
-        let cn  = this.getConnectionInfoForDB(databaseHashId);
-        if (cn !== undefined) {
-            cn.socket.close();
+        let index = -1;
+        for (let i = 0; i < this.connections.length; i++) {
+            if (this.connections[i].databaseHashId === databaseHashId) {
+                index = i;
+            }
+        }
+        if (index > -1) {
+            this.connections[index].socket.close();
+            this.connections.splice(index, 1);
         }
     }
 

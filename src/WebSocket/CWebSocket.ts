@@ -108,7 +108,7 @@ export class CWebSocket {
                     console.dir(error);
                 };
                 connection.onclose = () => {
-                    console.log("Reconnecting");
+
                     this._connected = false;
                     if (this.delegate !== undefined && this.delegate.connectionLost !== undefined) {
                         this.delegate.connectionLost(this.db, this.databaseHashId);
@@ -116,9 +116,10 @@ export class CWebSocket {
                     if (this._connection === undefined) {
                         reject({message: "Could not connect to socket"});
                     } else {
-                        this.connect(this.address).then((value: boolean) => {
-                            console.log("Reconnected.");
-                        });
+                        // do not reconnect automatically
+                        //this.connect(this.address).then((value: boolean) => {
+                        //    console.log("Reconnected.");
+                        //});
                     }
                 }
                 connection.onmessage = (message) => {

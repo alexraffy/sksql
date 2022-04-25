@@ -7,6 +7,10 @@ import fetch from "node-fetch";
 // @ts-ignore
 global["fetch"] = fetch;
 
+import {WebSocket} from 'ws';
+//@ts-ignore
+global["WebSocket"] = WebSocket;
+
 import {SKSQL} from "sksql";
 import * as fs from "fs";
 import {test_date} from "./test_date";
@@ -45,7 +49,7 @@ let db = new SKSQL();
 db.initWorkerPool(4, sksqlData);
 
 const tests: ((db: SKSQL, next:()=>void) => void)[] = [
-    blocks1, test_compress, int1, float1, test_numeric, strings, test_date, select1, where, in1, case1, groupby1, check, coalesce,
+    blocks1, test_compress, int1, float1, test_numeric, strings, remote1, test_date, select1, where, in1, case1, groupby1, check, coalesce,
     subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1, remote1
 ]
 

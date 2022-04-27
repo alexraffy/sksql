@@ -7,6 +7,7 @@ import {
     compileNewRoutines,
     decompress,
     genStatsForTable,
+    kConnectionStatus,
     TableColumnType,
     TWSRDataResponse,
     TWSRGNIDResponse,
@@ -35,7 +36,7 @@ import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
 import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {readTableName} from "../Table/readTableName";
 import {CTableInfoManager} from "./CTableInfoManager";
-import {breakerFailure, breakerSuccess, flowCallback, flowExit, flowNext, kBreakerState, newFlow} from "flowbreaker";
+import {flowCallback, flowExit, kBreakerState, newFlow} from "flowbreaker";
 
 let workerJavascript = "";
 workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
@@ -121,6 +122,16 @@ export class SKSQL {
         let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
         routines.run();
         registerFunctions(this);
+    }
+
+    get connected(): kConnectionStatus {
+        if (this.connections.length === 0) {
+            return kConnectionStatus.disconnected;
+        }
+        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
+            return kConnectionStatus.disconnected;
+        }
+        return this.connections[0].socket.connected;
     }
 
 
@@ -282,6 +293,8 @@ export class SKSQL {
                             }
                             fetch("https://sksql.com/api/v1/connect", {
                                 method: 'post',
+                                mode: 'cors', // no-cors, *cors, same-origin
+                                cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-
                                 body: JSON.stringify(payload),
                                 headers: {'Content-Type': 'application/json'}
                             }).then((value: Response) => {

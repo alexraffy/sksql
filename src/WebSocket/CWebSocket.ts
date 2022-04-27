@@ -11,6 +11,13 @@ import {TWebSocketMessageHandlerInfo} from "./TWebSocketMessageHandlerInfo";
 import {SKSQL} from "../API/SKSQL";
 
 
+export enum kConnectionStatus {
+    disconnected,
+    connecting,
+    connected
+}
+
+
 const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
 
 export class CWebSocket {
@@ -27,9 +34,8 @@ export class CWebSocket {
     private msg_count: number = 0;
 
     private outGoing: string[] = [];
-    private _connected: boolean = false;
-
-    public get connected(): boolean {
+    private _connected: kConnectionStatus = kConnectionStatus.connecting;
+    public get connected(): kConnectionStatus {
         return this._connected;
     }
     public get con_id(): number {
@@ -70,6 +76,7 @@ export class CWebSocket {
 
     connect(address): Promise<boolean> {
         this.address = address;
+        this._connected = kConnectionStatus.connecting;
         return new Promise<boolean>( (resolve, reject) => {
             // open connection
             var ws;
@@ -101,7 +108,7 @@ export class CWebSocket {
                 }
                 connection.onopen = () => {
                     this._connection = connection;
-                    this._connected = true;
+                    this._connected = kConnectionStatus.connected;
                     resolve(true);
                 };
                 connection.onerror = function (error) {
@@ -109,7 +116,7 @@ export class CWebSocket {
                 };
                 connection.onclose = () => {
 
-                    this._connected = false;
+                    this._connected = kConnectionStatus.disconnected;
                     if (this.delegate !== undefined && this.delegate.connectionLost !== undefined) {
                         this.delegate.connectionLost(this.db, this.databaseHashId);
                     }

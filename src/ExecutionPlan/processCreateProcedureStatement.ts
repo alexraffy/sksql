@@ -43,7 +43,6 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
             stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.procName);
             let retUpdate = stUpdate.run();
-            console.dir(retUpdate);
             stUpdate.close();
         } else {
             let sqlInsert = "INSERT INTO master.routines (schema, name, type, definition, modified) VALUES (@schema, @name, 'PROCEDURE', @text, GETUTCDATE())";

@@ -18,4 +18,5 @@ export interface TEPScan extends TEP {
     range?: TEPRange;
     projection: TEPProjection[];
     result: string;
+    acceptUnknownPredicateResult: boolean; // used in nested loop on the first table to avoid a loop scan if the predicate is false
 }

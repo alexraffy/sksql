@@ -6,5 +6,6 @@ export enum kQueryJoin {
     inner = "inner join",
     left = "left join",
     right = "right join",
-    full = "full join"
+    full = "full join",
+    cross = "cross join"
 }

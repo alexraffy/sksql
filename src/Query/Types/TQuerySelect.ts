@@ -8,6 +8,7 @@ import {TNumber} from "./TNumber";
 import {TQueryOrderBy} from "./TQueryOrderBy";
 import {TQueryComparisonColumnEqualsString} from "./TQueryComparisonColumnEqualsString";
 import {TValidExpressions} from "./TValidExpressions";
+import {kUnionType} from "../Enums/kUnionType";
 
 
 export interface TQuerySelect {
@@ -22,4 +23,7 @@ export interface TQuerySelect {
     orderBy: TQueryOrderBy[];
     resultTableName: string;
     hasForeignColumns: boolean;
+    hasDistinct: boolean;
+    unionType: kUnionType;
+    subSet?: TQuerySelect;
 }

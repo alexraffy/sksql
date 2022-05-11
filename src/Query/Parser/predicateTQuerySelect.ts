@@ -29,7 +29,51 @@ import {TAlias} from "../Types/TAlias";
 import {TValidExpressions} from "../Types/TValidExpressions";
 import {checkAhead} from "../../BaseParser/Predicates/checkAhead";
 import {isKeyword} from "../isKeyword";
+import {kUnionType} from "../Enums/kUnionType";
 
+
+function * predicateTypeOfJoin() {
+
+    let join = yield maybe(oneOf(
+        [
+            str(","),
+            checkSequence([str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("INNER"), atLeast1(whitespaceOrNewLine), str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("CROSS"), atLeast1(whitespaceOrNewLine), str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("LEFT"), atLeast1(whitespaceOrNewLine),
+                maybe(checkSequence([str("OUTER"), atLeast1(whitespaceOrNewLine)])),
+                str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("RIGHT"), atLeast1(whitespaceOrNewLine),
+                maybe(checkSequence([str("OUTER"), atLeast1(whitespaceOrNewLine)])),
+                str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("FULL"), atLeast1(whitespaceOrNewLine),
+                maybe(checkSequence([str("OUTER"), atLeast1(whitespaceOrNewLine)])),
+                str("JOIN"), atLeast1(whitespaceOrNewLine)])
+        ], ""));
+    if (join === undefined) {
+        yield returnPred(undefined);
+        return;
+    }
+
+    if (typeof join === "string" && join === ",") {
+        yield returnPred(kQueryJoin.cross);
+    }
+    if (join.length > 0 && join[0].toUpperCase() === "JOIN" || join[0].toUpperCase() === "INNER") {
+        yield returnPred(kQueryJoin.inner);
+    }
+    if (join.length > 0 && join[0].toUpperCase() === "LEFT") {
+        yield returnPred(kQueryJoin.left);
+    }
+    if (join.length > 0 && join[0].toUpperCase() === "RIGHT") {
+        yield returnPred(kQueryJoin.right);
+    }
+    if (join.length > 0 && join[0].toUpperCase() === "FULL") {
+        yield returnPred(kQueryJoin.full);
+    }
+    if (join.length > 0 && join[0].toUpperCase() === "CROSS") {
+        yield returnPred(kQueryJoin.cross);
+    }
+}
 
 
 /*
@@ -122,7 +166,9 @@ export const predicateTQuerySelect = function *(callback) {
     )
     yield maybe(atLeast1(whitespaceOrNewLine));
 
-    let hasMoreTables = yield maybe(oneOf([str(","), str("LEFT JOIN"), str("RIGHT JOIN"), str("JOIN")], ""));
+
+
+    let hasMoreTables = yield predicateTypeOfJoin; //yield maybe(oneOf([str(","), str("LEFT JOIN"), str("RIGHT JOIN"), str("JOIN")], ""));
     while (hasMoreTables !== undefined) {
         yield maybe(atLeast1(whitespaceOrNewLine));
         let joinTableName;
@@ -142,6 +188,14 @@ export const predicateTQuerySelect = function *(callback) {
         let alias = joinTableName;
         if (tableAliasSeq !== undefined) {
             alias = tableAliasSeq[2];
+        } else {
+            let aliasWithoutAS = yield maybe(checkAhead([literal], ""));
+            if (aliasWithoutAS !== undefined) {
+                if (!isKeyword(aliasWithoutAS)) {
+                    aliasWithoutAS = yield literal;
+                    alias = aliasWithoutAS;
+                }
+            }
         }
         yield maybe(atLeast1(whitespaceOrNewLine));
         let hasOnClause = yield maybe(str("ON"));
@@ -159,13 +213,13 @@ export const predicateTQuerySelect = function *(callback) {
         let tbl : TQueryTable = {
             kind: "TQueryTable",
             tableName: as,
-            joinType: kQueryJoin.left,
+            joinType: hasMoreTables,
             joinTarget: undefined,
             joinClauses: joinClause
         }
         tables.push(tbl);
         yield maybe(atLeast1(whitespaceOrNewLine));
-        hasMoreTables = yield maybe(oneOf([str(","), str("LEFT JOIN"), str("RIGHT JOIN"), str("JOIN")], ""));
+        hasMoreTables = yield predicateTypeOfJoin;
     }
 
     const where = yield maybe(str("WHERE"));
@@ -176,11 +230,10 @@ export const predicateTQuerySelect = function *(callback) {
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
 
-    const groupBy = yield maybe(str("GROUP BY"));
+    const groupBy = yield maybe(checkSequence([str("GROUP"), atLeast1(whitespaceOrNewLine), str("BY"), atLeast1(whitespaceOrNewLine)]));
     let groupByClauses: TQueryOrderBy[] = [];
     let havingClause: TQueryExpression | TValidExpressions;
-    if (groupBy !== undefined && groupBy.toUpperCase() === "GROUP BY") {
-        yield atLeast1(whitespaceOrNewLine);
+    if (groupBy !== undefined && groupBy[0].toUpperCase() === "GROUP") {
         let gotMoreGroups = ",";
         while (gotMoreGroups === ",") {
             yield maybe(atLeast1(whitespaceOrNewLine));
@@ -230,8 +283,28 @@ export const predicateTQuerySelect = function *(callback) {
         }
     }
 
-
     yield maybe(atLeast1(whitespaceOrNewLine));
+
+    let hasUnion = yield maybe(oneOf([
+        checkSequence([str("UNION"), atLeast1(whitespaceOrNewLine), str("ALL"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("UNION"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("EXCEPT"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("INTERSECT"), atLeast1(whitespaceOrNewLine)])], ""));
+    let unionType: kUnionType = kUnionType.none;
+    let subSet: TQuerySelect = undefined;
+    if (hasUnion !== undefined) {
+        subSet = yield predicateTQuerySelect;
+        if (hasUnion.length >= 3 && hasUnion[0].toUpperCase() === "UNION" && hasUnion[2].toUpperCase() === "ALL") {
+            unionType = kUnionType.unionAll;
+        } else if (hasUnion[0].toUpperCase() === "UNION") {
+            unionType = kUnionType.union;
+        } else if (hasUnion[0].toUpperCase() === "EXCEPT") {
+            unionType = kUnionType.except;
+        } else if (hasUnion[0].toUpperCase() === "INTERSECT") {
+            unionType = kUnionType.intersect;
+        }
+    }
+
     yield maybe(str(";"));
     yield maybe(atLeast1(whitespaceOrNewLine));
     return returnPred(
@@ -245,7 +318,10 @@ export const predicateTQuerySelect = function *(callback) {
             orderBy: orderByClauses,
             groupBy: groupByClauses,
             having: havingClause,
-            resultTableName: "#" + generateV4UUID()
+            resultTableName: "#" + generateV4UUID(),
+            hasDistinct: hasDistinct !== undefined,
+            unionType: unionType,
+            subSet: subSet
         } as TQuerySelect
     );
 }

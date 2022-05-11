@@ -54,6 +54,7 @@ import {cloneContext} from "../ExecutionPlan/cloneContext";
 import {predicateTGO} from "../Query/Parser/predicateTGO";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {predicateVacuum} from "../Query/Parser/predicateVacuum";
+import {predicateParseError} from "../BaseParser/Predicates/predicateParseError";
 
 
 let performance = undefined;
@@ -205,7 +206,7 @@ export class SQLStatement {
                 let result;
 
                 yield maybe(atLeast1(whitespaceOrNewLine));
-                let stType = yield checkAhead([oneOf([
+                let stType = yield maybe(checkAhead([oneOf([
                     checkSequence([str("--")]),
                     checkSequence([str("ALTER"), whitespaceOrNewLine]),
                     checkSequence([str("BEGIN"), whitespaceOrNewLine]),
@@ -227,7 +228,7 @@ export class SQLStatement {
                     checkSequence([str("UPDATE"), whitespaceOrNewLine]),
                     checkSequence([str("WHILE"), whitespaceOrNewLine]),
                     checkSequence([str("VACUUM"), endOfStatement])
-                ], "")], "");
+                ], "")], ""));
 
                 if (stType !== undefined) {
                     switch ((stType as any[])[0]) {
@@ -353,6 +354,8 @@ export class SQLStatement {
                             result = yield predicateVacuum;
                             break;
                     }
+                } else {
+                    let error = yield predicateParseError("A VALID STATEMENT");
                 }
 
 

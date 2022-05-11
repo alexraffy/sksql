@@ -159,7 +159,8 @@ export function checkConstraint(db: SKSQL, context: TExecutionContext, tbl: ITab
                 table: { kind: "TTable", table: def.name, schema: "dbo" } as TTable,
                 projection: [],
                 predicate: ret.exp,
-                result: ""
+                result: "",
+                acceptUnknownPredicateResult: false
             }
             let nc = cloneContext(context, "", false, false);
 
@@ -211,7 +212,8 @@ export function checkConstraint(db: SKSQL, context: TExecutionContext, tbl: ITab
                 table: { kind: "TTable", table: foreignTableName, schema: "dbo" } as TTable,
                 projection: [],
                 predicate: ret.exp,
-                result: ""
+                result: "",
+                acceptUnknownPredicateResult: false
             }
             let nc = cloneContext(context, "", false, false);
             let foundReference = false;

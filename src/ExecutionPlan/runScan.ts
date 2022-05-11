@@ -18,10 +18,23 @@ import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult
 // if a predicate is present, we evaluate it
 // finally if the record is wanted, we call back onRowSelected
 
+export interface TScanResult {
+    rowsScannedTotal: number;
+    rowsScanned: number;
+    rowsSelected: number;
+}
+
 export function runScan(db: SKSQL, context: TExecutionContext,
                         tep: TEPScan,
                         tables: TTableWalkInfo[],
-                        onRowSelected: (scan: TEPScan, tables: TTableWalkInfo[]) => boolean) {
+                        onRowSelected: (scan: TEPScan, tables: TTableWalkInfo[]) => boolean): TScanResult  {
+    let retInfo: TScanResult = {
+        rowsScannedTotal: 0,
+        rowsScanned: 0,
+        rowsSelected: 0
+    }
+
+
     let tableName = getValueForAliasTableOrLiteral(tep.table);
     let tblInfo = db.tableInfo.get(tableName.table);
 
@@ -35,14 +48,18 @@ export function runScan(db: SKSQL, context: TExecutionContext,
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
         const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted) {
+            retInfo.rowsScannedTotal += 1;
             walk.cursor = readNext(walk.table, walk.def, walk.cursor);
             continue;
         }
+        retInfo.rowsScanned += 1;
         let selectRow: TBooleanResult = {kind: "TBooleanResult", value: kBooleanResult.isTrue};
         if (tep.predicate !== undefined) {
             selectRow = evaluate(db, context, tep.predicate, tables, undefined, {currentStep: tep, aggregateObjects: [], aggregateMode: "none"}) as TBooleanResult;
         }
-        if (instanceOfTBooleanResult(selectRow) && selectRow.value === kBooleanResult.isTrue || ((typeof selectRow === "boolean") && selectRow === true)) {
+        if (instanceOfTBooleanResult(selectRow) && selectRow.value === kBooleanResult.isTrue || ((typeof selectRow === "boolean") && selectRow === true) ||
+            (instanceOfTBooleanResult(selectRow) && selectRow.value === kBooleanResult.isUnknown && tep.acceptUnknownPredicateResult === true)) {
+            retInfo.rowsSelected += 1;
             let ret = onRowSelected(tep, [walk, ...tables]);
             if (ret === false){
                 break;
@@ -50,7 +67,7 @@ export function runScan(db: SKSQL, context: TExecutionContext,
         }
         walk.cursor = readNext(walk.table, walk.def, walk.cursor);
     }
+    walk.cursor = {offset: -1, tableIndex: -1, blockIndex: -1, rowLength: walk.rowLength};
 
-
-
+    return retInfo;
 }

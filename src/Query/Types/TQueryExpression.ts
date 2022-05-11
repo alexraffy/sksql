@@ -9,7 +9,7 @@ import {TValidExpressions} from "./TValidExpressions";
 export interface TQueryExpression {
     kind: "TQueryExpression";
     value: {
-        left: TValidExpressions;
+        left: TQueryExpression | TValidExpressions;
         op: kQueryExpressionOp;
         right: TQueryExpression | TValidExpressions;
     }

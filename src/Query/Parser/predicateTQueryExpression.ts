@@ -68,7 +68,16 @@ export function * predicateTQueryExpression() {
         checkSequence([str("SET"), whitespaceOrNewLine]),
         checkSequence([str("TRUNCATE"), whitespaceOrNewLine]),
         checkSequence([str("UPDATE"), whitespaceOrNewLine]),
-        checkSequence([str("WHILE"), whitespaceOrNewLine])
+        checkSequence([str("WHILE"), whitespaceOrNewLine]),
+        checkSequence([str("UNION"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("INTERSECT"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("EXCEPT"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("JOIN"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("LEFT"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("RIGHT"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("INNER"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("CROSS"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("FULL"), atLeast1(whitespaceOrNewLine)])
     ];
 
     let chain: (TQueryExpression | TValidExpressions | kQueryExpressionOp)[] = [];
@@ -321,6 +330,9 @@ export function * predicateTQueryExpression() {
         for (let idx = 0; idx < chain.length - 1; idx++) {
             if (typeof chain[idx] === "string") {
                 if (chain[idx] === "+" || chain[idx] === "-") {
+                    if (idx + 1 < chain.length -1 && (chain[idx+1] === "+" || chain[idx+1] === "-")) {
+                        continue;
+                    }
                     let replaceWith : TQueryExpression | TValidExpressions = {
                         kind: "TQueryExpression",
                         value: {
@@ -443,7 +455,9 @@ export function * predicateTQueryExpression() {
     }
 
     fn(chain);
-
+    if (chain.length > 1) {
+        throw new TParserError("Unexpected operand in expression: " + chain[1]);
+    }
 
     yield returnPred(chain[0]);
 

@@ -35,6 +35,7 @@ import {instanceOfTStar} from "../Query/Guards/instanceOfTStar";
 import {instanceOfTQueryUpdate} from "../Query/Guards/instanceOfTQueryUpdate";
 import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {rowHeaderSize} from "../Table/addRow";
+import {ITableCursor} from "../Cursor/ITableCursor";
 
 
 // Walk an SQL statement AST tree for Tables and add them to a list.
@@ -72,7 +73,7 @@ export function addTable2Context(db, context, tableName: string, alias: TAlias) 
         context.tables.push({
             table: table,
             def: def,
-            cursor: readFirst(table, def),
+            cursor: {offset:-1, tableIndex: -1, blockIndex: -1, rowLength: len } as ITableCursor, //readFirst(table, def),
             alias: a.toUpperCase(),
             name: tableName.toUpperCase(),
             rowLength: len + rowHeaderSize

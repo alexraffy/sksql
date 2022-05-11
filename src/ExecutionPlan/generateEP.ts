@@ -152,6 +152,10 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
     let expressionType: TableColumnType = TableColumnType.int32;
     let expressionLength: number = undefined;
     let expressionTypes: TableColumnType[] = [];
+
+    let tablesReferencesInWhereExpression: {tables: string[], operator: "AND" | "OR"}[] = [];
+    let tablesReferencesInCurrentExpression = [];
+
     walkTree(db, context, select, context.tables, context.stack, select, [], {status: "", extra: {}},
         (obj, parents, info) => {
 
@@ -238,6 +242,7 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 if (["==", "=", "!=", "<>", "<=", "<", ">", ">=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "NOT", "NOT BETWEEN", "AND", "AND NOT", "OR", "IS NULL", "IS NOT NULL"].includes(obj.value.op)) {
                     expressionTypes.push(TableColumnType.boolean);
                 }
+
             }
 
 
@@ -249,6 +254,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                     expressionTypes.push(info.colData.def.type);
                 }
                 obj.table = info.colData.table.name.toUpperCase();
+
+                tablesReferencesInCurrentExpression.push(obj.table);
 
                 // if the TColumn is from a group by clause or a parameter of an aggregate function
                 // we add it to the projection list.
@@ -513,7 +520,28 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
 
                 }
             }
+            if (instanceOfTQueryExpression(obj)) {
+                if (info.status.status === "SELECT.WHERE") {
+                    // attempt to identify what part of the where expression can be moved to a table scan
+                    // for example in the query below
+                    // SELECT columns FROM table1 JOIN table2 ON some_clause WHERE table1.a = value
+                    // if we test the where clause after the join, we would have wasted cpu time scanning the whole of table2 if the table1.a column is different from the value
+                    // if we find a part of the predicate only references one table and is not next to a OR referencing a different table, we can move that predicate
+                    // to the table scan and avoid a useless nested scan
+                    if (instanceOfTQuerySelect(select)) {
+                        if (select.tables.length === 1) {
+                            return true;
+                        }
+                    }
 
+
+                }
+            }
+            if (instanceOfTQuerySelect(obj)) {
+                if (info.status.status === "SELECT.WHERE") {
+
+                }
+            }
 
         return true;
     });
@@ -573,7 +601,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             range: undefined,
             projection: projections,
             predicate: (idx === 0) ? select.where : select.tables[idx].joinClauses,
-            result: currentDestName
+            result: currentDestName,
+            acceptUnknownPredicateResult: false
         }
         if (idx === select.tables.length - 1 && select.tables.length > 1) {
             if (select.where !== undefined && select.tables[idx].joinClauses !== undefined) {
@@ -592,7 +621,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             }
         }
         if (idx === 0 && select.tables.length > 1) {
-            scan.predicate = undefined;
+            scan.predicate = select.where; //undefined;
+            scan.acceptUnknownPredicateResult = true;
         }
 
         if (current !== undefined) {
@@ -600,7 +630,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 kind: "TEPNestedLoop",
                 a: scan,
                 b: current,
-                join: select.tables[idx].joinClauses
+                join: select.tables[idx+1].joinClauses,
+                joinType: select.tables[idx+1].joinType
             }
             current = nestedLoop;
         } else {
@@ -616,7 +647,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             range: undefined,
             projection: projections,
             predicate:  (select as TQueryUpdate).where,
-            result: currentDestName
+            result: currentDestName,
+            acceptUnknownPredicateResult: false
         }
         current = scan;
 

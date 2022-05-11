@@ -312,6 +312,10 @@ export function evaluate(
                     if (left.value === kBooleanResult.isTrue && right.value === kBooleanResult.isTrue) {
                         return {kind: "TBooleanResult", value: kBooleanResult.isTrue };
                     }
+                    if ((left.value === kBooleanResult.isFalse && right.value === kBooleanResult.isUnknown) ||
+                        (left.value === kBooleanResult.isUnknown && right.value === kBooleanResult.isFalse)) {
+                        return {kind: "TBooleanResult", value: kBooleanResult.isFalse};
+                    }
                     if (left.value === kBooleanResult.isUnknown || right.value === kBooleanResult.isUnknown) {
                         return {kind: "TBooleanResult", value: kBooleanResult.isUnknown};
                     }
@@ -321,6 +325,10 @@ export function evaluate(
                 case kQueryExpressionOp.boolAndNot: {
                     if (left.value === kBooleanResult.isTrue && right.value === kBooleanResult.isFalse) {
                         return {kind: "TBooleanResult", value: kBooleanResult.isTrue};
+                    }
+                    if ((left.value === kBooleanResult.isFalse && right.value === kBooleanResult.isUnknown) ||
+                        (left.value === kBooleanResult.isUnknown && right.value === kBooleanResult.isFalse)) {
+                        return {kind: "TBooleanResult", value: kBooleanResult.isFalse};
                     }
                     if (left.value === kBooleanResult.isUnknown || right.value === kBooleanResult.isUnknown) {
                         return {kind: "TBooleanResult", value: kBooleanResult.isUnknown};

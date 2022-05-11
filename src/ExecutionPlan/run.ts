@@ -26,6 +26,15 @@ import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
 import {recordSize} from "../Table/recordSize";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 import {kBooleanResult} from "../API/kBooleanResult";
+import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
+import {compareBytesBetweenDV} from "../BlockIO/compareBytesBetweenDV";
+import {processSelectStatement} from "./processSelectStatement";
+import {createNewContext} from "./newContext";
+import {TTable} from "../Query/Types/TTable";
+import {readTableDefinition} from "../Table/readTableDefinition";
+import {kUnionType} from "../Query/Enums/kUnionType";
+import {isRowInSet} from "./isRowInSet";
+import {copyRow} from "../BlockIO/copyRow";
 
 
 // Run an execution plan.
@@ -38,6 +47,7 @@ export function run(db: SKSQL, context: TExecutionContext,
     let rowsModified = 0;
     let runCallback = function (tep: TEPScan | TEPNestedLoop, walkInfos: TTableWalkInfo[]) {
         let resultWI: TTableWalkInfo = undefined;
+        let hasDistinct: boolean = statement.hasDistinct;
         if (tep.kind === "TEPScan") {
             resultWI = walkInfos.find((w) => { return w.name.toUpperCase() === tep.result.toUpperCase(); });
         } else if (tep.kind === "TEPNestedLoop") {
@@ -48,7 +58,16 @@ export function run(db: SKSQL, context: TExecutionContext,
         while (resultWI.rowLength > lenNewBuffer) {
             lenNewBuffer = lenNewBuffer * 2;
         }
-        let row = addRow(resultWI.table.data, lenNewBuffer);
+
+
+        // let row = addRow(resultWI.table.data, lenNewBuffer);
+        // write to a temp buffer
+        // if distinct is specified we'll have to check if a row already exists with the same data
+        // we'll copy the content to a new row after
+        let ab = new ArrayBuffer(resultWI.cursor.rowLength + rowHeaderSize);
+        let row = new DataView(ab, 0, resultWI.cursor.rowLength + rowHeaderSize);
+
+
         let columns = resultWI.def.columns;
         if (tep.kind === "TEPScan") {
             for (let i = 0; i < tep.projection.length; i++) {
@@ -80,12 +99,28 @@ export function run(db: SKSQL, context: TExecutionContext,
                 }
             }
         }
-        rowsModified++;
-        if (statement.top !== undefined) {
-            if (statement.orderBy === undefined || statement.orderBy.length === 0) {
-                let topValue = evaluate(db, context, statement.top, [], undefined);
-                if ((typeof topValue === "number" && topValue <= rowsModified) || (isNumeric(topValue) && topValue.m <= rowsModified)) {
-                    return false;
+        let writeRow = true;
+        if (hasDistinct) {
+            let distinctCursor = readFirst(resultWI.table, resultWI.def);
+            while (!cursorEOF(distinctCursor)) {
+                let existingRow = new DataView(resultWI.table.data.blocks[distinctCursor.blockIndex], distinctCursor.offset, distinctCursor.rowLength + rowHeaderSize);
+                if (compareBytesBetweenDV(resultWI.cursor.rowLength, row, existingRow, rowHeaderSize, rowHeaderSize) === -1) {
+                    writeRow = false;
+                    break;
+                }
+                distinctCursor = readNext(resultWI.table, resultWI.def, distinctCursor);
+            }
+        }
+        if (writeRow) {
+            let newRow = addRow(resultWI.table.data, lenNewBuffer);
+            copyBytesBetweenDV(resultWI.cursor.rowLength, row, newRow, rowHeaderSize, rowHeaderSize);
+            rowsModified++;
+            if (statement.top !== undefined) {
+                if (statement.orderBy === undefined || statement.orderBy.length === 0) {
+                    let topValue = evaluate(db, context, statement.top, [], undefined);
+                    if ((typeof topValue === "number" && topValue <= rowsModified) || (isNumeric(topValue) && topValue.m <= rowsModified)) {
+                        return false;
+                    }
                 }
             }
         }
@@ -157,6 +192,81 @@ export function run(db: SKSQL, context: TExecutionContext,
         }
     }
 
+    if (statement.subSet !== undefined) {
+        // open the result table from the previous st
+        let mainTable = db.getTable(context.result.resultTableName);
+        let mainTableDef = readTableDefinition(mainTable.data);
+        let mainTableCursor = readFirst(mainTable, mainTableDef);
+        let lenNewBuffer = 65536;
+        while (mainTableCursor.rowLength > lenNewBuffer) {
+            lenNewBuffer = lenNewBuffer * 2;
+        }
+        let subQuery = statement.subSet as TQuerySelect;
+        let newC = createNewContext("subSet", "", undefined );
+        let rt : TTable = processSelectStatement(db, newC, subQuery, true, {printDebug: false});
+        context.openedTempTables.push(rt.table);
+        let subSetTable = db.getTable(rt.table);
+        let subSetTableDef = readTableDefinition(subSetTable.data);
+        let subSetCursor = readFirst(subSetTable, subSetTableDef);
 
+        if (statement.unionType !== kUnionType.none && statement.unionType !== kUnionType.intersect) {
+            while (!cursorEOF(subSetCursor)) {
+                let dv = new DataView(subSetTable.data.blocks[subSetCursor.blockIndex], subSetCursor.offset, subSetCursor.rowLength + rowHeaderSize);
+                let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
+                const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                if (isDeleted) {
+                    subSetCursor = readNext(subSetTable, subSetTableDef, subSetCursor);
+                    continue;
+                }
+                let bCopyRow = true;
+                let rowExists: { exists: boolean, info: {blockIndex: number, offset: number }[]};
+                if (statement.unionType === kUnionType.union || statement.unionType === kUnionType.except) {
+                    rowExists = isRowInSet(dv, subSetTable, subSetTableDef, mainTable, mainTableDef);
+                    if (rowExists.exists === true && statement.unionType === kUnionType.union) {
+                        //add row
+                        bCopyRow = false;
+                    } else if (statement.unionType === kUnionType.except) {
+                        bCopyRow = false;
+                        if (rowExists.exists === true) {
+                            for (let i = 0; i < rowExists.info.length; i++) {
+                                let row = new DataView(mainTable.data.blocks[rowExists.info[i].blockIndex], rowExists.info[i].offset);
+                                let flag = row.getUint8(kBlockHeaderField.DataRowFlag);
+                                flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
+                                row.setUint8(kBlockHeaderField.DataRowFlag, flag);
+                            }
+                        }
+                    }
+                } else if (statement.unionType === kUnionType.unionAll) {
+                    bCopyRow = true;
+                    rowsModified++;
+                }
+                if (bCopyRow === true) {
+                    copyRow(dv, subSetTable, subSetTableDef, mainTable, mainTableDef, lenNewBuffer);
+                    rowsModified++;
+                }
+                subSetCursor = readNext(subSetTable, subSetTableDef, subSetCursor);
+            }
+        } else if (statement.unionType === kUnionType.intersect) {
+            while (!cursorEOF(mainTableCursor)) {
+                let mainTableRow = new DataView(mainTable.data.blocks[mainTableCursor.blockIndex], mainTableCursor.offset, mainTableCursor.rowLength + rowHeaderSize);
+                let flag = mainTableRow.getUint8(kBlockHeaderField.DataRowFlag);
+                const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                if (isDeleted) {
+                    mainTableCursor = readNext(mainTable, mainTableDef, mainTableCursor);
+                    continue;
+                }
+
+                let rowExists = isRowInSet(mainTableRow, mainTable, mainTableDef, subSetTable, subSetTableDef);
+                if (rowExists.exists === false) {
+                    let flag = mainTableRow.getUint8(kBlockHeaderField.DataRowFlag);
+                    flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
+                    mainTableRow.setUint8(kBlockHeaderField.DataRowFlag, flag);
+                }
+
+                mainTableCursor = readNext(mainTable, mainTableDef, mainTableCursor);
+            }
+        }
+
+    }
 
 }

@@ -30,7 +30,16 @@ export function str(equalsTo: string): (input: Stream) => ParseResult | ParseErr
         if (value === equalsTo) {
             return new ParseResult(value, s, input, value);
         } else {
-            return new ParseError(input, equalsTo + " got " + value + " instead", false);
+            let readAhead = character;
+            let nextInput = input.next();
+            while (nextInput.EOF === false && character !== " ") {
+                character = nextInput.get().toUpperCase();
+                if (character !== " ") {
+                    readAhead += character;
+                }
+                nextInput = nextInput.next();
+            }
+            return new ParseError(input, equalsTo + " got " + readAhead + " instead", false);
         }
     }
 }

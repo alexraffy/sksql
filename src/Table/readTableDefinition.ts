@@ -68,18 +68,20 @@ export function readTableDefinition(tb: ITableData, showInvisibleColumns = false
         const type = dv.getUint8(offset + kBlockHeaderField.TableDefColumnType);
         const flag1 = dv.getUint8(offset + kBlockHeaderField.TableDefColumnFlag1);
         const flag2 = dv.getUint8(offset + kBlockHeaderField.TableDefColumnFlag2);
-        const flag3 = dv.getUint8(offset + kBlockHeaderField.TableDefColumnFlag3);
+        const decimal = dv.getUint8(offset + kBlockHeaderField.TableDefColumnFlag3);
         const length = dv.getUint32(offset + kBlockHeaderField.TableDefColumnLength);
         const columnOffset = dv.getUint32(offset + kBlockHeaderField.TableDefColumnOffset);
         const name = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefColumnName, 255);
         const defaultValue = readStringFromUtf8Array(dv, offset + kBlockHeaderField.TableDefColumnDefaultExpression, 255);
         const invisible = (flag2 & kBlockHeaderField.TableDefColumnFlag2Bit_Invisible) === kBlockHeaderField.TableDefColumnFlag2Bit_Invisible;
+
         let col: TableColumn = {
             name: name,
             type: type as TableColumnType,
             nullable: (flag1 & kBlockHeaderField.TableDefColumnFlag1Bit_Nullable) === kBlockHeaderField.TableDefColumnFlag1Bit_Nullable,
             defaultExpression: defaultValue,
             length: length,
+            decimal: decimal,
             offset: columnOffset
         };
         if (invisible === false || showInvisibleColumns === true) {

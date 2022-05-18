@@ -1,7 +1,7 @@
 
 
 
-import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
+import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, serializeTableDefinition} from "sksql";
 import {runTest} from "./runTest";
 
 
@@ -13,6 +13,9 @@ export function check(db: SKSQL, next:()=>void) {
         "      y NUMERIC(12,2) CHECK( y>x )\n" +
         "    );"
     runTest(db, sql, false, false, undefined);
+
+    let tableDefinition = serializeTableDefinition(db, "t1");
+
     runTest(db, "INSERT INTO t1 VALUES(3,4);\n" +
         "    SELECT * FROM t1;", false, false, [[3, numericLoad("4.0")]]);
     runTest(db, "INSERT INTO t1 VALUES(6,7);", true, true, undefined);

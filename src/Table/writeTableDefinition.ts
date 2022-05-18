@@ -105,7 +105,7 @@ export function writeTableDefinition(tb: ITableData, tbl: ITableDefinition): ITa
         d.setUint8(offset + kBlockHeaderField.TableDefColumnType,c.type);
         d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag1, columnFlag1);
         d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag2, columnFlag2);
-        d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag3, 0);
+        d.setUint8(offset + kBlockHeaderField.TableDefColumnFlag3, (c.decimal===undefined) ? 0 : c.decimal);
         d.setUint32(offset + kBlockHeaderField.TableDefColumnLength, c.length);
         d.setUint32(offset + kBlockHeaderField.TableDefColumnOffset, columnOffset);
         writeStringToUtf8ByteArray(d, offset + kBlockHeaderField.TableDefColumnName, c.name, 255);

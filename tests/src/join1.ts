@@ -64,7 +64,7 @@ export function join1(db: SKSQL, next:()=>void) {
         ["Josh", "Thompson", "IT"],
         ["Gary", "Powell", "IT"],
         ["Joe", "Intern", undefined]
-    ], undefined, {printDebug: true});
+    ], undefined, {printDebug: false});
 
 
     runTest(db, "DROP TABLE t1; DROP TABLE t2;", false, false, undefined);

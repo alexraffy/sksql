@@ -17,6 +17,8 @@ import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLi
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {predicateValidExpressions} from "./predicateValidExpressions";
+import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
+import {checkAhead} from "../../BaseParser/Predicates/checkAhead";
 
 
 /*
@@ -24,10 +26,7 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
  */
 const predicateTQueryConstraint = function (table: TTable, constraints: TTableConstraint[], currentColumn: string) {
     return function *(callback) {
-        //@ts-ignore
-        if (callback as string === "isGenerator") {
-            return;
-        }
+
         let constraintName = undefined;
         let isConstraint = yield maybe(str("CONSTRAINT"));
         if (isConstraint === "CONSTRAINT") {
@@ -39,12 +38,14 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
         }
 
         const columnNameOrConstraint = yield oneOf([
-            str("PRIMARY KEY"), str("UNIQUE"),
-            str("FOREIGN KEY"), str("CHECK")], "")
+            checkSequence([str("PRIMARY"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+            checkSequence([str("UNIQUE"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("FOREIGN"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+            checkSequence([str("CHECK")])], "A CONSTRAINT TYPE");
 
 
         yield maybe(atLeast1(whitespaceOrNewLine));
-        if (columnNameOrConstraint.toUpperCase() === "PRIMARY KEY" || columnNameOrConstraint.toUpperCase() === "UNIQUE") {
+        if (columnNameOrConstraint[0].toUpperCase() === "PRIMARY" || columnNameOrConstraint[0].toUpperCase() === "UNIQUE") {
             let columns: { name: string, ascending: boolean }[] = [];
             yield maybe(atLeast1(whitespaceOrNewLine));
             const clustering = yield maybe(oneOf([str("CLUSTERED"), str("NON CLUSTERED")], ""));
@@ -86,7 +87,7 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                 foreignKeyOnUpdate: kForeignKeyOnEvent.noAction
             });
 
-        } else if (columnNameOrConstraint.toUpperCase() === "FOREIGN KEY") {
+        } else if (columnNameOrConstraint[0].toUpperCase() === "FOREIGN") {
             yield maybe(atLeast1(whitespaceOrNewLine));
             yield str("(");
             let columns: { name: string, ascending: boolean }[] = [];
@@ -133,12 +134,14 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
             yield maybe(atLeast1(whitespaceOrNewLine));
             let onUpdate: kForeignKeyOnEvent = kForeignKeyOnEvent.noAction;
             let onDelete: kForeignKeyOnEvent = kForeignKeyOnEvent.noAction
-            let hasTriggerCheck = yield maybe(oneOf([str("ON UPDATE"), str("ON DELETE")], ""));
+            let hasTriggerCheck = yield maybe(oneOf([
+                checkSequence([str("ON"), atLeast1(whitespaceOrNewLine), str("UPDATE")]),
+                checkSequence([str("ON"), atLeast1(whitespaceOrNewLine), str("DELETE")])], ""));
             while (hasTriggerCheck !== undefined) {
                 yield atLeast1(whitespaceOrNewLine);
                 let onEventAction = yield oneOf([str("NO ACTION"), str("CASCADE"), str("SET NULL"), str("SET DEFAULT")], "");
 
-                if (hasTriggerCheck === "ON UPDATE") {
+                if (hasTriggerCheck[2].toUpperCase() === "UPDATE") {
                     switch (onEventAction.toUpperCase()) {
                         case "NO ACTION":
                             onUpdate = kForeignKeyOnEvent.noAction;
@@ -154,7 +157,7 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                             break;
                     }
                 }
-                if (hasTriggerCheck === "ON DELETE") {
+                if (hasTriggerCheck[2].toUpperCase() === "DELETE") {
                     switch (onEventAction.toUpperCase()) {
                         case "NO ACTION":
                             onDelete = kForeignKeyOnEvent.noAction;
@@ -171,7 +174,9 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                     }
                 }
                 yield maybe(atLeast1(whitespaceOrNewLine));
-                hasTriggerCheck = yield maybe(oneOf([str("ON UPDATE"), str("ON DELETE")], ""));
+                hasTriggerCheck = yield maybe(oneOf([
+                    checkSequence([str("ON"), atLeast1(whitespaceOrNewLine), str("UPDATE")]),
+                    checkSequence([str("ON"), atLeast1(whitespaceOrNewLine), str("DELETE")])], ""));
             }
 
             if (constraintName === undefined) {
@@ -195,7 +200,7 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                 }
             )
 
-        } else if (columnNameOrConstraint.toUpperCase() === "CHECK") {
+        } else if (columnNameOrConstraint[0].toUpperCase() === "CHECK") {
             yield maybe(atLeast1(whitespaceOrNewLine));
             yield str("(");
             yield maybe(atLeast1(whitespaceOrNewLine));
@@ -206,6 +211,23 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
 
             if (constraintName === undefined) {
                 constraintName = "CHK_" + table.table;
+                let exists = false;
+                for (let x = 0; x < constraints.length; x++ ) {
+                    if (constraints[x].constraintName.toUpperCase() === constraintName.toUpperCase()) {
+                        exists = true;
+                    }
+                }
+                let chkIdx = 2;
+                while (exists) {
+                    constraintName = "CHK_" + table.table + "_" + chkIdx;
+                    exists = false;
+                    for (let x = 0; x < constraints.length; x++ ) {
+                        if (constraints[x].constraintName.toUpperCase() === constraintName.toUpperCase()) {
+                            exists = true;
+                        }
+                    }
+                    chkIdx++;
+                }
             }
 
             constraints.push(
@@ -222,7 +244,7 @@ const predicateTQueryConstraint = function (table: TTable, constraints: TTableCo
                 }
             );
         }
-        yield returnPred(columnNameOrConstraint.toUpperCase());
+
 
     }
 
@@ -268,17 +290,19 @@ export const predicateTQueryCreateTable = function *(callback) {
     while (gotMore === ",") {
         yield maybe(atLeast1(whitespaceOrNewLine));
 
-        let isConstraint = yield maybe(str("CONSTRAINT"));
-        if (isConstraint === "CONSTRAINT") {
-            yield atLeast1(whitespaceOrNewLine);
-        }
-
-        const columnNameOrConstraint = yield oneOf([predicateTQueryConstraint(table, constraints, ""), literal], "")
 
 
-        if (["PRIMARY KEY", "UNIQUE", "FOREIGN KEY", "CHECK"].includes(columnNameOrConstraint.toUpperCase())) {
-
+        const hasConstraint = yield exitIf(oneOf([
+            checkSequence([str("CONSTRAINT"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("PRIMARY"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+            checkSequence([str("UNIQUE"), atLeast1(whitespaceOrNewLine)]),
+            checkSequence([str("FOREIGN"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+            checkSequence([str("CHECK")])], "A CONSTRAINT TYPE"));
+        if (hasConstraint) {
+            yield predicateTQueryConstraint(table, constraints, "");
         } else {
+            const columnNameOrConstraint = yield literal;
+
             yield atLeast1(whitespaceOrNewLine);
             const columnType = yield predicateTColumnType;
             yield maybe(atLeast1(whitespaceOrNewLine));
@@ -299,9 +323,15 @@ export const predicateTQueryCreateTable = function *(callback) {
                 yield maybe(atLeast1(whitespaceOrNewLine));
 
             }
-            let hasColumnConstraint = yield exitIf(oneOf([str("UNIQUE"), str("PRIMARY KEY"), str("CHECK")], ""));
+
+
+            const hasColumnConstraint = yield exitIf(oneOf([
+                checkSequence([str("PRIMARY"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+                checkSequence([str("UNIQUE"), atLeast1(whitespaceOrNewLine)]),
+                checkSequence([str("FOREIGN"), atLeast1(whitespaceOrNewLine), str("KEY")]),
+                checkSequence([str("CHECK")])], "A CONSTRAINT TYPE"));
             if (hasColumnConstraint === true) {
-                yield maybe(predicateTQueryConstraint(table, constraints, columnNameOrConstraint));
+                yield predicateTQueryConstraint(table, constraints, columnNameOrConstraint);
                 yield maybe(atLeast1(whitespaceOrNewLine));
             }
 

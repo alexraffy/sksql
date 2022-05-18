@@ -108,6 +108,9 @@ export class SKSQL {
     // used in skserver to delete/rename physical tables
     callbackDropTable: (db: SKSQL, tableName: string) => void = (db, tableName) => {};
     callbackRenameTable: (db: SKSQL, tableName: string, newName: string) => void = (db, tableName, newName) => {};
+    // if remote mode is enabled, no data is downloaded and all commands are sent to the server for execution.
+    remoteModeOnly: boolean = false;
+
 
     constructor() {
         this.allTables = [];
@@ -166,7 +169,8 @@ export class SKSQL {
 
                         connectionInfo.socket.send(WSRAuthenticate, {
                             id: msg.id,
-                            info: connectionInfo.auth
+                            info: connectionInfo.auth,
+                            remoteMode: db.remoteModeOnly
                         } as TWSRAuthenticateRequest)
 
                     } else {

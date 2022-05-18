@@ -464,6 +464,23 @@ export class SQLStatement {
             this.context.result.error = (this.ast as ParseError).description;
             return this.context.result;
         }
+
+        // if remote mode is enabled, we don't execute the query but send it to the server.
+        if (this.db.remoteModeOnly === true) {
+            if (this.db.connections.length > 0) {
+                let tc = this.db.getConnectionInfoForDB(this.db.connections[0].databaseHashId);
+                if (tc !== undefined) {
+                    tc.socket.send(WSRSQL, {
+                        id: tc.socket.con_id,
+                        p: this.contextOriginal.stack,
+                        r: this.query
+                    } as TWSRSQL);
+                }
+            }
+            return this.context.result;
+        }
+
+
         let st0 = 0;
         if (performance !== undefined) {
             st0 = performance.now();

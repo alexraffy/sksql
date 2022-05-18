@@ -14,6 +14,7 @@ export const WSRAuthenticate: string = "WSRA";
 export interface TWSRAuthenticateRequest {
     id: number;
     info: TAuthSession;
+    remoteMode: boolean;
 }
 export interface TWSRAuthenticateResponse {
     con_id: number;

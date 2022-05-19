@@ -15,7 +15,7 @@ import {genStatsForTable} from "../API/genStatsForTable";
 
 export function processDropTableStatement(db: SKSQL, context: TExecutionContext, st: TQueryDropTable) {
     let tableName = getValueForAliasTableOrLiteral(st.table).table.toUpperCase();
-    if (tableName === "DUAL" || tableName === "ROUTINES") {
+    if (tableName === "DUAL" || tableName === "ROUTINES" || tableName === "SYS_TABLE_STATISTICS") {
         return;
     }
     let allTables = db.allTables;
@@ -31,6 +31,10 @@ export function processDropTableStatement(db: SKSQL, context: TExecutionContext,
         }
     }
     db.dropTable(tableName);
+
+    if (db.callbackDropTable !== undefined) {
+        db.callbackDropTable(db, tableName);
+    }
 
 
 

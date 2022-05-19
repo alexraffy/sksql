@@ -490,8 +490,12 @@ export class SKSQL {
             return (tb.toUpperCase() === tableName.toUpperCase());
         });
         if (idx > -1) {
+
             this.allTables.splice(idx, 1);
             this.tableInfo.remove(tableName);
+            if (this.callbackDropTable !== undefined) {
+                this.callbackDropTable(this, tableName);
+            }
             if (!["DUAL", "SYS_TABLE_STATISTICS"].includes(tableName.toUpperCase())) {
                 genStatsForTable(this, tableName.toUpperCase());
             }

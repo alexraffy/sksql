@@ -11,6 +11,14 @@ import {swapContext} from "./swapContext";
 import {SKSQL} from "../API/SKSQL";
 import {SQLStatement} from "../API/SQLStatement";
 import {kResultType} from "../API/kResultType";
+import {readFirst} from "../Cursor/readFirst";
+import {runScan} from "./runScan";
+import {cursorEOF} from "../Cursor/cursorEOF";
+import {rowHeaderSize} from "../Table/addRow";
+import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {readNext} from "../Cursor/readNext";
+import {readValue} from "../BlockIO/readValue";
+import {TableColumn} from "../Table/TableColumn";
 
 // run all operations in a stored proc
 
@@ -22,12 +30,36 @@ export function runProcedure(db: SKSQL, context: TExecutionContext, st: TExecute
     let newContext = cloneContext(context, proc.procName, true, true);
     newContext.query = context.query;
     if (newContext.query === "") {
-        let rt = new SQLStatement(db, "SELECT definition from routines where UPPER(name) = @procName", false);
-        rt.setParameter("@procName", proc.procName.toUpperCase());
-        let rtRet: any[] = rt.run(kResultType.JSON) as any[]
-        if (rtRet.length > 0) {
-            newContext.query = rtRet[rtRet.length-1]["definition"];
+        let routines = db.tableInfo.get("routines");
+        let colProcName: TableColumn;
+        let colDefinition: TableColumn;
+        for (let i = 0; i < routines.def.columns.length; i++) {
+            let nameUp = routines.def.columns[i].name.toUpperCase();
+            if (nameUp === "NAME") {
+                colProcName = routines.def.columns[i];
+            }
+            if (nameUp === "DEFINITION") {
+                colDefinition = routines.def.columns[i];
+            }
         }
+
+        let cursor = readFirst(routines.pointer, routines.def);
+        while (!cursorEOF(cursor)) {
+            let dv = new DataView(routines.pointer.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
+            let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
+            const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+            if (isDeleted) {
+                cursor = readNext(routines.pointer, routines.def, cursor);
+                continue;
+            }
+            let procName = readValue(routines.pointer, routines.def, colProcName, dv, rowHeaderSize) as string;
+            if (procName.toUpperCase() === proc.procName.toUpperCase()) {
+                newContext.query = readValue(routines.pointer, routines.def, colDefinition, dv, rowHeaderSize) as string;
+                break;
+            }
+            cursor = readNext(routines.pointer, routines.def, cursor);
+        }
+
     }
 
     for (let i = 0; i < proc.ops.length; i++) {

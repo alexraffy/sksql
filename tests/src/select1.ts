@@ -95,6 +95,19 @@ export function select1(db: SKSQL, next: () => void) {
     runTest(db, "SELECT f1+F2 FROM test1 ORDER BY f2", false, false, [[33], [77]], {"f1+F2": 33});
 
 
+    runTest(db, "DROP TABLE test1; CREATE TABLE test1(a int);", false, false, undefined);
+    runTest(db, "DECLARE @var int = 0; WHILE @var < 50 BEGIN SET @var = @var + 1; INSERT INTO test1 VALUES(@var); END;", false, false, undefined);
+
+    runTest(db, "SELECT * FROM test1 ORDER BY a ASC OFFSET 0 ROWS FETCH NEXT 1 ROWS", false, false, [[1]], undefined, {printDebug: false});
+    runTest(db, "SELECT * FROM test1 ORDER BY a ASC OFFSET 1 ROWS FETCH NEXT 1 ROWS", false, false, [[2]]);
+    runTest(db, "SELECT * FROM test1 ORDER BY a ASC OFFSET 20 ROWS FETCH NEXT 3 ROWS", false, false, [[21], [22], [23]]);
+    runTest(db, "SELECT * FROM test1 ORDER BY a DESC OFFSET 0 ROWS FETCH NEXT 1 ROWS", false, false, [[50]]);
+    runTest(db, "SELECT * FROM test1 ORDER BY a DESC OFFSET 1 ROWS FETCH NEXT 1 ROWS", false, false, [[49]]);
+    runTest(db, "SELECT * FROM test1 ORDER BY a DESC OFFSET 10 ROWS FETCH NEXT 3 ROWS ONLY", false, false, [[40], [39], [38]]);
+    runTest(db, "DECLARE @offset INT = 10; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT 3 ROWS ONLY", false, false, [[40], [39], [38]]);
+    runTest(db, "DECLARE @offset INT = 10; DECLARE @fetch INT = 3; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT @fetch ROWS ONLY", false, false, [[40], [39], [38]]);
+
+
     next();
 
 }

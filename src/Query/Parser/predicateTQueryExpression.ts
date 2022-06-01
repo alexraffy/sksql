@@ -17,6 +17,7 @@ import {TBetween} from "../Types/TBetween";
 import {instanceOfTBetween} from "../Guards/instanceOfTBetween";
 import {predicateTArray} from "./predicateTArray";
 
+
 // parse an expression
 //
 // We read elements pushing them in an array first, stopping when a reserved keyword is found;
@@ -77,7 +78,12 @@ export function * predicateTQueryExpression() {
         checkSequence([str("RIGHT"), atLeast1(whitespaceOrNewLine)]),
         checkSequence([str("INNER"), atLeast1(whitespaceOrNewLine)]),
         checkSequence([str("CROSS"), atLeast1(whitespaceOrNewLine)]),
-        checkSequence([str("FULL"), atLeast1(whitespaceOrNewLine)])
+        checkSequence([str("FULL"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("OFFSET"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("ROW"), endOfStatement]),
+        checkSequence([str("ROWS"), endOfStatement]),
+        checkSequence([str("FETCH"), atLeast1(whitespaceOrNewLine)]),
+        checkSequence([str("ONLY"), endOfStatement]),
     ];
 
     let chain: (TQueryExpression | TValidExpressions | kQueryExpressionOp)[] = [];

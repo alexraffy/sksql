@@ -755,15 +755,40 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                     return true;
                 });
             }
+
+            // order by result table
+            let newDest = "";
+            if (select.top !== undefined || select.offset !== undefined) {
+                let afterOrderByTableName = currentDestName + "_" + "orderBy";
+                let afterOrderByTableDef: ITableDefinition = {
+                    id: 999,
+                    name: afterOrderByTableName,
+                    columns: JSON.parse(JSON.stringify(currentDestTableDef.columns)),
+                    hasIdentity: false,
+                    identityColumnName: "",
+                    constraints: [],
+                    identityIncrement: 1,
+                    identitySeed: 1,
+                    identityValue: 0
+                };
+                let afterOrderByTable = newTable(db, afterOrderByTableDef);
+                context.openedTempTables.push(afterOrderByTableName);
+                newDest = afterOrderByTableName;
+            }
+
             let stepSort: TEPSortNTop = {
                 kind: "TEPSortNTop",
                 source: currentDestName,
                 orderBy: copyOrderBy,
                 top: select.top,
-                dest: ""
+                dest: newDest,
+                offsetExpression: select.offset,
+                fetchExpression: select.fetch
             }
             ret.push(stepSort);
-
+            if (newDest !== "") {
+                currentDestName = newDest;
+            }
 
         }
     }

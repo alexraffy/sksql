@@ -60,7 +60,7 @@ export function test_date(db: SKSQL, next:()=>void) {
     dateAdded.reverse();
 
     runTest(db, "SELECT TOP(4) dates FROM date_tests ORDER BY dates DESC", false, false,
-        [[parseDateString(dateAdded[0])], [parseDateString(dateAdded[1])], [parseDateString(dateAdded[2])], [parseDateString(dateAdded[3])]]);
+        [[parseDateString(dateAdded[0])], [parseDateString(dateAdded[1])], [parseDateString(dateAdded[2])], [parseDateString(dateAdded[3])]], undefined, {printDebug: false});
 
 
     let stTimes = new SQLStatement(db, "CREATE TABLE time_tests(times TIME)");

@@ -32,6 +32,7 @@ import {isKeyword} from "../isKeyword";
 import {kUnionType} from "../Enums/kUnionType";
 
 
+
 function * predicateTypeOfJoin() {
 
     let join = yield maybe(oneOf(
@@ -259,6 +260,8 @@ export const predicateTQuerySelect = function *(callback) {
     yield maybe(atLeast1(whitespaceOrNewLine));
     const orderBy = yield maybe(checkSequence([str("ORDER"), atLeast1(whitespaceOrNewLine), str("BY")]));
     let orderByClauses: TQueryOrderBy[] = [];
+    let offsetExpression: TQueryExpression | TValidExpressions = undefined;
+    let fetchExpression: TQueryExpression | TValidExpressions = undefined;
     if (orderBy !== undefined && orderBy[0].toUpperCase() === "ORDER") {
         yield atLeast1(whitespaceOrNewLine);
         let gotMoreOrderByClauses = ",";
@@ -281,6 +284,24 @@ export const predicateTQuerySelect = function *(callback) {
                 }
             );
         }
+
+        let hasOffset = yield maybe(checkSequence([str("OFFSET"), atLeast1(whitespaceOrNewLine)]));
+        if (hasOffset) {
+            offsetExpression = yield predicateTQueryExpression;
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            yield oneOf([str("ROWS"), str("ROW")], "ROW or ROWS");
+            yield maybe(atLeast1(whitespaceOrNewLine));
+            let hasFetch = yield maybe(checkSequence([str("FETCH"), atLeast1(whitespaceOrNewLine)]));
+            if (hasFetch) {
+                yield maybe(checkSequence([oneOf([str("FIRST"), str("NEXT")], "FIRST or NEXT"), atLeast1(whitespaceOrNewLine)]));
+                fetchExpression = yield predicateTQueryExpression;
+                yield maybe(atLeast1(whitespaceOrNewLine));
+                yield oneOf([str("ROWS"), str("ROW")], "ROW or ROWS");
+                yield maybe(atLeast1(whitespaceOrNewLine));
+                yield maybe(str("ONLY"));
+            }
+        }
+
     }
 
     yield maybe(atLeast1(whitespaceOrNewLine));
@@ -321,7 +342,9 @@ export const predicateTQuerySelect = function *(callback) {
             resultTableName: "#" + generateV4UUID(),
             hasDistinct: hasDistinct !== undefined,
             unionType: unionType,
-            subSet: subSet
+            subSet: subSet,
+            offset: offsetExpression,
+            fetch: fetchExpression
         } as TQuerySelect
     );
 }

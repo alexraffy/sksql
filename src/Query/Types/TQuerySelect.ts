@@ -26,4 +26,6 @@ export interface TQuerySelect {
     hasDistinct: boolean;
     unionType: kUnionType;
     subSet?: TQuerySelect;
+    offset?: TQueryExpression | TValidExpressions;
+    fetch?: TQueryExpression | TValidExpressions;
 }

@@ -35,6 +35,9 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {kUnionType} from "../Query/Enums/kUnionType";
 import {isRowInSet} from "./isRowInSet";
 import {copyRow} from "../BlockIO/copyRow";
+import {TParserError} from "../API/TParserError";
+import {dumpTable} from "../Table/dumpTable";
+
 
 
 // Run an execution plan.
@@ -159,31 +162,70 @@ export function run(db: SKSQL, context: TExecutionContext,
         if (p.kind === "TEPSortNTop") {
             let ps = p as TEPSortNTop;
             let resultWI = context.tables.find((w) => { return w.name.toUpperCase() === ps.source.toUpperCase(); });
+            //console.log("PRE SORT");
+            //console.log(dumpTable(resultWI.table));
             bubbleSort(db, context, resultWI.table,resultWI.def, ps.orderBy);
-            if (ps.top !== undefined) {
-                let topValue = evaluate(db, context, ps.top,  [], undefined);
-                let n = 0;
-                if (typeof topValue === "number") {
-                    n = topValue;
-                } else if (isNumeric(topValue)) {
-                    n = topValue.m;
-                }
+            //console.log("POST SORT");
+            //console.log(dumpTable(resultWI.table));
+            if (ps.dest !== "") {
 
+                let sortDestTable = db.getTable(ps.dest);
+                if (sortDestTable === undefined) {
+                    throw new TParserError("Could not find temp table " + ps.dest);
+                }
+                let sortDestTableDef = readTableDefinition(sortDestTable.data, false);
+
+                let offsetRow = 0;
+                let fetchXRow = undefined;
+                if (ps.top !== undefined) {
+                    let n = evaluate(db, context, ps.top,  [], undefined);
+                    if (typeof n === "number") {
+                        fetchXRow = n;
+                    } else if (isNumeric(n)) {
+                        fetchXRow = n.m;
+                    }
+                }
+                if (ps.fetchExpression !== undefined) {
+                    let n = evaluate(db, context, ps.fetchExpression,  [], undefined);
+                    if (typeof n === "number") {
+                        fetchXRow = n;
+                    } else if (isNumeric(n)) {
+                        fetchXRow = n.m;
+                    }
+                }
+                if (ps.offsetExpression !== undefined) {
+                    let n = evaluate(db, context, ps.offsetExpression,  [], undefined);
+                    if (typeof n === "number") {
+                        offsetRow = n;
+                    } else if (isNumeric(n)) {
+                        offsetRow = n.m;
+                    }
+                }
                 let curs = readFirst(resultWI.table, resultWI.def);
+                let offset = -1;
                 let num = 0;
                 while (!cursorEOF(curs)) {
-                    num++;
-                    if (num>n) {
-                        let dv = new DataView(resultWI.table.data.blocks[curs.blockIndex]);
-                        dv.setUint32(kBlockHeaderField.DataEnd, curs.offset);
-                        dv.setUint32(kBlockHeaderField.NumRows, num);
+                    let dv = new DataView(resultWI.table.data.blocks[curs.blockIndex], curs.offset, curs.rowLength + rowHeaderSize);
+                    let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
+                    const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                    if (isDeleted) {
+                        curs = readNext(resultWI.table, resultWI.def, curs);
+                        continue;
+                    }
+                    offset++;
+                    let grab = (offsetRow <= offset);
+                    if ((grab && fetchXRow === undefined) || (grab && num < fetchXRow)) {
+                        copyRow(dv, resultWI.table, resultWI.def, sortDestTable, sortDestTableDef, resultWI.table.data.blocks[curs.blockIndex].byteLength);
+                        num++;
+                    }
+                    if (fetchXRow !== undefined && num >= fetchXRow) {
                         break;
                     }
+
                     curs = readNext(resultWI.table, resultWI.def, curs);
                 }
-
-
             }
+
         }
         if (p.kind === "TEPSelect") {
             let ps = p as TEPSelect;

@@ -4,6 +4,8 @@ import {literal} from "../../BaseParser/Predicates/literal";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {TColumn} from "../Types/TColumn";
 import {TParserError} from "../../API/TParserError";
+import {isKeyword} from "../isKeyword";
+import {predicateParseError} from "../../BaseParser/Predicates/predicateParseError";
 
 /*
     tries to parse a column literal
@@ -29,8 +31,10 @@ export const predicateTColumn = function *(callback) {
         "INSERT", "RETURN", "BREAK", "IF", "WHILE", "DEBUGGER", "SET", "GROUP", "EXECUTE", "EXEC", "CONTINUE", "BEGIN",
         "END", "AS"
     ];
-    if (keyWords.includes(columnName.toUpperCase())) {
-        throw new TParserError(columnName  + " is a reserved keyword.");
+
+    if (isKeyword(columnName.toUpperCase())) {
+        yield predicateParseError(columnName  + " is a reserved keyword.");
+        return;
     }
 
     return returnPred({

@@ -8,6 +8,8 @@ import {maybe} from "../../BaseParser/Predicates/maybe";
 import {either} from "../../BaseParser/Predicates/either";
 import {atLeast1} from "../../BaseParser/Predicates/atLeast1";
 import {whitespaceOrNewLine} from "../../BaseParser/Predicates/whitespaceOrNewLine";
+import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
+import {isNull} from "util";
 
 /*
     tries to parse the column type and if it is nullable in a CREATE TABLE statement
@@ -46,13 +48,18 @@ export const predicateTColumnType = function *(callback) {
         yield str(")");
     }
     yield maybe(atLeast1(whitespaceOrNewLine));
-    const nullable = yield maybe(oneOf([str("NOT NULL"), str("NULL")], ""));
-
+    const nullable = yield maybe(oneOf([
+        checkSequence([str("NOT"), atLeast1(whitespaceOrNewLine), str("NULL")]),
+        str("NULL")], ""));
+    let isNullable = true;
+    if (nullable !== undefined && nullable.length === 3 && nullable[0].toUpperCase() === "NOT") {
+        isNullable = false;
+    }
     yield returnPred({
         kind: "TColumnType",
         type: type,
         size: size,
         dec: (type.toUpperCase() === "NUMERIC") ? dec : undefined,
-        isNullable: {kind: "TBoolValue", value: (nullable === undefined) ? true : ((nullable === "NULL") ? true : false)}
+        isNullable: {kind: "TBoolValue", value: isNullable}
     });
 }

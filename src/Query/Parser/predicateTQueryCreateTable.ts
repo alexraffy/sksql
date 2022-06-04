@@ -19,6 +19,7 @@ import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {predicateValidExpressions} from "./predicateValidExpressions";
 import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
 import {checkAhead} from "../../BaseParser/Predicates/checkAhead";
+import {TColumnType} from "../Types/TColumnType";
 
 
 /*
@@ -322,6 +323,17 @@ export const predicateTQueryCreateTable = function *(callback) {
                 yield str(")");
                 yield maybe(atLeast1(whitespaceOrNewLine));
 
+            }
+
+            const nullable = yield maybe(oneOf([
+                checkSequence([str("NOT"), atLeast1(whitespaceOrNewLine), str("NULL")]),
+                str("NULL")], ""));
+            if (nullable !== undefined) {
+                let isNullable = true;
+                if (nullable.length === 3 && nullable[0].toUpperCase() === "NOT") {
+                    isNullable = false;
+                }
+                (columnType as TColumnType).isNullable = { kind: "TBoolValue", value: isNullable };
             }
 
 

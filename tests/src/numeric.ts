@@ -1,7 +1,7 @@
 import {numericLoad, numericAdd, numericDisplay, SQLStatement, kResultType, numericCmp, numericDiv, SKSQL, numericMul} from "sksql";
 import * as assert from "assert";
 import {runTest} from "./runTest";
-import {nearlyEqual} from "./float1";
+
 
 
 

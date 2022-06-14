@@ -2,7 +2,7 @@
 import {SKSQL, SQLStatement, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function groupby1(db: SKSQL, next:()=>void) {
@@ -68,6 +68,8 @@ export function groupby1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT database_id, STRING_AGG(token, ',') as tokens FROM tokens WHERE database_id = 1 AND validity > GETDATE() GROUP BY database_id", false, false, [
         [1, '123456789,987654321']
     ]);
+
+    checkNoTempTables(db);
 
     next();
 

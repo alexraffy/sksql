@@ -9,6 +9,7 @@ import {TQueryOrderBy} from "./TQueryOrderBy";
 import {TQueryComparisonColumnEqualsString} from "./TQueryComparisonColumnEqualsString";
 import {TValidExpressions} from "./TValidExpressions";
 import {kUnionType} from "../Enums/kUnionType";
+import {TAlias} from "./TAlias";
 
 
 export interface TQuerySelect {
@@ -28,4 +29,5 @@ export interface TQuerySelect {
     subSet?: TQuerySelect;
     offset?: TQueryExpression | TValidExpressions;
     fetch?: TQueryExpression | TValidExpressions;
+
 }

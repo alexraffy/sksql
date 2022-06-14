@@ -3,7 +3,7 @@
 import {rowHeaderSize, readTableDefinition, createNewContext, SKSQL, evaluate, ITableCursor,
     readFirst, TTableWalkInfo, kQueryExpressionOp, TBooleanResult, kBooleanResult, TQueryExpression} from "sksql";
 import * as assert from "assert";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -519,7 +519,7 @@ export function evaluate1(db: SKSQL, next:()=>void) {
 
     assert(kBooleanResult.isUnknown === (evaluate(db, context, unknown_or_false, [walkInfo], undefined) as TBooleanResult).value, "evaluate TQueryExpression fail");
 
-
+    checkNoTempTables(db);
 
     next();
 }

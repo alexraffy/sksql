@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function delete1(db: SKSQL, next:()=>void) {
@@ -81,6 +81,8 @@ export function delete1(db: SKSQL, next:()=>void) {
         "    INSERT INTO t3 SELECT a+1 FROM t3;\n" +
         "    INSERT INTO t3 SELECT a+2 FROM t3;\n" +
         "    SELECT * FROM t3;", false, false, [[1], [2], [3], [4]]);
+
+    checkNoTempTables(db);
 
     next();
 

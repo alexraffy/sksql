@@ -2,8 +2,9 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, writeStringToUtf8ByteArray, readStringFromUtf8Array} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 import * as assert from "assert";
+import {test_parser} from "./parser";
 
 export function blocks1(db: SKSQL, next:()=>void) {
     console.log("TESTING BLOCKS...");
@@ -16,6 +17,6 @@ export function blocks1(db: SKSQL, next:()=>void) {
     writeStringToUtf8ByteArray(dv, 0, "Hello", 50);
     let str = readStringFromUtf8Array(dv, 0, -1);
     assert((str.length === 5 && str === "Hello"), "Writing/Reading to AB failed.");
-
+    checkNoTempTables(db);
     next();
 }

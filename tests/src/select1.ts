@@ -1,7 +1,7 @@
 import {SKSQL, SQLStatement, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -107,7 +107,7 @@ export function select1(db: SKSQL, next: () => void) {
     runTest(db, "DECLARE @offset INT = 10; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT 3 ROWS ONLY", false, false, [[40], [39], [38]]);
     runTest(db, "DECLARE @offset INT = 10; DECLARE @fetch INT = 3; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT @fetch ROWS ONLY", false, false, [[40], [39], [38]]);
 
-
+    checkNoTempTables(db);
     next();
 
 }

@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import {SQLStatement, readTableAsJSON, dumpTable, SKSQL, SQLResult, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function test_db_university(db: SKSQL, next:()=>void) {
@@ -139,6 +139,8 @@ export function test_db_university(db: SKSQL, next:()=>void) {
         ["PHY-101", "Physical Principles", "Physics", "Watson"]
     ], undefined, {printDebug: false});
 
+
+    checkNoTempTables(db);
 
     next();
 

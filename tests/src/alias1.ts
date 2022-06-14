@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 export function alias1(db: SKSQL, next:()=>void) {
     console.log("TESTING ALIAS...");
@@ -25,6 +25,6 @@ export function alias1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT f.a, f.b FROM (SELECT * FROM t1) f", false, false, [[10, 20], [40, 10]]);
     runTest(db, "SELECT f.b, g.b FROM (SELECT * FROM t1) f JOIN (SELECT * FROM t2) g ON g.a = f.a", false, false, [[20, 30]]);
 
-
+    checkNoTempTables(db);
     next();
 }

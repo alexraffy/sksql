@@ -77,7 +77,7 @@ export function openTable(db: SKSQL, context: TExecutionContext, table: TAlias |
 
     let cursor = readFirst(tbl, def);
     let rowLength = recordSize(tbl.data) + 5;
-    ret.push({name: tableToOpen, alias: alias, table: tbl, def: def, cursor: cursor, rowLength: rowLength});
+    ret.push({name: tableToOpen.toUpperCase(), alias: alias.toUpperCase(), table: tbl, def: def, cursor: cursor, rowLength: rowLength});
     return ret;
 }
 

@@ -1,13 +1,20 @@
 
 import {SKSQL, SQLStatement, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
-    readNext} from "sksql";
-import {runTest} from "./runTest";
+    kDebugLevel} from "sksql";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
 export function subquery1(db: SKSQL, next:()=>void) {
     console.log("TESTING SUBQUERIES...");
+
+    runTest(db, "SELECT (SELECT 'Hello' FROM DUAL) FROM DUAL", false, false, [["Hello"]], undefined, {printDebug: false});
+    runTest(db, "SELECT (SELECT true FROM DUAL) FROM DUAL", false, false, [[true]]);
+    runTest(db, "SELECT (SELECT -150 FROM DUAL) FROM DUAL", false, false, [[-150]]);
+    runTest(db, "SELECT (SELECT 1.10 FROM DUAL) FROM DUAL", false, false, [[numericLoad("1.10")]]);
+
+
 
     let init = "DROP TABLE t1; DROP TABLE t2; CREATE TABLE t1(a int,b int);" +
     "INSERT INTO t1 VALUES(1,2);" +
@@ -27,6 +34,11 @@ export function subquery1(db: SKSQL, next:()=>void) {
             [3, 9],
             [5, 25]
         ]);
+
+    runTest(db, "SELECT (SELECT y FROM t2 WHERE t2.x = t1.a) FROM t1 WHERE a = 5;", false, false, [[25]]);
+
+
+    checkNoTempTables(db);
 
     next();
 

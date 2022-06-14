@@ -1,7 +1,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 import {nearlyEqual} from "./float1";
 
 
@@ -28,6 +28,6 @@ export function int1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT CAST(10.1 AS INTEGER) FROM dual", false, false, [[10]]);
     runTest(db, "SELECT CAST(10 AS FLOAT) FROM dual", false, false, [[(a) => { return nearlyEqual(a, 10); }]]);
     runTest(db, "SELECT CAST(10 AS NUMERIC(12,2)) FROM dual", false, false, [[numericLoad("10.00")]]);
-
+    checkNoTempTables(db);
     next();
 }

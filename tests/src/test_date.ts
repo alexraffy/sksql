@@ -1,7 +1,7 @@
 
 import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, SQLResult} from "sksql";
 import * as assert from "assert";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -80,7 +80,7 @@ export function test_date(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT times FROM time_tests WHERE times > '10:00:00'", false, false, [[parseTimeString("10:30.00")], [parseTimeString("12:05:50")]])
 
 
-
+    checkNoTempTables(db);
     next();
 
 

@@ -16,6 +16,7 @@ import {TString} from "../Types/TString";
 import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
 import {exitIf} from "../../BaseParser/Predicates/exitIf";
 import {eof} from "../../BaseParser/Predicates/eof";
+import {predicateParseError} from "../../BaseParser/Predicates/predicateParseError";
 
 
 
@@ -29,6 +30,10 @@ export const predicateTQueryColumn = function *(callback) {
 
 
     let left = yield oneOf([predicateTStar, predicateTVariableAssignment, predicateTQueryExpression], "an expression or column" );
+    if (left === undefined) {
+        yield predicateParseError("An expression or column");
+        return;
+    }
     yield maybe(atLeast1(whitespaceOrNewLine));
     let as = yield exitIf(checkSequence([str("AS"), whitespaceOrNewLine]));
     let columnName = "";

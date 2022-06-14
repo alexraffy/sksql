@@ -17,6 +17,11 @@ import {TableColumn} from "../Table/TableColumn";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
 import {typeString2TableColumnType} from "./typeString2TableColumnType";
 import {instanceOfTCast} from "../Query/Guards/instanceOfTCast";
+import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
+import {openTables} from "./openTables";
+import {generateEP} from "../ExecutionPlan/generateEP";
+import {createNewContext} from "../ExecutionPlan/newContext";
+import {TEPSelect} from "../ExecutionPlan/TEPSelect";
 
 
 export interface TFindExpressionTypeOptions {
@@ -35,7 +40,43 @@ export function findExpressionType(db: SKSQL,
                                    options: TFindExpressionTypeOptions = {callbackOnTColumn: false}): TableColumnType {
     let ret = TableColumnType.int;
     let types: TableColumnType[] = [];
-    walkTree(db, undefined, currentStatement, tables, parameters, o, [], {status: "", extra: {}},
+
+    let tablesToCheck = [];
+    for (let i = 0; i < tables.length; i++) {
+        tablesToCheck.push(tables[i]);
+    }
+    /*
+    if (instanceOfTQuerySelect(o)) {
+        let query = "";
+        let context = createNewContext("", query, undefined);
+        context.tables = tables;
+        context.stack = parameters;
+
+        //let steps = generateEP(db, context, o);
+        //let lastStepDest = (steps[steps.length-1] as TEPSelect).dest;
+        //let tbl = db.tableInfo.get(lastStepDest);
+        //if (tbl === undefined || tbl.def.columns.length === 0) {
+        //    return TableColumnType.int;
+        //}
+        //return tbl.def.columns[0].type;
+
+
+        let ts: TTableWalkInfo[] = openTables(db, undefined, o);
+        for (let i = 0; i < ts.length; i++) {
+            let found = false;
+            for (let x = 0; x < tablesToCheck.length; x++) {
+                if (tablesToCheck[x].name.toUpperCase() === ts[i].name) {
+                    found = true;
+                }
+            }
+            if (found === false) {
+                tablesToCheck.push(ts[i]);
+            }
+        }
+    }
+    */
+
+    walkTree(db, undefined, currentStatement, tablesToCheck, parameters, o, [], {status: "", extra: {}},
         (obj: any, parents: any[], info: {colData: {table: TTableWalkInfo, def: TableColumn}, functionData: {name: string, data: TRegisteredFunction}}) => {
 
         if (instanceOfTQueryExpression(obj)) {

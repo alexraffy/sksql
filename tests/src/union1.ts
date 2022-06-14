@@ -3,7 +3,7 @@
 import {SKSQL, dumpTable, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 export function union1 (db: SKSQL, next: ()=> void) {
     console.log("TESTING UNION...");
@@ -73,6 +73,8 @@ export function union1 (db: SKSQL, next: ()=> void) {
     ], undefined, {printDebug: false});
 
     runTest(db, "DROP TABLE t1", false, false, undefined);
+
+    checkNoTempTables(db);
 
     next();
 

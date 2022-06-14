@@ -412,6 +412,9 @@ export class SQLStatement {
         }
         if (this.ast === undefined) {
             this.parse();
+        } else {
+            // clear the temp tables if we run again
+            this.close();
         }
         if (performance !== undefined) {
             let t1 = performance.now();

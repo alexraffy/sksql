@@ -64,7 +64,7 @@ export function addTable2Context(db, context, tableName: string, alias: TAlias) 
     let def = tableInfo.def;
     let len = recordSize(table.data);
     let exists = context.tables.find((t) => {
-        if (t.name == tableName && (t.alias !== "" && a!== "" && t.alias === a) || (t.alias === "" && a === "")) {
+        if (t.name.toUpperCase() == tableName.toUpperCase() && (t.alias !== "" && a!== "" && t.alias.toUpperCase() === a.toUpperCase()) || (t.alias === "" && a === "")) {
             return true;
         }
         return false;

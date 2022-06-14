@@ -3,7 +3,7 @@
 import {SKSQL, dumpTable, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function tsql1(db: SKSQL, next: ()=>void) {
@@ -42,6 +42,8 @@ export function tsql1(db: SKSQL, next: ()=>void) {
         [1, 2, 3]
     ]);
     runTest(db, "DROP TABLE TTT;", false, false, undefined);
+
+    checkNoTempTables(db);
 
     next();
 

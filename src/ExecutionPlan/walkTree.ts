@@ -37,6 +37,7 @@ import {instanceOfTQueryExpression} from "../Query/Guards/instanceOfTQueryExpres
 import {instanceOfTCaseWhen} from "../Query/Guards/instanceOfTCaseWhen";
 import {instanceOfTVariableAssignment} from "../Query/Guards/instanceOfTVariableAssignment";
 import {instanceOfTVariableDeclaration} from "../Query/Guards/instanceOfTVariableDeclaration";
+import {TQuerySelect} from "../Query/Types/TQuerySelect";
 
 /*
     Walk an AST tree
@@ -127,26 +128,74 @@ export function walkTree(db: SKSQL,
                 throw new TParserError("Ambiguous column name " + name);
             }
             if (tableNames.length === 0) {
-                throw new TParserError("Unknown column name " + name);
+                // check the previous context if this is a sub-query
+                let found = false;
+                if (info.extra.previousContext !== undefined) {
+                    tableNames = findTableNameForColumn(name, (info.extra.previousContext as TExecutionContext).tables, o);
+                    if (tableNames.length > 1) {
+                        throw new TParserError("Ambiguous column name " + name);
+                    }
+                    if (tableNames.length === 1) {
+                        found = true;
+                        switch (currentStatement.kind) {
+                            case "TQuerySelect":
+                                (currentStatement as TQuerySelect).hasForeignColumns = true;
+
+
+                                break;
+                            case "TQueryUpdate":
+                                break;
+                        }
+                    }
+                }
+                if (found === false) {
+                    throw new TParserError("Unknown column name " + name);
+                }
             }
             table = tableNames[0];
         }
         let t = tables.find((t) => {
-            if (t.name === table) {
-                return true;
+            let ret = false;
+            if (t.name.toUpperCase() === table.toUpperCase()) {
+                ret = true;
             }
             if (typeof t.alias === "string") {
                 if (t.alias === table) {
-                    return true;
+                    ret = true;
                 }
             } else if (instanceOfTAlias(t.alias)) {
                 let val = getValueForAliasTableOrLiteral(t.alias);
                 if (val.table === table || val.alias === table) {
-                    return true;
+                    ret = true;
                 }
             }
-            return false;
+
+            return ret;
         });
+        if (t === undefined && info.extra.previousContext !== undefined) {
+            t = (info.extra.previousContext as TExecutionContext).tables.find((t) => {
+                let ret = false;
+                if (t.name.toUpperCase() === table.toUpperCase()) {
+                    ret = true;
+                }
+                if (typeof t.alias === "string") {
+                    if (t.alias === table) {
+                        ret = true;
+                    }
+                } else if (instanceOfTAlias(t.alias)) {
+                    let val = getValueForAliasTableOrLiteral(t.alias);
+                    if (val.table === table || val.alias === table) {
+                        ret = true;
+                    }
+                }
+                if (ret === true) {
+                    // push the table to the list of tables in the current context
+                    context.tables.push(t);
+                }
+
+                return ret;
+            });
+        }
         if (t === undefined) {
             throw new TParserError("Could not find table for column " + name + " from TColumn " + JSON.stringify(o));
         }
@@ -272,6 +321,7 @@ export function walkTree(db: SKSQL,
 
         } else if (instanceOfTQuerySelect(o)) {
             let lastStatus = info.status;
+
             info.status = "SELECT";
             let process = perItem(o, parentsTree, {status: info, colData: undefined, functionData: undefined});
             if (process === false ) {

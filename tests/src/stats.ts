@@ -3,7 +3,7 @@
 import {SKSQL, SQLStatement, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, vacuumTable, genStatsForTable, readValue,
     dumpTable} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function stats1(db: SKSQL, next:()=>void) {
@@ -44,6 +44,9 @@ export function stats1(db: SKSQL, next:()=>void) {
     genStatsForTable(db, "table1");
     runTest(db, "SELECT active_rows, dead_rows, header_size, total_size, largest_block_size FROM sys_table_statistics WHERE table = UPPER('table1')", false, false, undefined
     , undefined, {printDebug: false});
+
+
+    checkNoTempTables(db);
 
     next();
 

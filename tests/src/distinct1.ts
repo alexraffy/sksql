@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function distinct1(db: SKSQL, next:()=>void) {
@@ -24,7 +24,7 @@ export function distinct1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT DISTINCT city FROM t1", false, false, [["Paris"], ["Lyon"]]);
     runTest(db, "SELECT DISTINCT city, country FROM t1", false, false, [["Paris", "France"], ["Lyon", "France"], ["Paris", "USA"]]);
 
-
+    checkNoTempTables(db);
 
     next();
 

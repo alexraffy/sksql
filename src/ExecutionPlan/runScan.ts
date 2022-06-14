@@ -1,7 +1,7 @@
 import {TEPScan} from "./TEPScan";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
-import {SKSQL} from "../API/SKSQL";
+import {kDebugLevel, SKSQL} from "../API/SKSQL";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
@@ -12,6 +12,9 @@ import {kBooleanResult} from "../API/kBooleanResult";
 import {evaluate} from "../API/evaluate";
 import {TBooleanResult} from "../API/TBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
+import {TParserError} from "../API/TParserError";
+import {dumpAllColumnsInCurrentRow} from "../Table/dumpAllColumnsInCurrentRow";
+import {dumpContextInfo} from "./dumpContextInfo";
 
 // SCAN a table
 // this goes through all records in a table.
@@ -35,11 +38,31 @@ export function runScan(db: SKSQL, context: TExecutionContext,
     }
 
 
+
+
     let tableName = getValueForAliasTableOrLiteral(tep.table);
-    let tblInfo = db.tableInfo.get(tableName.table);
+
+
+    if (db.debugLevel >= kDebugLevel.L8_scans) {
+        console.log("RunScan: '" + tableName.alias + "' (" + tableName.table + ")" );
+        let strTables = "";
+        for (let i = 0; i < tables.length; i++) {
+            strTables += tables[i].name;
+            if (tables[i].alias !== undefined && tables[i].alias !== "") {
+                strTables += " AS " + tables[i].alias;
+            }
+            strTables += (i === tables.length - 1) ? "" : ", ";
+        }
+        console.log("Open Tables: " + strTables);
+        if (db.debugLevel >= kDebugLevel.L990_contextUpdate) {
+            console.log(dumpContextInfo(context, "runScan"));
+        }
+    }
 
     let walk = findWalkTable(tables, tep.table);
-
+    if (walk === undefined) {
+        throw new TParserError("runScan called for " + tableName + ". Table was not found in the current context." );
+    }
     walk.cursor = readFirst(walk.table, walk.def);
     while (!cursorEOF(walk.cursor)) {
         //console.log(tblDef.name + " blk: " + walk.cursor.blockIndex + ":" + walk.cursor.offset);
@@ -53,9 +76,25 @@ export function runScan(db: SKSQL, context: TExecutionContext,
             continue;
         }
         retInfo.rowsScanned += 1;
+        if (db.debugLevel >= kDebugLevel.L900_eachRow) {
+            console.log(dumpAllColumnsInCurrentRow(dv, walk.table, walk.def, walk.rowLength));
+        }
         let selectRow: TBooleanResult = {kind: "TBooleanResult", value: kBooleanResult.isTrue};
         if (tep.predicate !== undefined) {
             selectRow = evaluate(db, context, tep.predicate, tables, undefined, {currentStep: tep, aggregateObjects: [], aggregateMode: "none"}) as TBooleanResult;
+        }
+        if (db.debugLevel >= kDebugLevel.L910_scanPredicate) {
+            switch (selectRow.value) {
+                case kBooleanResult.isUnknown:
+                    console.log("row predicate: UNKNOWN");
+                    break;
+                case kBooleanResult.isFalse:
+                    console.log("row predicate: FALSE");
+                    break;
+                case kBooleanResult.isTrue:
+                    console.log("row predicate: TRUE");
+                    break;
+            }
         }
         if (instanceOfTBooleanResult(selectRow) && selectRow.value === kBooleanResult.isTrue || ((typeof selectRow === "boolean") && selectRow === true) ||
             (instanceOfTBooleanResult(selectRow) && selectRow.value === kBooleanResult.isUnknown && tep.acceptUnknownPredicateResult === true)) {

@@ -1,5 +1,6 @@
 import {SKSQL, compressAB, decompress} from "sksql";
 import assert = require("assert");
+import {checkNoTempTables} from "./runTest";
 
 
 
@@ -21,6 +22,6 @@ export function test_compress(db: SKSQL, next: ()=>void) {
         let b = dvd.getUint8(i);
         assert(a === b, "compress/decompress does not return the same data! " + i);
     }
-
+    checkNoTempTables(db);
     next();
 }

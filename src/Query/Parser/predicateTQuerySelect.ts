@@ -344,7 +344,8 @@ export const predicateTQuerySelect = function *(callback) {
             unionType: unionType,
             subSet: subSet,
             offset: offsetExpression,
-            fetch: fetchExpression
+            fetch: fetchExpression,
+            
         } as TQuerySelect
     );
 }

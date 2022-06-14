@@ -254,7 +254,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
         let selectContext = createNewContext("select", q, context.parseResult as ParseResult);
         selectResultTable = processSelectStatement(db, selectContext, insert.selectStatement, true);
         let selectTableInfo = db.tableInfo.get(selectResultTable.table);
-
+        newContext.openedTempTables.push(...selectContext.openedTempTables);
         //console.log("INSERT INTO SELECT");
         //console.log(dumpTable(selectTableInfo.pointer));
 
@@ -281,7 +281,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
     if (numberOfRowsAdded > 0) {
         updateTableTimestamp(db, def.name.toUpperCase());
     }
-
+    context.openedTempTables.push(...newContext.openedTempTables);
     context.broadcastQuery = true;
     context.result.rowsInserted += numberOfRowsAdded;
 

@@ -1,6 +1,6 @@
 import {numericLoad, numericAdd, numericDisplay, SQLStatement, kResultType, numericCmp, numericDiv, SKSQL, numericMul} from "sksql";
 import * as assert from "assert";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -41,7 +41,9 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
     let ret = st1.run(kResultType.JSON);
     let check = numericLoad("0.3");
     assert(numericCmp(ret[0]["ret"], check) === 0, "Adding two numeric");
+    st1.close();
 
+    checkNoTempTables(db);
     runTest(db, "SELECT 1.0 * 5 FROM dual", false, false, [[numericLoad("5")]], undefined, {printDebug: false});
     runTest(db, "SELECT 2.0 * 5 FROM dual", false, false, [[numericLoad("10")]], undefined, {printDebug: false});
     runTest(db, "SELECT 33.0 * 4 + 10 FROM dual", false, false, [[numericLoad("142")]], undefined, {printDebug: false});
@@ -90,7 +92,7 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
     runTest(db, "SELECT POWER(150.0, 1) FROM dual", false, false, [[numericLoad("150")]], undefined, {printDebug: false});
     runTest(db, "SELECT CAST(10.1 AS INTEGER) FROM dual", false, false, [[10]]);
     runTest(db, "SELECT CAST(10.299 AS NUMERIC(12,2)) FROM dual", false, false, [[numericLoad("10.30")]]);
-
+    checkNoTempTables(db);
     next();
 
 }

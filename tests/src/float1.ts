@@ -3,7 +3,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, readTableDefinition} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 // REF: https://stackoverflow.com/questions/4915462/how-should-i-do-floating-point-comparison
 export function nearlyEqual(a: number, b: number): boolean {
@@ -43,6 +43,6 @@ export function float1(db: SKSQL, next:()=>void) {
     runTest(db, "DECLARE @v FLOAT = 1.32; SELECT @v from dual;", false, false, [[(a) => { return nearlyEqual(a,1.32); }]], undefined, {printDebug: false});
     runTest(db, "DECLARE @v FLOAT = 1.2332; SELECT ROUND(@v, 2) FROM DUAL", false, false, [[(a) => { return nearlyEqual(a, 1.23); }]], undefined, {printDebug: false});
     runTest(db, "SELECT ABS(CAST(-1.23 AS FLOAT)) FROM dual", false, false, [[(a) => { return nearlyEqual(a, 1.23);}]], undefined, {printDebug: false});
-
+    checkNoTempTables(db);
     next();
 }

@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, serializeTableDefinition} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function check(db: SKSQL, next:()=>void) {
@@ -45,6 +45,8 @@ export function check(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT * FROM t1", false, false, [[2, numericLoad("4.0")]]);
     runTest(db, "UPDATE t1 SET x=4, y=11 WHERE x=2", false, false, undefined);
     runTest(db, "SELECT * FROM t1", false, false, [[4, numericLoad("11.0")]]);
+
+    checkNoTempTables(db);
 
     next();
 

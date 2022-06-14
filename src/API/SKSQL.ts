@@ -55,7 +55,7 @@ workerJavascript += "   let result = st.run();\n";
 workerJavascript += "   if (result.error === undefined && result.resultTableName !== \"\") {\n";
 workerJavascript += "       parentPort.postMessage({c: \"DB\", d: db.allTables});\n";
 workerJavascript += "   }\n";
-workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, result: result} });\n";
+workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, openedTempTables: st.context.openedTempTables, result: result} });\n";
 workerJavascript += "}\n\n";
 workerJavascript += "parentPort.on('message', (value) => {\n";
 workerJavascript += "   if (value !== undefined && value.c !== undefined) {\n";
@@ -80,6 +80,18 @@ interface TConnectionData {
     delegate: TDBEventsDelegate;
 }
 
+export enum kDebugLevel {
+    L0_none = 0,
+    L4_executionPlan = 4,
+    L5_resultTableDefinition = 5,
+    L8_scans = 8,
+    L80_fromSubQueryDump = 80,
+    L900_eachRow = 900,
+    L910_scanPredicate = 910,
+    L990_contextUpdate = 990,
+    all = 999
+}
+
 
 // Initialize a local database
 
@@ -87,9 +99,8 @@ interface TConnectionData {
 // db.initWorkerPool(0, "");
 // let st = new SQLStatement(db, "CREATE TABLE users(FirstName VARCHAR(255), Lastname VARCHAR(255))");
 // st.run();
-
 export class SKSQL {
-
+    debugLevel: kDebugLevel = kDebugLevel.L0_none;
     // All tables and temp results are stored here
     allTables: ITable[];
     // The connection to the server
@@ -97,7 +108,7 @@ export class SKSQL {
     // webworkers instances
     private workers: Worker[] = [];
     // list of queries that need to be processed
-    private pendingQueries: {id: string, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
+    private pendingQueries: {id: string, statement:SQLStatement, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
     // SQL and js functions
     functions: TRegisteredFunction[] = [];
     // SQL procs
@@ -569,6 +580,7 @@ export class SKSQL {
         let queryId = generateV4UUID();
         this.pendingQueries.push({
             id: queryId,
+            statement: query,
             resolve: resolve,
             reject: reject
         });
@@ -581,9 +593,12 @@ export class SKSQL {
     }
 
     // internal, callback from a WebWorker
-    receivedResult(id: string, result: SQLResult) {
+    receivedResult(id: string, openedTempTables: string[], result: SQLResult) {
         let idx = this.pendingQueries.findIndex((pq) => { return pq.id === id;});
         if (idx > -1) {
+            if (this.pendingQueries[idx].statement !== undefined && openedTempTables !== undefined && openedTempTables.length > 0) {
+                this.pendingQueries[idx].statement.context.openedTempTables.push(...openedTempTables);
+            }
             if (result.error !== undefined) {
                 this.pendingQueries[idx].reject(result.error);
             } else {
@@ -629,7 +644,7 @@ export class SKSQL {
                     if (e !== undefined && e.c !== undefined) {
                         switch (e.c) {
                             case "QS": {
-                                this.receivedResult(e.d.id, e.d.result);
+                                this.receivedResult(e.d.id, e.d.openedTempTables, e.d.result);
                             }
                                 break;
                             case "DB": {
@@ -669,7 +684,7 @@ export class SKSQL {
                     if (e !== undefined && e.c !== undefined) {
                         switch (e.c) {
                             case "QS": {
-                                this.receivedResult(e.d.id, e.d.result);
+                                this.receivedResult(e.d.id, e.d.openedTempTables, e.d.result);
                             }
                                 break;
                             case "DB": {

@@ -1,6 +1,6 @@
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
 import {TExecutionContext} from "./TExecutionContext";
-import {TEP} from "./TEP";
+import {TEP, TExecutionPlan} from "./TEP";
 import {TEPScan} from "./TEPScan";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TEPNestedLoop} from "./TEPNestedLoop";
@@ -28,7 +28,7 @@ export function processUpdateStatement(db: SKSQL, context: TExecutionContext, st
     //newContext.openTables = tables;
 
     let planDescription = "";
-    let plan: TEP[] = generateEP(db, context, statement);
+    let plan: TExecutionPlan[] = generateEP(db, context, statement);
     let recur = function (plan: TEP) {
         planDescription += "\t"
         if (plan.kind === "TEPScan") {
@@ -74,10 +74,13 @@ export function processUpdateStatement(db: SKSQL, context: TExecutionContext, st
         }
     }
     for (let i = 0; i < plan.length; i++) {
-        recur(plan[i]);
+        for (let x = 0; x < plan[i].steps.length; x++) {
+            recur(plan[i].steps[x]);
+        }
+        runUpdatePlan(db, context, statement, plan[i].steps);
     }
 
-    runUpdatePlan(db, context, statement, plan);
+
 
     context.broadcastQuery = true;
 

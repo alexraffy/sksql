@@ -1,4 +1,5 @@
 import {
+    SKSQL,
     cursorEOF,
     dumpTable,
     isNumeric,
@@ -13,17 +14,27 @@ import {
     TableColumnType,
     kResultType,
     numericDisplay,
-    kBlockHeaderField
+    kBlockHeaderField,
+    readTableDefinition
 } from "sksql";
 
 
 
+export function checkNoTempTables(db: SKSQL) {
+    for (let i = 0; i < db.allTables.length; i++) {
+        let def = readTableDefinition(db.allTables[i].data);
+        if (def.name.startsWith("#")) {
+            throw new Error("Last SQLStatement did not remove " + def.name.toUpperCase());
+        }
+    }
+}
 
 
 export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[], colValues: { [key:string]:any } = undefined, options: {printDebug: boolean} = {printDebug: false}) {
     let throwError = "";
+    let st: SQLStatement = undefined;
     try {
-        let st = new SQLStatement(db, sql);
+        st = new SQLStatement(db, sql);
         let ret: SQLResult = st.run(kResultType.SQLResult, options) as SQLResult;
         if (error === true && ret.error === undefined) {
             throwError =  sql + " should have triggered an error.";
@@ -134,7 +145,8 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
                 }
             }
         }
-        st.close();
+
+
     } catch (e) {
         if (excep === false) {
             throwError = sql + " triggered an unexpected exception.";
@@ -143,7 +155,18 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
             throwError += "Stack : " + e.stack;
         }
     }
+    if (st !== undefined) {
+        st.close();
+    }
+    // check for temp tables
+    for (let i = 0; i < db.allTables.length; i++) {
+        let def = readTableDefinition(db.allTables[i].data);
+        if (def.name.startsWith("#")) {
+            throwError = "Last SQLStatement did not remove " + def.name.toUpperCase();
+        }
+    }
+
     if (throwError !== "") {
-        throw throwError;
+        throw new Error(throwError);
     }
 }

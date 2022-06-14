@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function join1(db: SKSQL, next:()=>void) {
@@ -76,6 +76,8 @@ export function join1(db: SKSQL, next:()=>void) {
     ]);
 
     runTest(db, "DROP TABLE employees; DROP TABLE department; DROP TABLE t1; DROP TABLE t2;", false, false, undefined);
+
+    checkNoTempTables(db);
 
     next();
 }

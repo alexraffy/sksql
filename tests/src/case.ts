@@ -1,7 +1,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 export function case1(db: SKSQL, next: ()=> void) {
     console.log("TESTING CASE WHEN...");
@@ -52,7 +52,7 @@ export function case1(db: SKSQL, next: ()=> void) {
         [2, 21]
     ], undefined, {printDebug: false});
 
-
+    checkNoTempTables(db);
     next();
 
 }

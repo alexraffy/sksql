@@ -1,6 +1,6 @@
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
-import {TEP} from "./TEP";
+import {TExecutionPlan} from "./TEP";
 import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {createNewContext} from "./newContext";
 import {processSelectStatement} from "./processSelectStatement";
@@ -10,7 +10,7 @@ import {walkTree} from "./walkTree";
 import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
 import {addTable2Context} from "./contextTables";
-import {SKSQL} from "../API/SKSQL";
+import {kDebugLevel, SKSQL} from "../API/SKSQL";
 import {TExecutionContext} from "./TExecutionContext";
 import {TEPProjection} from "./TEPProjection";
 import {instanceOfTQueryFunctionCall} from "../Query/Guards/instanceOfTQueryFunctionCall";
@@ -59,10 +59,14 @@ import {TQueryOrderBy} from "../Query/Types/TQueryOrderBy";
 import {instanceOfTQueryExpression} from "../Query/Guards/instanceOfTQueryExpression";
 import {TQueryExpression} from "../Query/Types/TQueryExpression";
 import {kQueryExpressionOp} from "../Query/Enums/kQueryExpressionOp";
-import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {dumpTable} from "../Table/dumpTable";
 import {instanceOfTCast} from "../Query/Guards/instanceOfTCast";
 import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
+import {getResultTableFromExecutionPlanSteps} from "./getResultTableFromExecutionPlanSteps";
+import {getFirstPublicColumn} from "../Table/getFirstPublicColumn";
+import {serializeTQuery} from "../API/serializeTQuery";
+import {dumpContextInfo} from "./dumpContextInfo";
+import {serializeTableDefinition} from "../Table/serializeTableDefinition";
 
 /*
     generateEP
@@ -80,8 +84,20 @@ import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
 
 
 */
-export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuerySelect | TQueryUpdate, options: { printDebug: boolean} = {printDebug: false}): TEP[] {
-    let ret: TEP[] = [];
+export function generateEP(db: SKSQL,
+                           context: TExecutionContext,
+                           select: TQuerySelect | TQueryUpdate,
+                           options: { previousContext?: TExecutionContext, printDebug: boolean} = {previousContext: undefined, printDebug: false}): TExecutionPlan[] {
+    let ret: TExecutionPlan[] = [];
+    let currentPlan: TExecutionPlan = {
+        kind: "TExecutionPlan",
+        steps: [],
+        hasForeignTables: false,
+        tablesReferences: [],
+        tempTables: [],
+        statement: select
+    }
+
     let returnTableName = "";
     let returnTableDefinition = {
         name: returnTableName,
@@ -106,8 +122,9 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
     let projections: TEPProjection[] = [];
     let hasAggregation = false;
 
-
-
+    if (db.debugLevel >= kDebugLevel.L4_executionPlan) {
+        console.log("generateEP for " + serializeTQuery(select));
+    }
 
     // process sub-queries in FROM clauses
     if (instanceOfTQuerySelect(select)) {
@@ -118,14 +135,14 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 let subQuery = select.tables[i].tableName as TQuerySelect;
                 rt = processSelectStatement(db, newC, subQuery, true, options);
                 select.tables[i].tableName = rt;
-                context.openedTempTables.push(rt.table);
+                context.openedTempTables.push(...newC.openedTempTables);
             } else if (instanceOfTAlias(select.tables[i].tableName) && instanceOfTQuerySelect((select.tables[i].tableName as TAlias).name)) {
                 let subQuery = (select.tables[i].tableName as TAlias).name as TQuerySelect;
                 rt = processSelectStatement(db, newC, subQuery, true, options);
                 (select.tables[i].tableName as TAlias).name = rt;
-                context.openedTempTables.push(rt.table);
+                context.openedTempTables.push(...newC.openedTempTables);
             }
-            if (rt !== undefined && options !== undefined && options.printDebug === true) {
+            if (rt !== undefined && db.debugLevel >= kDebugLevel.L80_fromSubQueryDump) {
                 console.log("--------------------");
                 console.log("SUBQUERY TABLE DUMP: " + rt.table);
                 console.log(dumpTable(db.getTable(rt.table)));
@@ -133,17 +150,18 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
         }
     }
 
+    // the temp table name for our results
     if (instanceOfTQuerySelect(select)) {
         let i = 1;
         returnTableName = "#query" + i;
-        while (db.tableInfo.get(returnTableName) !== undefined) {
+        while (db.tableInfo.get(returnTableName) !== undefined || context.openedTempTables.includes(returnTableName.toUpperCase())) {
             returnTableName = "#query" + (++i);
         }
     }
     returnTableName = returnTableName.toUpperCase();
     returnTableDefinition.name = returnTableName;
-
-
+    currentPlan.tempTables.push(returnTableName);
+    context.openedTempTables.push(returnTableName);
     // walk the AST
     // on TTable: add table information to context.tables
     // on TColumn: add a table alias if not present
@@ -156,25 +174,56 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
     let tablesReferencesInWhereExpression: {tables: string[], operator: "AND" | "OR"}[] = [];
     let tablesReferencesInCurrentExpression = [];
 
-    walkTree(db, context, select, context.tables, context.stack, select, [], {status: "", extra: {}},
+    walkTree(db, context, select, context.tables, context.stack, select, [], {status: "", extra: { previousContext: options.previousContext}},
         (obj, parents, info) => {
 
             if (instanceOfTQuerySelect(obj)) {
+
+                let oldContext: TExecutionContext = undefined;
                 if (parents.length > 0 && (instanceOfTQueryColumn(parents[0]) || instanceOfTQueryExpression(parents[0]))) {
                     // this is a subquery, we try to generate an execution plan.
                     // if it fails that tell us that the subquery references a foreign table
+                    oldContext = context;
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
-                    let subQueryHasForeignColumns = false;
-                    try {
-                        let copyObj = JSON.parse(JSON.stringify(obj));
-                        let teps = generateEP(db, newC, copyObj);
-                    } catch (e) {
-                        subQueryHasForeignColumns = true;
+                    newC.tables = [];
+                    for (let i = 0; i < oldContext.tables.length; i++) {
+                        if (oldContext.tables[i].name.startsWith("#")) {
+                            newC.tables.push(oldContext.tables[i]);
+                        }
                     }
-                    obj.hasForeignColumns = subQueryHasForeignColumns;
+                    context = newC;
+                    let execPlans = generateEP(db, newC, obj, {previousContext: oldContext, printDebug: options.printDebug});
+                    if (execPlans.length > 0) {
+                        // get the result table name
+                        let resultTable = getResultTableFromExecutionPlanSteps(execPlans[execPlans.length-1]);
+                        if (resultTable !== "") {
+                            let t: TTable = {
+                                kind: "TTable",
+                                table: resultTable,
+                                schema: "dbo"
+                            }
+                            let info = db.tableInfo.get(resultTable);
+                            let firstColumn = getFirstPublicColumn(info.def);
+                            expressionTypes.push(firstColumn.type);
+                            if (execPlans[execPlans.length-1].hasForeignTables === false) {
+                                // we can replace the sub-query with the value
+                                // OPTIMIZATION
+                            }
+                        }
+
+
+                    }
+                    context = oldContext;
+                    context.openedTempTables.push(...newC.openedTempTables);
+
+
+                    if (info.status.extra["ignoreType"] === false) {
+
+                    }
                     return false;
                 }
+
                 if (info.status.status === "SELECT") {
                     // pre columns processing
                     if (obj.groupBy !== undefined && obj.groupBy.length > 0) {
@@ -550,7 +599,6 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
     if (returnTableName !== "") {
         returnTable = newTable(db, returnTableDefinition);
         returnTableDefinition = db.tableInfo.get(returnTableDefinition.name).def;
-        context.openedTempTables.push(returnTableName);
         context.tables.push(
             {
                 name: returnTableName,
@@ -562,10 +610,15 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             }
         );
 
-        if (options !== undefined && options.printDebug === true) {
+        if (db.debugLevel >= kDebugLevel.L990_contextUpdate) {
+            console.log(dumpContextInfo(context, "SCAN"));
+        }
+
+        if (options !== undefined && options.printDebug === true || db.debugLevel >= kDebugLevel.L5_resultTableDefinition) {
             console.log("--------------------------");
             console.log("RESULT TABLE: " + returnTableName);
-            console.dir(returnTableDefinition);
+            console.log(serializeTableDefinition(db, returnTableName));
+
         }
 
 
@@ -653,8 +706,8 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
         current = scan;
 
     }
+    currentPlan.steps.push(current);
 
-    ret.push(current);
     if (instanceOfTQuerySelect(select)) {
         if (select.groupBy !== undefined && select.groupBy.length > 0) {
 
@@ -670,13 +723,13 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             groupByResultTableDef.name = groupByResultTableName;
             let groupByResultTable = newTable(db, groupByResultTableDef);
             groupByResultTableDef = db.tableInfo.get(groupByResultTableName).def;
-
+            currentPlan.tempTables.push(groupByResultTableName);
             context.openedTempTables.push(groupByResultTableName);
 
-            if (options !== undefined && options.printDebug === true) {
+            if (options !== undefined && options.printDebug === true || db.debugLevel >= kDebugLevel.L5_resultTableDefinition) {
                 console.log("--------------------------");
                 console.log("GROUP BY RESULT TABLE: " + groupByResultTableName);
-                console.dir(groupByResultTableDef);
+                console.log(serializeTableDefinition(db, groupByResultTableName));
             }
 
             context.tables.push(
@@ -733,11 +786,13 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 dest: {kind: "TTable", table: groupByResultTableName, schema: "dbo"} as TTable,
                 aggregateFunctions: aggregateFunctions
             }
-            ret.push(stepGroupBy);
+            currentPlan.steps.push(stepGroupBy);
 
             currentDestName = groupByResultTableName;
 
-
+            if (db.debugLevel >= kDebugLevel.L990_contextUpdate) {
+                console.log(dumpContextInfo(context, "GroupBy Step"));
+            }
         }
 
 
@@ -773,7 +828,12 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 };
                 let afterOrderByTable = newTable(db, afterOrderByTableDef);
                 context.openedTempTables.push(afterOrderByTableName);
+                currentPlan.tempTables.push(afterOrderByTableName);
                 newDest = afterOrderByTableName;
+
+                if (db.debugLevel >= kDebugLevel.L990_contextUpdate) {
+                    console.log(dumpContextInfo(context, "OrderBy TOP | OFFSET"));
+                }
             }
 
             let stepSort: TEPSortNTop = {
@@ -785,7 +845,7 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
                 offsetExpression: select.offset,
                 fetchExpression: select.fetch
             }
-            ret.push(stepSort);
+            currentPlan.steps.push(stepSort);
             if (newDest !== "") {
                 currentDestName = newDest;
             }
@@ -797,7 +857,7 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             kind: "TEPSelect",
             dest: currentDestName,
         }
-        ret.push(stepSelect);
+        currentPlan.steps.push(stepSelect);
     }
     if (instanceOfTQueryUpdate(select)) {
         let stepUpdate: TEPUpdate = {
@@ -805,14 +865,65 @@ export function generateEP(db: SKSQL, context: TExecutionContext, select: TQuery
             dest: currentDestName,
             sets: select.sets.map((t) => { return t.column;})
         }
-        ret.push(stepUpdate);
+        currentPlan.steps.push(stepUpdate);
+    }
+    ret.push(currentPlan);
+    if (options !== undefined && options.printDebug === true || db.debugLevel >= kDebugLevel.L4_executionPlan) {
+        console.log("--------------------------");
+        console.log("EXECUTION PLAN GENERATED");
+        for (let i = 0; i < ret.length; i++) {
+            let p = ret[i];
+            console.log("hasForeignTables: " + JSON.stringify(p.hasForeignTables));
+            console.log("tableReferences: " + JSON.stringify(p.tablesReferences));
+            console.log("tempTables: " + JSON.stringify(p.tempTables));
+            for (let x = 0; x < p.steps.length; x++) {
+                let s = p.steps[x];
+                console.log("STEP " + s.kind);
+                switch (s.kind) {
+                    case "TEPScan":
+                    {
+                        const ps = s as TEPScan;
+                        const src = getValueForAliasTableOrLiteral(ps.table);
+                        console.log("Source Table: " + src.table);
+                        console.log("Source Alias: " + src.alias);
+                        console.log("Accept Unknown Predicate: " + ps.acceptUnknownPredicateResult);
+                        console.log("Predicate: " + serializeTQuery(ps.predicate));
+                        console.log("Projections: ");
+                        for (let j = 0; j < ps.projection.length; j++) {
+                            let proj = ps.projection[j];
+                            console.log("\t" + proj.columnName + " = " + serializeTQuery(proj.output));
+                        }
+                    }
+                    break;
+                    case "TEPNestedLoop":
+                    {
+
+                    }
+                    break;
+                    case "TEPSelect":
+                    {
+                        const ps = s as TEPSelect;
+                        console.log("Dest: " + ps.dest);
+                    }
+                    break;
+                    case "TEPSortNTop":
+                    {
+
+                    }
+                    break;
+                    case "TEPUpdate":
+                    {
+
+                    }
+                    break;
+                }
+            }
+            console.log("");
+            console.log("");
+        }
+
     }
 
-    if (options !== undefined && options.printDebug === true) {
-        console.log("--------------------------");
-        console.log("EXECUTION PLAN");
-        console.dir(ret);
-    }
 
 
     return ret;

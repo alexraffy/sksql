@@ -40,6 +40,7 @@ import {distinct1} from "./distinct1";
 import {join1} from "./join1";
 import {union1} from "./union1";
 import {evaluate1} from "./evaluate1";
+import {perf1} from "./perf1";
 
 let start = performance.now();
 
@@ -49,13 +50,14 @@ let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
 console.log(sksqlData.length + " bytes.");
 console.log("");
 
-test_parser();
+
 let db = new SKSQL();
 db.initWorkerPool(4, sksqlData);
+test_parser(db);
 
 const tests: ((db: SKSQL, next:()=>void) => void)[] = [evaluate1,
     blocks1, test_compress, int1, float1, test_numeric, strings, test_date, select1, where, union1, alias1, in1, case1, distinct1, join1, groupby1, check, coalesce,
-    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1, remote1
+    subquery1, insert1, update1, delete1, tsql1, test_functions, test_db_university, test_worker, stats1, perf1, remote1
 ]
 
 let idx = -1;

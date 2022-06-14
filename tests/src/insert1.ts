@@ -1,6 +1,6 @@
 
 import {SQLStatement, dumpTable, kResultType, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -120,7 +120,7 @@ export function insert1(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')", false, false,
         [["Anne Bonny", "Ireland"], ["Bartholomew Roberts", "Wales"]]);
 
-
+    checkNoTempTables(db);
     next();
 
 }

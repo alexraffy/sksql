@@ -2,7 +2,7 @@
 import {SKSQL, dumpTable, SQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 
@@ -38,6 +38,8 @@ export function in1(db: SKSQL, next: ()=>void) {
     runTest(db, "SELECT a FROM t1 WHERE b BETWEEN a AND a*5 ORDER BY a", false, false, [[1], [2], [3], [4]]);
     runTest(db, "SELECT a FROM t1 WHERE b NOT BETWEEN a AND a*5 ORDER BY a", false, false, [[5], [6], [7], [8], [9], [10]]);
     runTest(db, "SELECT a FROM t1 WHERE b BETWEEN a AND a*5 OR b=512 ORDER BY a", false, false, [[1], [2], [3], [4], [9]]);
+
+    checkNoTempTables(db);
 
     next();
 

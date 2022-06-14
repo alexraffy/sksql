@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function where(db: SKSQL, next: ()=>void) {
@@ -39,6 +39,8 @@ export function where(db: SKSQL, next: ()=>void) {
             throw new Error(ret.error);
         }
     }
+    st.close();
+
     //console.log(dumpTable(db.getTable("t1")));
     runTest(db, "INSERT INTO t2 SELECT 101-w, x, 10201+1-y, y FROM t1", false, false, undefined);
     //console.log(dumpTable(db.getTable("t2")));
@@ -109,6 +111,9 @@ export function where(db: SKSQL, next: ()=>void) {
 
     runTest(db, "SELECT w, p FROM t2, t1\n" +
         "    WHERE x=q AND y=s AND r=8977", false, false, [[34, 67]]);
+
+
+    checkNoTempTables(db);
 
     next();
 

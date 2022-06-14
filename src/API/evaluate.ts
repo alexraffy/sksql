@@ -506,6 +506,7 @@ export function evaluate(
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
                     tt = evaluate(db, newC, struct.value.right, newC.tables, undefined, options, withRow) as TTable;
+                    context.openedTempTables.push(...newC.openedTempTables);
                 } else if (instanceOfTTable(struct.value.right)) {
                     tt = struct.value.right;
                 }
@@ -785,6 +786,8 @@ export function evaluate(
                 newContext.label = fnData.name;
                 newContext.stack = sqlFunctionParams;
                 newContext.scopedIdentity = context.scopedIdentity;
+                // important if one of the parameter is a subquery with a reference to a table in the query
+                newContext.tables = context.tables;
                 let result = runFunction(db, newContext, fnData.fn);
                 swapContext(context, newContext);
                 context.exitExecution = false;
@@ -840,7 +843,7 @@ export function evaluate(
             }
         }
         let newStruct = JSON.parse(JSON.stringify(struct));
-        let tt = processSelectStatement(db, subQueryContext, newStruct);
+        let tt = processSelectStatement(db, subQueryContext, newStruct, true, {previousContext: context, printDebug: false});
         context.openedTempTables.push(...subQueryContext.openedTempTables);
 
         return tt;

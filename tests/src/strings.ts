@@ -1,7 +1,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, writeStringToUtf8ByteArray, readTableAsJSON} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 import * as assert from "assert";
 
 
@@ -77,7 +77,8 @@ export function strings(db: SKSQL, next: ()=>void) {
     let retArabic = sqlArabic.run() as SQLResult;
     let resultArabic = readTableAsJSON(db, retArabic.resultTableName);
     assert(resultArabic[0]["result"] === arabic, "Error RTL string.");
+    sqlArabic.close();
 
-
+    checkNoTempTables(db);
     next();
 }

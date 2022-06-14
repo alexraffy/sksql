@@ -40,14 +40,15 @@ import {
     instanceOfTQueryUpdate,
     instanceOfTQueryDelete,
     instanceOfTQueryTable,
-    TQueryExpression
+    TQueryExpression, SKSQL
 } from "sksql";
+import {checkNoTempTables} from "./runTest";
 
 
 
 
 
-export function test_parser() {
+export function test_parser(db: SKSQL) {
 
     console.log("TESTING PARSER...");
 
@@ -561,5 +562,5 @@ export function test_parser() {
     }, new Stream("(a = 1 AND b = 1) OR c <> 0", 0));
 
 
-
+    checkNoTempTables(db);
 }

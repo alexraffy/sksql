@@ -1,5 +1,6 @@
 import {SQLStatement, readTableAsJSON, SKSQL} from "sksql";
 import * as assert from "assert";
+import {checkNoTempTables} from "./runTest";
 
 
 export function test_worker(db: SKSQL, next:()=>void) {
@@ -18,6 +19,8 @@ export function test_worker(db: SKSQL, next:()=>void) {
     select.runOnWebWorker().then((resultTableName) => {
         let result = readTableAsJSON(db, resultTableName);
         assert(result !== undefined && result[0]["ID"] === "user_id" && result[0]["VALUE"] === "1544", "WebWorker test1 failed.");
+        select.close();
+        checkNoTempTables(db);
         next();
     }).catch((e) => {
         console.log("Error ", e);

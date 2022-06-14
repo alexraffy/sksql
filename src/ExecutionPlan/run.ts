@@ -1,5 +1,5 @@
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
-import {TEP} from "./TEP";
+import {TExecutionPlan} from "./TEP";
 import {runScan} from "./runScan";
 import {TEPScan} from "./TEPScan";
 import {addRow, rowHeaderSize} from "../Table/addRow";
@@ -20,7 +20,7 @@ import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {TEPGroupBy} from "./TEPGroupBy";
 import {runGroupBy} from "./runGroupBy";
 import {TExecutionContext} from "./TExecutionContext";
-import {SKSQL} from "../API/SKSQL";
+import {kDebugLevel, SKSQL} from "../API/SKSQL";
 import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
 import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
 import {recordSize} from "../Table/recordSize";
@@ -36,8 +36,6 @@ import {kUnionType} from "../Query/Enums/kUnionType";
 import {isRowInSet} from "./isRowInSet";
 import {copyRow} from "../BlockIO/copyRow";
 import {TParserError} from "../API/TParserError";
-import {dumpTable} from "../Table/dumpTable";
-
 
 
 // Run an execution plan.
@@ -45,10 +43,13 @@ import {dumpTable} from "../Table/dumpTable";
 
 
 export function run(db: SKSQL, context: TExecutionContext,
-                    statement: TQuerySelect, ep: TEP[]) {
+                    statement: TQuerySelect, execPlan: TExecutionPlan) {
     let returnTable = "";
     let rowsModified = 0;
     let runCallback = function (tep: TEPScan | TEPNestedLoop, walkInfos: TTableWalkInfo[]) {
+
+
+
         let resultWI: TTableWalkInfo = undefined;
         let hasDistinct: boolean = statement.hasDistinct;
         if (tep.kind === "TEPScan") {
@@ -131,8 +132,8 @@ export function run(db: SKSQL, context: TExecutionContext,
         return true;
     }
 
-    for (let i = 0; i < ep.length; i++) {
-        let p = ep[i];
+    for (let i = 0; i < execPlan.steps.length; i++) {
+        let p = execPlan.steps[i];
         if (p.kind === "TEPScan") {
             let ps = p as TEPScan;
             let tblName = getValueForAliasTableOrLiteral(ps.table);
@@ -246,7 +247,7 @@ export function run(db: SKSQL, context: TExecutionContext,
         let subQuery = statement.subSet as TQuerySelect;
         let newC = createNewContext("subSet", "", undefined );
         let rt : TTable = processSelectStatement(db, newC, subQuery, true, {printDebug: false});
-        context.openedTempTables.push(rt.table);
+        context.openedTempTables.push(...newC.openedTempTables);
         let subSetTable = db.getTable(rt.table);
         let subSetTableDef = readTableDefinition(subSetTable.data);
         let subSetCursor = readFirst(subSetTable, subSetTableDef);

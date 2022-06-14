@@ -2,7 +2,7 @@
 
 
 import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
-import {runTest} from "./runTest";
+import {checkNoTempTables, runTest} from "./runTest";
 
 
 export function coalesce(db: SKSQL, next:()=>void) {
@@ -25,6 +25,8 @@ export function coalesce(db: SKSQL, next:()=>void) {
     runTest(db, "SELECT isnull(isnull(d+c+b,d+c),d) FROM t1 ORDER BY a", false, false, [[undefined], [200], [102], [4], [undefined], [220], [132], [44]]);
     runTest(db, "SELECT isnull(isnull(b,c),d) FROM t1 ORDER BY a", false, false, [[undefined], [2], [3], [4], [undefined], [22], [33], [44]]);
     runTest(db, "SELECT isnull(b,isnull(c,d)) FROM t1 ORDER BY a", false, false, [[undefined], [2], [3], [4], [undefined], [22], [33], [44]]);
+
+    checkNoTempTables(db);
 
     next();
 

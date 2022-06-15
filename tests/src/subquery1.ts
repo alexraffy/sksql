@@ -9,7 +9,7 @@ import {checkNoTempTables, runTest} from "./runTest";
 export function subquery1(db: SKSQL, next:()=>void) {
     console.log("TESTING SUBQUERIES...");
 
-    runTest(db, "SELECT (SELECT 'Hello' FROM DUAL) FROM DUAL", false, false, [["Hello"]], undefined, {printDebug: false});
+    runTest(db, "SELECT (SELECT 'Hello' FROM DUAL) FROM DUAL", false, false, [["Hello"]], [{"(SELECT 'Hello' FROM DUAL)": "Hello"}], {printDebug: false});
     runTest(db, "SELECT (SELECT true FROM DUAL) FROM DUAL", false, false, [[true]]);
     runTest(db, "SELECT (SELECT -150 FROM DUAL) FROM DUAL", false, false, [[-150]]);
     runTest(db, "SELECT (SELECT 1.10 FROM DUAL) FROM DUAL", false, false, [[numericLoad("1.10")]]);

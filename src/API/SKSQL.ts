@@ -56,6 +56,7 @@ workerJavascript += "   if (result.error === undefined && result.resultTableName
 workerJavascript += "       parentPort.postMessage({c: \"DB\", d: db.allTables});\n";
 workerJavascript += "   }\n";
 workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, openedTempTables: st.context.openedTempTables, result: result} });\n";
+workerJavascript += "   st.close();\n";
 workerJavascript += "}\n\n";
 workerJavascript += "parentPort.on('message', (value) => {\n";
 workerJavascript += "   if (value !== undefined && value.c !== undefined) {\n";
@@ -661,7 +662,7 @@ export class SKSQL {
                                         }
                                     }
                                 }
-
+                                this.tableInfo.syncAll();
                             }
                                 break;
                         }
@@ -688,7 +689,20 @@ export class SKSQL {
                             }
                                 break;
                             case "DB": {
-                                this.allTables = e.d;
+                                for (let i = 0; i < e.d.length; i++) {
+                                    let d: ITable = e.d[i];
+                                    let name = readTableName(d.data);
+                                    if (!["dual", "routines", "sys_table_statistics"].includes(name)) {
+                                        let exists = this.allTables.find((at) => { let n = readTableName(at.data); return (n.toUpperCase() === name.toUpperCase());});
+                                        if (exists) {
+                                            exists.data.tableDef = d.data.tableDef;
+                                            exists.data.blocks = d.data.blocks;
+                                        } else {
+                                            this.allTables.push(d);
+                                        }
+                                    }
+                                }
+                                this.tableInfo.syncAll();
                             }
                                 break;
                         }

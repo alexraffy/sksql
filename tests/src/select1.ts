@@ -90,9 +90,9 @@ export function select1(db: SKSQL, next: () => void) {
     runTest(db, "SELECT f1 FROM test1 ORDER BY f2", false, false, [[11], [33]]);
     runTest(db, "SELECT f1 FROM test1 ORDER BY f2 DESC", false, false, [[33], [11]]);
     runTest(db, "SELECT DISTINCT * FROM test1 WHERE f1=11", false, false, [[11, 22]]);
-    runTest(db, "SELECT f1 as xyzzy FROM test1 ORDER BY f2", false, false, undefined, { "xyzzy": 11});
-    runTest(db, "SELECT f1+F2 as xyzzy FROM test1 ORDER BY f2", false, false, [[33], [77]], {"xyzzy": 33});
-    runTest(db, "SELECT f1+F2 FROM test1 ORDER BY f2", false, false, [[33], [77]], {"f1+F2": 33});
+    runTest(db, "SELECT f1 as xyzzy FROM test1 ORDER BY f2", false, false, undefined, [{ "xyzzy": 11}, {"xyzzy": 33}]);
+    runTest(db, "SELECT f1+F2 as xyzzy FROM test1 ORDER BY f2", false, false, [[33], [77]], [{"xyzzy": 33}, {"xyzzy": 77}]);
+    runTest(db, "SELECT f1+F2 FROM test1 ORDER BY f2", false, false, [[33], [77]], [{"f1+F2": 33}, {"f1+F2": 77}]);
 
 
     runTest(db, "DROP TABLE test1; CREATE TABLE test1(a int);", false, false, undefined);

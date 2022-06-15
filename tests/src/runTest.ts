@@ -15,8 +15,10 @@ import {
     kResultType,
     numericDisplay,
     kBlockHeaderField,
-    readTableDefinition
+    readTableDefinition,
+    readTableAsJSON
 } from "sksql";
+
 
 
 
@@ -30,7 +32,7 @@ export function checkNoTempTables(db: SKSQL) {
 }
 
 
-export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[], colValues: { [key:string]:any } = undefined, options: {printDebug: boolean} = {printDebug: false}) {
+export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[], colValues: { [key:string]:any }[] = undefined, options: {printDebug: boolean} = {printDebug: false}) {
     let throwError = "";
     let st: SQLStatement = undefined;
     try {
@@ -140,9 +142,78 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
                     }
                 }
                 if (totalToCheck !== totalChecked) {
-
                     throwError = throwError + sql + " did not return the expected columns.";
                 }
+
+                if (colValues !== undefined) {
+                    let line = 0;
+                    let check = true;
+                    let totalChecked = 0;
+                    let json = readTableAsJSON(db, ret.resultTableName);
+                    if (json.length !== colValues.length) {
+                        throwError = throwError + sql + " returned more rows than expected.";
+                    } else {
+                        for (let i = 0; i < json.length; i++) {
+                            let rowA = json[i];
+                            let rowB = colValues[i];
+                            let keysA = Object.keys(rowA);
+
+                            for (let x = 0; x < keysA.length; x++) {
+                                let key = keysA[x];
+                                let valueA = rowA[key];
+                                let valueB = rowB[key];
+                                if (typeof valueB === "function") {
+                                    if (valueB(valueA) === false) {
+                                        throwError = throwError + sql + " not the data expected for key " + key;
+                                        break;
+                                    }
+                                } else {
+                                    let ta: TableColumnType;
+                                    let tb: TableColumnType;
+                                    if (isNumeric(valueA)) {
+                                        ta = TableColumnType.numeric;
+                                        check = check && (numericCmp(valueA, valueB) === 0);
+                                        if (options !== undefined && options.printDebug === true) {
+                                            console.log("[" + numericDisplay(valueA) + "] = [" + numericDisplay(valueB) + "]");
+                                        }
+                                    } else if (typeof valueA === "string") {
+                                        ta = TableColumnType.varchar;
+                                        check = check && (valueA.localeCompare(valueB) === 0);
+                                        if (options !== undefined && options.printDebug === true) {
+                                            console.log("[" + valueA + "] = [" + valueB + "]");
+                                        }
+                                    } else if (typeof valueA === "number") {
+                                        ta = TableColumnType.int32;
+                                        check = check && (valueA === valueB);
+                                        if (options !== undefined && options.printDebug === true) {
+                                            console.log("[" + valueA + "] = [" + valueB + "]");
+                                        }
+                                    } else if (typeof valueA === "boolean") {
+                                        ta = TableColumnType.boolean;
+                                        if (options !== undefined && options.printDebug === true) {
+                                            console.log("[" + valueA + "] = [" + valueB + "]");
+                                        }
+                                    }
+                                    if (isNumeric(valueB)) {
+                                        tb = TableColumnType.numeric;
+                                    } else if (typeof valueB === "string") {
+                                        tb = TableColumnType.varchar;
+                                    } else if (typeof valueB === "number") {
+                                        tb = TableColumnType.int32;
+                                    } else if (typeof valueB === "boolean") {
+                                        tb = TableColumnType.boolean;
+                                    }
+                                    if (ta !== tb) {
+                                        throwError = sql + " did not return the expected type.";
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+
             }
         }
 

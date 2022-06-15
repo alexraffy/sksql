@@ -14,30 +14,31 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 
 export function readTableAsJSON(db: SKSQL, table: string): any[] {
     let ret: any[] = [];
-    let tbl = db.getTable(table);
+    let tbl = db.tableInfo.get(table);
     if (tbl === undefined) { return ret; }
-    let def = readTableDefinition(tbl.data);
-    let cursor = readFirst(tbl, def);
+    let cursor = readFirst(tbl.pointer, tbl.def);
     while (!cursorEOF(cursor)) {
         let row = {};
-        let dv = new DataView(tbl.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + 5);
+        let dv = new DataView(tbl.pointer.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + 5);
 
         let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
         const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted == 0) {
-            for (let i = 0; i < def.columns.length; i++) {
-                let val = readValue(tbl, def, def.columns[i], dv, 5);
-                if (isNumeric(val)) {
-                    row[def.columns[i].name] = val; //numericToNumber(val);
-                } else if (instanceOfTDate(val)) {
-                    row[def.columns[i].name] = new Date(val.year + "-" + padLeft(val.month, 2, "0") + "-" + padLeft(val.month, 2, "0"));
-                } else {
-                    row[def.columns[i].name] = val;
+            for (let i = 0; i < tbl.def.columns.length; i++) {
+                if (tbl.def.columns[i].invisible !== true) {
+                    let val = readValue(tbl.pointer, tbl.def, tbl.def.columns[i], dv, 5);
+                    if (isNumeric(val)) {
+                        row[tbl.def.columns[i].name] = val; //numericToNumber(val);
+                    } else if (instanceOfTDate(val)) {
+                        row[tbl.def.columns[i].name] = new Date(val.year + "-" + padLeft(val.month, 2, "0") + "-" + padLeft(val.month, 2, "0"));
+                    } else {
+                        row[tbl.def.columns[i].name] = val;
+                    }
                 }
             }
             ret.push(row);
         }
-        cursor = readNext(tbl, def, cursor);
+        cursor = readNext(tbl.pointer, tbl.def, cursor);
     }
     return ret;
 }

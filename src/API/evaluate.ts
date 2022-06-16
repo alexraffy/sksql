@@ -754,7 +754,7 @@ export function evaluate(
         if (fnData.type === kFunctionType.scalar) {
             for (let i = 0; i < struct.value.parameters.length; i++) {
                 let param = struct.value.parameters[i];
-                let expType = findExpressionType(db, param, struct, tables, context.stack);
+                let expType = findExpressionType(db, context, param, struct, tables, context.stack);
                 let paramValue = evaluate(db, context, param, tables, colDef, options, withRow);
                 if (instanceOfTTable(paramValue)) {
                     paramValue = readFirstColumnOfTable(db, context, paramValue);

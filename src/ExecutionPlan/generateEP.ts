@@ -67,6 +67,7 @@ import {getFirstPublicColumn} from "../Table/getFirstPublicColumn";
 import {serializeTQuery} from "../API/serializeTQuery";
 import {dumpContextInfo} from "./dumpContextInfo";
 import {serializeTableDefinition} from "../Table/serializeTableDefinition";
+import {instanceOfTCaseWhen} from "../Query/Guards/instanceOfTCaseWhen";
 
 /*
     generateEP
@@ -180,7 +181,16 @@ export function generateEP(db: SKSQL,
             if (instanceOfTQuerySelect(obj)) {
 
                 let oldContext: TExecutionContext = undefined;
-                if (parents.length > 0 && (instanceOfTQueryColumn(parents[0]) || instanceOfTQueryExpression(parents[0]))) {
+                if (parents.length > 0) {
+                    /*
+                    // do we need this test?
+                    && (instanceOfTQueryColumn(parents[0]) ||
+                     instanceOfTQueryExpression(parents[0]) ||
+                     instanceOfTQueryFunctionCall(parents[0]) ||
+                     instanceOfTCast(parents[0]) ||
+                     instanceOfTCaseWhen(parents[0]))) {
+                     */
+
                     // this is a subquery, we try to generate an execution plan.
                     // if it fails that tell us that the subquery references a foreign table
                     oldContext = context;
@@ -344,12 +354,12 @@ export function generateEP(db: SKSQL,
                 if (info.status.extra["inFunction"] === undefined && info.functionData.data.returnTypeSameTypeHasParameterX !== undefined && info.status.extra["ignoreType"] !== true) {
                     let t;
                     if (info.functionData.data.returnTypeSameTypeHasParameterX < obj.value.parameters.length) {
-                        t = findExpressionType(db, obj.value.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
+                        t = findExpressionType(db, context, obj.value.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
                     } else if (info.functionData.data.parameters.length > info.functionData.data.returnTypeSameTypeHasParameterX) {
-                        t = findExpressionType(db, info.functionData.data.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
+                        t = findExpressionType(db, context, info.functionData.data.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
                     } else {
                         if (info.functionData.data.returnTypeSameTypeHasParameterX < obj.value.parameters.length) {
-                            t = findExpressionType(db, obj.value.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
+                            t = findExpressionType(db, context, obj.value.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], select, context.tables, context.stack);
                         } else {
                             throw new TParserError("Could not find return type for function " + info.functionData.name);
                         }

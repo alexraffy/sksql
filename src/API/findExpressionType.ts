@@ -22,6 +22,10 @@ import {openTables} from "./openTables";
 import {generateEP} from "../ExecutionPlan/generateEP";
 import {createNewContext} from "../ExecutionPlan/newContext";
 import {TEPSelect} from "../ExecutionPlan/TEPSelect";
+import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
+import {getResultTableFromExecutionPlanSteps} from "../ExecutionPlan/getResultTableFromExecutionPlanSteps";
+import {TTable} from "../Query/Types/TTable";
+import {getFirstPublicColumn} from "../Table/getFirstPublicColumn";
 
 
 export interface TFindExpressionTypeOptions {
@@ -32,6 +36,7 @@ export interface TFindExpressionTypeOptions {
 // Calculate the type of expression o
 
 export function findExpressionType(db: SKSQL,
+                                   context: TExecutionContext,
                                    o: any,
                                    currentStatement: TValidStatementsInProcedure,
                                    tables: TTableWalkInfo[],
@@ -79,13 +84,68 @@ export function findExpressionType(db: SKSQL,
     walkTree(db, undefined, currentStatement, tablesToCheck, parameters, o, [], {status: "", extra: {}},
         (obj: any, parents: any[], info: {colData: {table: TTableWalkInfo, def: TableColumn}, functionData: {name: string, data: TRegisteredFunction}}) => {
 
+
+        if (instanceOfTQuerySelect(obj)) {
+
+            let oldContext: TExecutionContext = undefined;
+
+            /*
+            // do we need this test?
+            && (instanceOfTQueryColumn(parents[0]) ||
+             instanceOfTQueryExpression(parents[0]) ||
+             instanceOfTQueryFunctionCall(parents[0]) ||
+             instanceOfTCast(parents[0]) ||
+             instanceOfTCaseWhen(parents[0]))) {
+             */
+
+            // this is a subquery, we try to generate an execution plan.
+            // if it fails that tell us that the subquery references a foreign table
+            oldContext = context;
+            let newC = createNewContext("subQuery", context.query, undefined);
+            newC.stack = context.stack;
+            newC.tables = [];
+            for (let i = 0; i < oldContext.tables.length; i++) {
+                if (oldContext.tables[i].name.startsWith("#")) {
+                    newC.tables.push(oldContext.tables[i]);
+                }
+            }
+            context = newC;
+            let execPlans = generateEP(db, newC, obj, {previousContext: oldContext, printDebug: false});
+            if (execPlans.length > 0) {
+                // get the result table name
+                let resultTable = getResultTableFromExecutionPlanSteps(execPlans[execPlans.length-1]);
+                if (resultTable !== "") {
+                    let t: TTable = {
+                        kind: "TTable",
+                        table: resultTable,
+                        schema: "dbo"
+                    }
+                    let info = db.tableInfo.get(resultTable);
+                    let firstColumn = getFirstPublicColumn(info.def);
+                    types.push(firstColumn.type);
+                    if (execPlans[execPlans.length-1].hasForeignTables === false) {
+                        // we can replace the sub-query with the value
+                        // OPTIMIZATION
+                    }
+                }
+
+
+            }
+            context = oldContext;
+            context.openedTempTables.push(...newC.openedTempTables);
+            return false;
+
+        }
+
+
+
         if (instanceOfTQueryExpression(obj)) {
             if (["==", "=", "!=", "<>", "<=", "<", ">", ">=", "LIKE", "NOT LIKE", "IN", "NOT IN", "BETWEEN", "NOT", "NOT BETWEEN", "AND", "AND NOT", "OR"].includes(obj.value.op)) {
                 types.push(TableColumnType.boolean);
                 return false;
             }
-            types.push(findExpressionType(db, obj.value.left, currentStatement, tables, parameters, callback, options));
-            types.push(findExpressionType(db, obj.value.right, currentStatement, tables, parameters, callback, options));
+            types.push(findExpressionType(db, context, obj.value.left, currentStatement, tables, parameters, callback, options));
+            types.push(findExpressionType(db, context, obj.value.right, currentStatement, tables, parameters, callback, options));
             return false;
         }
 
@@ -133,7 +193,7 @@ export function findExpressionType(db: SKSQL,
 
         if (instanceOfTQueryFunctionCall(o)) {
             if (info.functionData.data.returnTypeSameTypeHasParameterX !== undefined) {
-                let t = findExpressionType(db, info.functionData.data.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], currentStatement, tables, parameters);
+                let t = findExpressionType(db, context, info.functionData.data.parameters[info.functionData.data.returnTypeSameTypeHasParameterX], currentStatement, tables, parameters);
                 types.push(t);
                 return false;
             }

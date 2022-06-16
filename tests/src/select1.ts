@@ -107,6 +107,8 @@ export function select1(db: SKSQL, next: () => void) {
     runTest(db, "DECLARE @offset INT = 10; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT 3 ROWS ONLY", false, false, [[40], [39], [38]]);
     runTest(db, "DECLARE @offset INT = 10; DECLARE @fetch INT = 3; SELECT * FROM test1 ORDER BY a DESC OFFSET @offset ROWS FETCH NEXT @fetch ROWS ONLY", false, false, [[40], [39], [38]]);
 
+    runTest(db, "SELECT IsNull((SELECT 'Hello' FROM dual), 'Hi') FROM dual", false, false, [["Hello"]], undefined, {printDebug: false});
+
     checkNoTempTables(db);
     next();
 

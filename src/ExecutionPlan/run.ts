@@ -36,6 +36,7 @@ import {kUnionType} from "../Query/Enums/kUnionType";
 import {isRowInSet} from "./isRowInSet";
 import {copyRow} from "../BlockIO/copyRow";
 import {TParserError} from "../API/TParserError";
+import {addTempTablesToContext} from "./addTempTablesToContext";
 
 
 // Run an execution plan.
@@ -246,8 +247,9 @@ export function run(db: SKSQL, context: TExecutionContext,
         }
         let subQuery = statement.subSet as TQuerySelect;
         let newC = createNewContext("subSet", "", undefined );
+        addTempTablesToContext(newC, context.openedTempTables);
         let rt : TTable = processSelectStatement(db, newC, subQuery, true, {printDebug: false});
-        context.openedTempTables.push(...newC.openedTempTables);
+        addTempTablesToContext(context, newC.openedTempTables);
         let subSetTable = db.getTable(rt.table);
         let subSetTableDef = readTableDefinition(subSetTable.data);
         let subSetCursor = readFirst(subSetTable, subSetTableDef);

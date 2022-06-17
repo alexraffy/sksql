@@ -26,6 +26,7 @@ import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 import {getResultTableFromExecutionPlanSteps} from "../ExecutionPlan/getResultTableFromExecutionPlanSteps";
 import {TTable} from "../Query/Types/TTable";
 import {getFirstPublicColumn} from "../Table/getFirstPublicColumn";
+import {addTempTablesToContext} from "../ExecutionPlan/addTempTablesToContext";
 
 
 export interface TFindExpressionTypeOptions {
@@ -81,7 +82,7 @@ export function findExpressionType(db: SKSQL,
     }
     */
 
-    walkTree(db, undefined, currentStatement, tablesToCheck, parameters, o, [], {status: "", extra: {}},
+    walkTree(db, context, currentStatement, tablesToCheck, parameters, o, [], {status: "", extra: {}},
         (obj: any, parents: any[], info: {colData: {table: TTableWalkInfo, def: TableColumn}, functionData: {name: string, data: TRegisteredFunction}}) => {
 
 
@@ -104,6 +105,7 @@ export function findExpressionType(db: SKSQL,
             let newC = createNewContext("subQuery", context.query, undefined);
             newC.stack = context.stack;
             newC.tables = [];
+            addTempTablesToContext(newC, context.openedTempTables);
             for (let i = 0; i < oldContext.tables.length; i++) {
                 if (oldContext.tables[i].name.startsWith("#")) {
                     newC.tables.push(oldContext.tables[i]);
@@ -132,7 +134,7 @@ export function findExpressionType(db: SKSQL,
 
             }
             context = oldContext;
-            context.openedTempTables.push(...newC.openedTempTables);
+            addTempTablesToContext(context, newC.openedTempTables);
             return false;
 
         }

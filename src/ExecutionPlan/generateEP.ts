@@ -68,6 +68,7 @@ import {serializeTQuery} from "../API/serializeTQuery";
 import {dumpContextInfo} from "./dumpContextInfo";
 import {serializeTableDefinition} from "../Table/serializeTableDefinition";
 import {instanceOfTCaseWhen} from "../Query/Guards/instanceOfTCaseWhen";
+import {addTempTablesToContext} from "./addTempTablesToContext";
 
 /*
     generateEP
@@ -136,12 +137,12 @@ export function generateEP(db: SKSQL,
                 let subQuery = select.tables[i].tableName as TQuerySelect;
                 rt = processSelectStatement(db, newC, subQuery, true, options);
                 select.tables[i].tableName = rt;
-                context.openedTempTables.push(...newC.openedTempTables);
+                addTempTablesToContext(context, newC.openedTempTables);
             } else if (instanceOfTAlias(select.tables[i].tableName) && instanceOfTQuerySelect((select.tables[i].tableName as TAlias).name)) {
                 let subQuery = (select.tables[i].tableName as TAlias).name as TQuerySelect;
                 rt = processSelectStatement(db, newC, subQuery, true, options);
                 (select.tables[i].tableName as TAlias).name = rt;
-                context.openedTempTables.push(...newC.openedTempTables);
+                addTempTablesToContext(context, newC.openedTempTables);
             }
             if (rt !== undefined && db.debugLevel >= kDebugLevel.L80_fromSubQueryDump) {
                 console.log("--------------------");
@@ -197,6 +198,8 @@ export function generateEP(db: SKSQL,
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
                     newC.tables = [];
+                    newC.openedTempTables = [...context.openedTempTables];
+                    addTempTablesToContext(newC, context.openedTempTables);
                     for (let i = 0; i < oldContext.tables.length; i++) {
                         if (oldContext.tables[i].name.startsWith("#")) {
                             newC.tables.push(oldContext.tables[i]);
@@ -225,8 +228,7 @@ export function generateEP(db: SKSQL,
 
                     }
                     context = oldContext;
-                    context.openedTempTables.push(...newC.openedTempTables);
-
+                    addTempTablesToContext(context, newC.openedTempTables);
 
                     if (info.status.extra["ignoreType"] === false) {
 

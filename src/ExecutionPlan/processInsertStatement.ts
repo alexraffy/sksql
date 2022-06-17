@@ -49,6 +49,7 @@ import {dumpTable} from "../Table/dumpTable";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {TBooleanResult} from "../API/TBooleanResult";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
+import {addTempTablesToContext} from "./addTempTablesToContext";
 
 
 function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecutionContext, insert: TQueryInsert, rowLength: number, tbl: ITable, def: ITableDefinition, rowData: any[]) {
@@ -254,7 +255,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
         let selectContext = createNewContext("select", q, context.parseResult as ParseResult);
         selectResultTable = processSelectStatement(db, selectContext, insert.selectStatement, true);
         let selectTableInfo = db.tableInfo.get(selectResultTable.table);
-        newContext.openedTempTables.push(...selectContext.openedTempTables);
+        addTempTablesToContext(newContext, selectContext.openedTempTables);
         //console.log("INSERT INTO SELECT");
         //console.log(dumpTable(selectTableInfo.pointer));
 
@@ -281,7 +282,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
     if (numberOfRowsAdded > 0) {
         updateTableTimestamp(db, def.name.toUpperCase());
     }
-    context.openedTempTables.push(...newContext.openedTempTables);
+    addTempTablesToContext(context, newContext.openedTempTables);
     context.broadcastQuery = true;
     context.result.rowsInserted += numberOfRowsAdded;
 

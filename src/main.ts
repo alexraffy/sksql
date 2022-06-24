@@ -67,6 +67,7 @@ export * from "./Table/convertToType";
 export * from "./Table/dumpTable";
 export * from "./Table/foreignKeyCascadeEnum2String";
 export * from "./Table/headerLengthForTableDefinition";
+export * from "./Table/isValidTableHeader";
 export * from "./Table/ITable";
 export * from "./Table/ITableData";
 export * from "./Table/ITableDefinition";

@@ -9,6 +9,8 @@ import {predicateValidExpressions} from "./predicateValidExpressions";
 import {returnPred} from "../../BaseParser/Predicates/ret";
 import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {TExecute} from "../Types/TExecute";
+import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
+import {eof} from "../../BaseParser/Predicates/eof";
 
 
 // parse a EXECUTE/EXEC op
@@ -72,7 +74,12 @@ export function* predicateTExecute(callback) {
                 p.order = param_order;
                 yield maybe(atLeast1(whitespaceOrNewLine));
             }
-            const output = yield maybe(str("OUTPUT"));
+            let endOfStatement = oneOf([whitespaceOrNewLine, str(";"), str(","), eof], "");
+            const output = yield maybe(
+                oneOf([
+                    checkSequence([str("OUTPUT"), endOfStatement]),
+                    checkSequence([str("OUT"), endOfStatement])
+                    ], ""));
             p.output = (output !== undefined);
             yield maybe(atLeast1(whitespaceOrNewLine));
             gotMore = yield maybe(str(","));

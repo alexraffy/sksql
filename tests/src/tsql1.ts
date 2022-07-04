@@ -43,6 +43,17 @@ export function tsql1(db: SKSQL, next: ()=>void) {
     ]);
     runTest(db, "DROP TABLE TTT;", false, false, undefined);
 
+    runTest(db, "CREATE PROCEDURE usp_testParam @a UINT32 AS BEGIN SELECT @a FROM dual; END;", false, false, undefined);
+    runTest(db, "Execute usp_testParam @a = 1;", false, false, [[1]]);
+    runTest(db, "DROP PROCEDURE usp_runTest;", false, false, undefined);
+    runTest(db, "CREATE PROCEDURE usp_testParam @a UINT32 as begin SET @a = @a + 1; END;", false, false, undefined);
+    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var; SELECT @var FROM dual;", false, false, [[1]]);
+    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var OUTPUT; SELECT @var FROM dual;", false, false, [[1]], undefined, {printDebug: true});
+    runTest(db, "CREATE PROCEDURE usp_testParam @a UINT32 OUTPUT as begin SET @a = @a + 1; END;", false, false, undefined);
+    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var; SELECT @var FROM dual;", false, false, [[1]]);
+    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var OUTPUT; SELECT @var FROM dual;", false, false, [[2]]);
+
+
     checkNoTempTables(db);
 
     next();

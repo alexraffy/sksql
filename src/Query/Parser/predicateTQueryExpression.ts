@@ -84,6 +84,9 @@ export function * predicateTQueryExpression() {
         checkSequence([str("ROWS"), endOfStatement]),
         checkSequence([str("FETCH"), atLeast1(whitespaceOrNewLine)]),
         checkSequence([str("ONLY"), endOfStatement]),
+        checkSequence([str("OUTPUT"), endOfStatement]),
+        checkSequence([str("OUT"), endOfStatement]),
+        checkSequence([str("READONLY"), endOfStatement])
     ];
 
     let chain: (TQueryExpression | TValidExpressions | kQueryExpressionOp)[] = [];

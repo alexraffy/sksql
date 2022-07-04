@@ -52,7 +52,7 @@ export function processExecuteStatement(db: SKSQL,
                     let value = evaluate(db, context, exists.value,  [], undefined);
                     newParameter.value = value;
                     gotParameter = true;
-                    if (exists.output === true) {
+                    if (exists.output === true && p.output === true) {
                         gotOutput = true;
                     }
                 }
@@ -64,7 +64,7 @@ export function processExecuteStatement(db: SKSQL,
                         let value = evaluate(db, context, existsByIndex.value,  [],  undefined);
                         newParameter.value = value;
                         gotParameter = true;
-                        if (existsByIndex.output === true) {
+                        if (existsByIndex.output === true && p.output === true) {
                             gotOutput = true;
                         }
                     }

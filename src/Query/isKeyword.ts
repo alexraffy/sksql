@@ -21,7 +21,7 @@ const keyWords = ["ADD", "EXTERNAL", "PROCEDURE", "ALL", "FETCH" , "PUBLIC", "AL
     "OPTION", "USER", "DROP", "OR", "VALUES", "DUMP", "ORDER", "VARYING", "ELSE", "OUTER", "VIEW", "END",
     "OVER", "WAITFOR", "ERRLVL", "PERCENT", "WHEN", "ESCAPE", "PIVOT", "WHERE", "EXCEPT", "PLAN", "WHILE",
     "EXEC", "PRECISION", "WITH", "EXECUTE", "PRIMARY", "WITHIN", "EXISTS", "PRINT", "WRITETEXT", "EXIT",
-    "PROC", "DEBUGGER", "OFFSET", "ROW", "ROWS", "NEXT", "FIRST", "ONLY"];
+    "PROC", "DEBUGGER", "OFFSET", "ROW", "ROWS", "NEXT", "FIRST", "ONLY", "OUTPUT", "OUT", "READONLY"];
 
 const ops = ["+", "-", "*", "/", "%"];
 const logic = ["=", "!=", "<>", "==", "<=", "<", ">=", ">", "IS"]

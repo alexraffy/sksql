@@ -253,6 +253,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
             q = context.query; //.substring((insert.selectStatement as TDebugInfo).debug.start, (insert.selectStatement as TDebugInfo).debug.end);
         }
         let selectContext = createNewContext("select", q, context.parseResult as ParseResult);
+        selectContext.stack = context.stack;
         selectResultTable = processSelectStatement(db, selectContext, insert.selectStatement, true);
         let selectTableInfo = db.tableInfo.get(selectResultTable.table);
         addTempTablesToContext(newContext, selectContext.openedTempTables);

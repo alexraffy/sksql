@@ -263,7 +263,9 @@ export function generateEP(db: SKSQL,
 
             if (instanceOfTVariable(obj) && info.status.extra["inFunction"] === undefined && info.status.extra["ignoreType"] !== true) {
                 let param = context.stack.find((p) => { return p.name === obj.name;});
-
+                if (param === undefined) {
+                    throw new TParserError("Could not find parameter " + obj.name);
+                }
                     if (param.type !== undefined) {
                         expressionTypes.push(param.type);
                         if ((expressionLength !== undefined && param.type === TableColumnType.varchar && expressionLength < 4096) || expressionLength === undefined) {

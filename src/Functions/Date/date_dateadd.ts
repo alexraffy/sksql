@@ -14,6 +14,7 @@ import {date_addYear} from "./date_addYear";
 import {date_addQuarter} from "./date_addQuarter";
 import {date_addWeek} from "./date_addWeek";
 import {date_addWeekDay} from "./date_addWeekDay";
+import {TParserError} from "../../API/TParserError";
 
 
 
@@ -83,7 +84,10 @@ export function date_dateadd(context: TExecutionContext, what: string, value: nu
         case "w":
             ret = date_addWeekDay(d, value);
             break;
-
+        default:
+        {
+            throw new TParserError(what + " is not a valid parameter for DATEADD")
+        }
     }
 
 

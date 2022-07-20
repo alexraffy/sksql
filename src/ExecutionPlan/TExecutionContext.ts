@@ -5,12 +5,19 @@ import {TDate} from "../Query/Types/TDate";
 import {TTime} from "../Query/Types/TTime";
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {ParseResult} from "../BaseParser/ParseResult";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {ParseError} from "../BaseParser/ParseError";
 import {TValidStatementsInProcedure} from "../Query/Types/TValidStatementsInProcedure";
 
 // Execution context
 // keep track of variables, open tables, loop flow, return value...
+
+export enum kModifiedBlockType {
+    tableHeader = "TABLEHEADER",
+    tableBlock = "TABLEBLOCK",
+    indexHeader = "INDEXHEADER",
+    indexBlock = "INDEXBLOCK"
+}
 
 export interface TExecutionContext {
     label: string;
@@ -24,7 +31,7 @@ export interface TExecutionContext {
     breakLoop: boolean; // if true, we will exit the current loop
     parseResult: ParseResult | ParseError;
     broadcastQuery: boolean; // set to true if the query modify any records
-    result: SQLResult;
+    result: TSQLResult;
     query: string;
     tables: TTableWalkInfo[]; // tables needed to fulfill the query.
     openedTempTables: string[]; // temp tables that will have to be dropped after the final result is read.
@@ -33,4 +40,9 @@ export interface TExecutionContext {
     rollback: boolean;
     rollbackMessage: string;
     currentStatement: TValidStatementsInProcedure;
+    modifiedBlocks: {
+        type: kModifiedBlockType,
+        name: string;
+        blockIndex: number;
+    }[];
 }

@@ -1,6 +1,6 @@
 
 
-import {SKSQL, dumpTable, SQLResult, numericCmp, isNumeric,
+import {SKSQL, dumpTable, TSQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
@@ -48,7 +48,7 @@ export function tsql1(db: SKSQL, next: ()=>void) {
     runTest(db, "DROP PROCEDURE usp_runTest;", false, false, undefined);
     runTest(db, "CREATE PROCEDURE usp_testParam @a UINT32 as begin SET @a = @a + 1; END;", false, false, undefined);
     runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var; SELECT @var FROM dual;", false, false, [[1]]);
-    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var OUTPUT; SELECT @var FROM dual;", false, false, [[1]], undefined, {printDebug: true});
+    runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var OUTPUT; SELECT @var FROM dual;", false, false, [[1]], undefined, {printDebug: false});
     runTest(db, "CREATE PROCEDURE usp_testParam @a UINT32 OUTPUT as begin SET @a = @a + 1; END;", false, false, undefined);
     runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var; SELECT @var FROM dual;", false, false, [[1]]);
     runTest(db, "DECLARE @var UINT32 = 1; Exec usp_testParam @a = @var OUTPUT; SELECT @var FROM dual;", false, false, [[2]]);

@@ -8,6 +8,7 @@ import {readNext} from "../Cursor/readNext";
 import {addRow, rowHeaderSize} from "../Table/addRow";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {writeStringToUtf8ByteArray} from "../BlockIO/writeStringToUtf8ByteArray";
+import {createNewContext} from "../ExecutionPlan/newContext";
 
 // Remove deleted rows from a table
 
@@ -48,7 +49,8 @@ export function vacuumTable(db: SKSQL, tableName: string, cbWriteTable: (tableNa
                 cursor = readNext(table, def, cursor);
                 continue;
             }
-            let row = addRow(nt.data, table.data.blocks[0].byteLength);
+            let nc = createNewContext("", "", undefined);
+            let row = addRow(nt.data, table.data.blocks[0].byteLength, nc);
             copyBytesBetweenDV(cursor.rowLength, dv, row, rowHeaderSize, rowHeaderSize);
             cursor = readNext(table, def, cursor);
         }

@@ -1,4 +1,5 @@
 import {TExecutionContext} from "./TExecutionContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 // swap back to an old context
 
@@ -16,4 +17,5 @@ export function swapContext(backToContext: TExecutionContext, fromContext: TExec
             backToContext.openedTempTables.push(fromContext.openedTempTables[i]);
         }
     }
+    addModifiedBlocksToContext(backToContext, fromContext);
 }

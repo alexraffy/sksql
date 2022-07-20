@@ -6,7 +6,6 @@ import {TColumn} from "../Query/Types/TColumn";
 import {evaluate} from "../API/evaluate";
 import {writeValue} from "../BlockIO/writeValue";
 import {ParseResult} from "../BaseParser/ParseResult";
-import {SQLResult} from "../API/SQLResult";
 import {updateTableIdentityValue} from "../BlockIO/updateTableIdentityValue";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
 import {parse} from "../BaseParser/parse";
@@ -25,7 +24,7 @@ import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLi
 import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {convertValue} from "../API/convertValue";
-import {TExecutionContext} from "./TExecutionContext";
+import {kModifiedBlockType, TExecutionContext} from "./TExecutionContext";
 import {createNewContext} from "./newContext";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {checkConstraint} from "./checkConstraint";
@@ -38,18 +37,17 @@ import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
 import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
 import {TTable} from "../Query/Types/TTable";
 import {processSelectStatement} from "./processSelectStatement";
-import {readTableDefinition} from "../Table/readTableDefinition";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
-import {readTableAsJSON} from "../API/readTableAsJSON";
 import {readValue} from "../BlockIO/readValue";
 import {recordSize} from "../Table/recordSize";
-import {dumpTable} from "../Table/dumpTable";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {TBooleanResult} from "../API/TBooleanResult";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
 import {addTempTablesToContext} from "./addTempTablesToContext";
+import {addModifiedBlockToContext} from "./addModifiedBlockToContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 
 function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecutionContext, insert: TQueryInsert, rowLength: number, tbl: ITable, def: ITableDefinition, rowData: any[]) {
@@ -159,7 +157,7 @@ function insertRow(db: SKSQL, context: TExecutionContext, newContext: TExecution
     }
 
     // we write the row to the block
-    let newRow = addRow(tbl.data, 655360);
+    let newRow = addRow(tbl.data, 655360, context);
     copyBytesBetweenDV(rowLength - rowHeaderSize, row, newRow, rowHeaderSize, rowHeaderSize);
 
     return newKey;
@@ -257,6 +255,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
         selectResultTable = processSelectStatement(db, selectContext, insert.selectStatement, true);
         let selectTableInfo = db.tableInfo.get(selectResultTable.table);
         addTempTablesToContext(newContext, selectContext.openedTempTables);
+        addModifiedBlocksToContext(newContext, selectContext);
         //console.log("INSERT INTO SELECT");
         //console.log(dumpTable(selectTableInfo.pointer));
 
@@ -284,6 +283,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
         updateTableTimestamp(db, def.name.toUpperCase());
     }
     addTempTablesToContext(context, newContext.openedTempTables);
+    addModifiedBlocksToContext(context, newContext);
     context.broadcastQuery = true;
     context.result.rowsInserted += numberOfRowsAdded;
 

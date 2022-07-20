@@ -1,31 +1,24 @@
-
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {evaluate} from "../API/evaluate";
 import {TQueryDelete} from "../Query/Types/TQueryDelete";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
-import {instanceOfTQueryDelete} from "../Query/Guards/instanceOfTQueryDelete";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
-import {instanceOfTTable} from "../Query/Guards/instanceOfTTable";
-import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {readFirst} from "../Cursor/readFirst";
-import {TLiteral} from "../Query/Types/TLiteral";
 import {TTable} from "../Query/Types/TTable";
 import {TAlias} from "../Query/Types/TAlias";
-import {instanceOfTAlias} from "../Query/Guards/instanceOfTAlias";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
-import {numeric} from "../Numeric/numeric";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TParserError} from "../API/TParserError";
-import {TExecutionContext} from "./TExecutionContext";
+import {kModifiedBlockType, TExecutionContext} from "./TExecutionContext";
 import {runScan} from "./runScan";
 import {TEPScan} from "./TEPScan";
 import {SKSQL} from "../API/SKSQL";
-import {openTable} from "../API/openTables";
 import {recordSize} from "../Table/recordSize";
 import {findWalkTable} from "./findWalkTable";
 import {contextTables} from "./contextTables";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
+import {addModifiedBlockToContext} from "./addModifiedBlockToContext";
 
 
 // Process a DELETE FROM statement
@@ -90,6 +83,8 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
         // mark the block as dirty
         let dvBlock = new DataView(b, 0, 25);
         dvBlock.setUint8(kBlockHeaderField.BlockDirty, 1);
+
+        addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, w.name, w.cursor.blockIndex);
 
         if (del.top !== undefined) {
             let maxCount = evaluate(db, context, del.top, [], undefined, undefined);

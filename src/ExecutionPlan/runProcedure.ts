@@ -29,6 +29,7 @@ export function runProcedure(db: SKSQL, context: TExecutionContext, st: TExecute
 
     let newContext = cloneContext(context, proc.procName, true, true);
     newContext.query = context.query;
+
     if (newContext.query === "") {
         let routines = db.tableInfo.get("routines");
         let colProcName: TableColumn;

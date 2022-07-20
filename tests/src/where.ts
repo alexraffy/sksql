@@ -1,7 +1,7 @@
 
 
 
-import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad} from "sksql";
+import {SQLStatement, dumpTable, TSQLResult, SKSQL, numericLoad} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 
 
@@ -34,7 +34,7 @@ export function where(db: SKSQL, next: ()=>void) {
         st.setParameter("@w", w);
         st.setParameter("@x", x);
         st.setParameter("@y", y);
-        let ret: SQLResult = st.run() as SQLResult;
+        let ret = st.run();
         if (ret.error !== undefined && ret.error !== "") {
             throw new Error(ret.error);
         }

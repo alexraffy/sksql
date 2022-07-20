@@ -6,10 +6,7 @@ import {oneOf} from "../../BaseParser/Predicates/oneOf";
     tries to parse TRUE | FALSE
  */
 export const predicateTBoolValue = function *(callback) {
-    //@ts-ignore
-    if (callback as string === "isGenerator") {
-        return;
-    }
+
     const value = yield oneOf([str("TRUE"), str("FALSE")], "");
     yield returnPred(
         {

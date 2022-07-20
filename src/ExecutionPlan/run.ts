@@ -37,6 +37,8 @@ import {isRowInSet} from "./isRowInSet";
 import {copyRow} from "../BlockIO/copyRow";
 import {TParserError} from "../API/TParserError";
 import {addTempTablesToContext} from "./addTempTablesToContext";
+import {addModifiedBlockToContext} from "./addModifiedBlockToContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 
 // Run an execution plan.
@@ -117,7 +119,7 @@ export function run(db: SKSQL, context: TExecutionContext,
             }
         }
         if (writeRow) {
-            let newRow = addRow(resultWI.table.data, lenNewBuffer);
+            let newRow = addRow(resultWI.table.data, lenNewBuffer, context);
             copyBytesBetweenDV(resultWI.cursor.rowLength, row, newRow, rowHeaderSize, rowHeaderSize);
             rowsModified++;
             if (statement.top !== undefined) {
@@ -217,7 +219,7 @@ export function run(db: SKSQL, context: TExecutionContext,
                     offset++;
                     let grab = (offsetRow <= offset);
                     if ((grab && fetchXRow === undefined) || (grab && num < fetchXRow)) {
-                        copyRow(dv, resultWI.table, resultWI.def, sortDestTable, sortDestTableDef, resultWI.table.data.blocks[curs.blockIndex].byteLength);
+                        copyRow(dv, resultWI.table, resultWI.def, sortDestTable, sortDestTableDef, resultWI.table.data.blocks[curs.blockIndex].byteLength, context);
                         num++;
                     }
                     if (fetchXRow !== undefined && num >= fetchXRow) {
@@ -250,6 +252,7 @@ export function run(db: SKSQL, context: TExecutionContext,
         addTempTablesToContext(newC, context.openedTempTables);
         let rt : TTable = processSelectStatement(db, newC, subQuery, true, {printDebug: false});
         addTempTablesToContext(context, newC.openedTempTables);
+        addModifiedBlocksToContext(context, newC);
         let subSetTable = db.getTable(rt.table);
         let subSetTableDef = readTableDefinition(subSetTable.data);
         let subSetCursor = readFirst(subSetTable, subSetTableDef);
@@ -286,7 +289,7 @@ export function run(db: SKSQL, context: TExecutionContext,
                     rowsModified++;
                 }
                 if (bCopyRow === true) {
-                    copyRow(dv, subSetTable, subSetTableDef, mainTable, mainTableDef, lenNewBuffer);
+                    copyRow(dv, subSetTable, subSetTableDef, mainTable, mainTableDef, lenNewBuffer, context);
                     rowsModified++;
                 }
                 subSetCursor = readNext(subSetTable, subSetTableDef, subSetCursor);

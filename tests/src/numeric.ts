@@ -38,7 +38,7 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
 
 
     let st1 = new SQLStatement(db, "SELECT 0.1 + 0.2 as ret FROM dual")
-    let ret = st1.run(kResultType.JSON);
+    let ret = st1.run().getRows();
     let check = numericLoad("0.3");
     assert(numericCmp(ret[0]["ret"], check) === 0, "Adding two numeric");
     st1.close();

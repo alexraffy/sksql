@@ -69,6 +69,7 @@ import {dumpContextInfo} from "./dumpContextInfo";
 import {serializeTableDefinition} from "../Table/serializeTableDefinition";
 import {instanceOfTCaseWhen} from "../Query/Guards/instanceOfTCaseWhen";
 import {addTempTablesToContext} from "./addTempTablesToContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 /*
     generateEP
@@ -229,6 +230,7 @@ export function generateEP(db: SKSQL,
                     }
                     context = oldContext;
                     addTempTablesToContext(context, newC.openedTempTables);
+                    addModifiedBlocksToContext(context, newC);
 
                     if (info.status.extra["ignoreType"] === false) {
 

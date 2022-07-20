@@ -1,7 +1,7 @@
 
 
 
-import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, serializeTableDefinition} from "sksql";
+import {SQLStatement, dumpTable, TSQLResult, SKSQL, numericLoad, serializeTableDefinition} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 
 

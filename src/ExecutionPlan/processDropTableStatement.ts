@@ -5,7 +5,7 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TParserError} from "../API/TParserError";
 import {rollback} from "./rollback";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {genStatsForTable} from "../API/genStatsForTable";
 
 // Process a DROP TABLE statement

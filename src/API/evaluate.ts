@@ -84,6 +84,8 @@ import {numericMul} from "../Numeric/numericMul";
 import {numericDiv} from "../Numeric/numericDiv";
 import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
 import {numericRound} from "../Numeric/numericRound";
+import {addModifiedBlocksToContext} from "../ExecutionPlan/addModifiedBlocksToContext";
+import {addTempTablesToContext} from "../ExecutionPlan/addTempTablesToContext";
 
 export interface TEvaluateOptions {
     aggregateMode: "none" | "init" | "row" | "final";
@@ -182,7 +184,7 @@ export function evaluate(
 
     if (instanceOfTVariable(struct)) {
         // look up the parameter
-        let exists = context.stack.find((p) => { return p.name === struct.name;});
+        let exists = context.stack.find((p) => { return p.name.toUpperCase() === struct.name.toUpperCase();});
         if (!exists) {
             throw new TParserError("Parameter " + struct.name + " expected");
         }
@@ -506,7 +508,8 @@ export function evaluate(
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
                     tt = evaluate(db, newC, struct.value.right, newC.tables, undefined, options, withRow) as TTable;
-                    context.openedTempTables.push(...newC.openedTempTables);
+                    addTempTablesToContext(context, newC.openedTempTables);
+                    addModifiedBlocksToContext(context, newC);
                 } else if (instanceOfTTable(struct.value.right)) {
                     tt = struct.value.right;
                 }
@@ -844,7 +847,8 @@ export function evaluate(
         }
         let newStruct = JSON.parse(JSON.stringify(struct));
         let tt = processSelectStatement(db, subQueryContext, newStruct, true, {previousContext: context, printDebug: false});
-        context.openedTempTables.push(...subQueryContext.openedTempTables);
+        addTempTablesToContext(context, subQueryContext.openedTempTables);
+        addModifiedBlocksToContext(context, subQueryContext);
 
         return tt;
 

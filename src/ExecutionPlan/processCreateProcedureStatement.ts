@@ -1,6 +1,6 @@
 import {ParseResult} from "../BaseParser/ParseResult";
 import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {instanceOfTQueryCreateFunction} from "../Query/Guards/instanceOfTQueryCreateFunction";
 import {TableColumnType} from "../Table/TableColumnType";
 import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
@@ -11,13 +11,14 @@ import {kResultType} from "../API/kResultType";
 import {instanceOfTQueryCreateProcedure} from "../Query/Guards/instanceOfTQueryCreateProcedure";
 import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {TExecutionContext} from "./TExecutionContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 
 // Process a CREATE/ALTER PROCEDURE statement
 //
 // The procedure is saved in the routines table.
 
-export function processCreateProcedureStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateProcedure): SQLResult {
+export function processCreateProcedureStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateProcedure): TSQLResult {
     if (instanceOfTQueryCreateProcedure(statement)) {
         let c: TQueryCreateProcedure = statement;
         db.declareProcedure(c);
@@ -35,14 +36,15 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
         let sql = "SELECT true FROM master.routines WHERE name = @name AND TYPE = 'PROCEDURE'";
         let doesItExist = new SQLStatement(db, sql, false);
         doesItExist.setParameter("@name", c.procName);
-        let exists = doesItExist.run(kResultType.JSON);
+        let exists = doesItExist.run().getRows();
         doesItExist.close();
-        if ((exists as any[]).length > 0 && exists[0]["true"].true !== true) {
+        if (exists.length > 0 && exists[0]["true"].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
             let stUpdate = new SQLStatement(db, sqlUpdate, false);
             stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.procName);
             let retUpdate = stUpdate.run();
+            addModifiedBlocksToContext(context, stUpdate.context);
             stUpdate.close();
         } else {
             let sqlInsert = "INSERT INTO master.routines (schema, name, type, definition, modified) VALUES (@schema, @name, 'PROCEDURE', @text, GETUTCDATE())";
@@ -51,6 +53,7 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
             stInsert.setParameter("@name", c.procName);
             stInsert.setParameter("@text", text);
             stInsert.run();
+            addModifiedBlocksToContext(context, stInsert.context);
             stInsert.close();
         }
 

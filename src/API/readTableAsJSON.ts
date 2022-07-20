@@ -30,7 +30,9 @@ export function readTableAsJSON(db: SKSQL, table: string): any[] {
                     if (isNumeric(val)) {
                         row[tbl.def.columns[i].name] = val; //numericToNumber(val);
                     } else if (instanceOfTDate(val)) {
-                        row[tbl.def.columns[i].name] = new Date(val.year + "-" + padLeft(val.month, 2, "0") + "-" + padLeft(val.month, 2, "0"));
+                        // TODO check return option
+                        row[tbl.def.columns[i].name] = val;
+                        // row[tbl.def.columns[i].name] = new Date(val.year + "-" + padLeft(val.month, 2, "0") + "-" + padLeft(val.month, 2, "0"));
                     } else {
                         row[tbl.def.columns[i].name] = val;
                     }

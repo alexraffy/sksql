@@ -1,5 +1,5 @@
 
-import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, SQLResult} from "sksql";
+import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, TSQLResult} from "sksql";
 import * as assert from "assert";
 import {checkNoTempTables, runTest} from "./runTest";
 

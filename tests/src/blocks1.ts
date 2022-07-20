@@ -1,7 +1,7 @@
 
 
 
-import {SQLStatement, dumpTable, SQLResult, SKSQL, numericLoad, writeStringToUtf8ByteArray, readStringFromUtf8Array} from "sksql";
+import {SQLStatement, dumpTable, TSQLResult, SKSQL, numericLoad, writeStringToUtf8ByteArray, readStringFromUtf8Array} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 import * as assert from "assert";
 import {test_parser} from "./parser";

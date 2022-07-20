@@ -30,6 +30,7 @@ export function createNewContext(label: string, query: string, parseResult: Pars
         tables: [],
         returnValue: undefined,
         transactionId: 0,
-        currentStatement: undefined
+        currentStatement: undefined,
+        modifiedBlocks: []
     }
 }

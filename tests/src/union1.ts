@@ -1,6 +1,6 @@
 
 
-import {SKSQL, dumpTable, SQLResult, numericCmp, isNumeric,
+import {SKSQL, dumpTable, TSQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";

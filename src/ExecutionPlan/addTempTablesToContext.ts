@@ -6,6 +6,5 @@ export function addTempTablesToContext(context: TExecutionContext, arr: string[]
         if (context.openedTempTables.includes(arr[i]) == false) {
             context.openedTempTables.push(arr[i]);
         }
-
     }
 }

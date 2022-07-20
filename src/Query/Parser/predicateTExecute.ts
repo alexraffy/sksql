@@ -11,6 +11,7 @@ import {predicateTQueryExpression} from "./predicateTQueryExpression";
 import {TExecute} from "../Types/TExecute";
 import {checkSequence} from "../../BaseParser/Predicates/checkSequence";
 import {eof} from "../../BaseParser/Predicates/eof";
+import {exitIf} from "../../BaseParser/Predicates/exitIf";
 
 
 // parse a EXECUTE/EXEC op
@@ -75,12 +76,15 @@ export function* predicateTExecute(callback) {
                 yield maybe(atLeast1(whitespaceOrNewLine));
             }
             let endOfStatement = oneOf([whitespaceOrNewLine, str(";"), str(","), eof], "");
-            const output = yield maybe(
+            const output = yield exitIf(
                 oneOf([
                     checkSequence([str("OUTPUT"), endOfStatement]),
                     checkSequence([str("OUT"), endOfStatement])
                     ], ""));
-            p.output = (output !== undefined);
+            if (output) {
+                yield oneOf([str("OUTPUT"), str("OUT")], "");
+            }
+            p.output = output;
             yield maybe(atLeast1(whitespaceOrNewLine));
             gotMore = yield maybe(str(","));
             yield maybe(atLeast1(whitespaceOrNewLine));

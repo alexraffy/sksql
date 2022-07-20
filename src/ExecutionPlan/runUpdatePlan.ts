@@ -1,12 +1,8 @@
-
-
-
-
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {TEP} from "./TEP";
 import {runScan} from "./runScan";
 import {TEPScan} from "./TEPScan";
-import {addRow, rowHeaderSize} from "../Table/addRow";
+import {rowHeaderSize} from "../Table/addRow";
 import {getValueForAliasTableOrLiteral} from "../Query/getValueForAliasTableOrLiteral";
 import {TEPNestedLoop} from "./TEPNestedLoop";
 import {runNestedLoop} from "./runNestedLoop";
@@ -22,7 +18,7 @@ import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TEPGroupBy} from "./TEPGroupBy";
 import {runGroupBy} from "./runGroupBy";
-import {TExecutionContext} from "./TExecutionContext";
+import {kModifiedBlockType, TExecutionContext} from "./TExecutionContext";
 import {TQueryUpdate} from "../Query/Types/TQueryUpdate";
 import {TParserError} from "../API/TParserError";
 import {convertValue} from "../API/convertValue";
@@ -34,6 +30,7 @@ import {TTable} from "../Query/Types/TTable";
 import {copyBytesBetweenDV} from "../BlockIO/copyBytesBetweenDV";
 import {checkConstraint} from "./checkConstraint";
 import {updateTableTimestamp} from "../API/updateTableTimestamp";
+import {addModifiedBlockToContext} from "./addModifiedBlockToContext";
 
 
 // Execute an execution plan for an UPDATE statement
@@ -106,6 +103,9 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
 
             // we write the row to the block
             copyBytesBetweenDV(targetTable.cursor.rowLength, row, dv, rowHeaderSize, rowHeaderSize);
+
+            addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, targetTable.name, targetTable.cursor.blockIndex);
+
 
             rowsModified++;
             context.result.rowsModified += 1;

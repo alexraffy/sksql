@@ -1,4 +1,4 @@
-import {SQLStatement, readTableAsJSON, SKSQL, dumpTable} from "sksql";
+import {SQLStatement, readTableAsJSON, SKSQL, dumpTable, SQLResult} from "sksql";
 import * as assert from "assert";
 import {checkNoTempTables} from "./runTest";
 
@@ -17,9 +17,9 @@ export function test_worker(db: SKSQL, next:()=>void) {
     //console.log(readTableAsJSON(db, "keyValues"));
     let select = new SQLStatement(db, "SELECT ID, VALUE FROM keyValues WHERE ID = @id");
     select.setParameter("@id", "user_id");
-    select.runOnWebWorker().then((resultTableName) => {
+    select.runOnWebWorker().then((res: SQLResult) => {
 
-        let result = readTableAsJSON(db, resultTableName);
+        let result = res.getRows();
         assert(result !== undefined && result[0]["ID"] === "user_id" && result[0]["VALUE"] === "1544", "WebWorker test1 failed.");
         select.close();
         checkNoTempTables(db);

@@ -5,11 +5,12 @@ import {columnTypeIsInteger} from "../Table/columnTypeIsInteger";
 import {TParserError} from "../API/TParserError";
 import {readValue} from "./readValue";
 import {writeValue} from "./writeValue";
+import {TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 
 
-export function copyRow(srcRow: DataView, table1: ITable, table1Def: ITableDefinition, table2: ITable, table2Def: ITableDefinition, lenNewBuffer) {
+export function copyRow(srcRow: DataView, table1: ITable, table1Def: ITableDefinition, table2: ITable, table2Def: ITableDefinition, lenNewBuffer, context: TExecutionContext) {
 
-    let newRow = addRow(table2.data, lenNewBuffer);
+    let newRow = addRow(table2.data, lenNewBuffer, context);
     let currentColIndex = -1;
     for (let i = 0; i < table2Def.columns.length; i++) {
         let colMain = table2Def.columns[i];

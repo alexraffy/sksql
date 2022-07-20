@@ -9,7 +9,7 @@ import {
     readValue,
     recordSize,
     rowHeaderSize,
-    SQLResult,
+    TSQLResult,
     SQLStatement,
     TableColumnType,
     kResultType,
@@ -37,7 +37,7 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
     let st: SQLStatement = undefined;
     try {
         st = new SQLStatement(db, sql);
-        let ret: SQLResult = st.run(kResultType.SQLResult, options) as SQLResult;
+        let ret = st.run(options);
         if (error === true && ret.error === undefined) {
             throwError =  sql + " should have triggered an error.";
             console.log(dumpTable(db.getTable(ret.resultTableName)));

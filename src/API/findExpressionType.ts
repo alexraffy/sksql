@@ -27,6 +27,7 @@ import {getResultTableFromExecutionPlanSteps} from "../ExecutionPlan/getResultTa
 import {TTable} from "../Query/Types/TTable";
 import {getFirstPublicColumn} from "../Table/getFirstPublicColumn";
 import {addTempTablesToContext} from "../ExecutionPlan/addTempTablesToContext";
+import {addModifiedBlocksToContext} from "../ExecutionPlan/addModifiedBlocksToContext";
 
 
 export interface TFindExpressionTypeOptions {
@@ -135,6 +136,7 @@ export function findExpressionType(db: SKSQL,
             }
             context = oldContext;
             addTempTablesToContext(context, newC.openedTempTables);
+            addModifiedBlocksToContext(context, newC);
             return false;
 
         }

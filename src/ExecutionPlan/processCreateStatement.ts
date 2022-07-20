@@ -6,15 +6,13 @@ import {instanceOfTColumn} from "../Query/Guards/instanceOfTColumn";
 import {TColumn} from "../Query/Types/TColumn";
 import {instanceOfTLiteral} from "../Query/Guards/instanceOfTLiteral";
 import {newTable} from "../Table/newTable";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {serializeTQuery} from "../API/serializeTQuery";
 import {SKSQL} from "../API/SKSQL";
 import {TParserError} from "../API/TParserError";
 import {typeString2TableColumnType} from "../API/typeString2TableColumnType";
-import {TExecutionContext} from "./TExecutionContext";
+import {kModifiedBlockType, TExecutionContext} from "./TExecutionContext";
 import {readTableDefinition} from "../Table/readTableDefinition";
-import {recordSize} from "../Table/recordSize";
-import {readFirst} from "../Cursor/readFirst";
 import {TTableConstraint} from "../Table/TTableConstraint";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
 import {genStatsForTable} from "../API/genStatsForTable";
@@ -24,7 +22,7 @@ import {genStatsForTable} from "../API/genStatsForTable";
 //
 //
 
-export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): SQLResult {
+export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): TSQLResult {
     if (instanceOfTQueryCreateTable(statement)) {
         let c: TQueryCreateTable = statement;
         let tblDef = {
@@ -118,6 +116,13 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
         if (!["DUAL", "ROUTINES", "SYS_TABLE_STATISTICS"].includes(tblDef.name.toUpperCase())) {
             genStatsForTable(db, tblDef.name);
         }
+        context.modifiedBlocks.push(
+            {
+                type: kModifiedBlockType.tableHeader,
+                name: tblDef.name,
+                blockIndex: -1
+            }
+        )
 
 
         if (context.result.messages === undefined) {

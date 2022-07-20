@@ -1,5 +1,5 @@
 import {ParseResult} from "../BaseParser/ParseResult";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {instanceOfTQueryCreateFunction} from "../Query/Guards/instanceOfTQueryCreateFunction";
 import {TQueryCreateFunction} from "../Query/Types/TQueryCreateFunction";
 import {TableColumnType} from "../Table/TableColumnType";
@@ -9,6 +9,7 @@ import {kFunctionType} from "../Functions/kFunctionType";
 import {SQLStatement} from "../API/SQLStatement";
 import {kResultType} from "../API/kResultType";
 import {TExecutionContext} from "./TExecutionContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 
 // Process a CREATE/ALTER FUNCTION statement
@@ -16,7 +17,7 @@ import {TExecutionContext} from "./TExecutionContext";
 // The function code is saved in the routines table.
 
 
-export function processCreateFunctionStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateFunction): SQLResult {
+export function processCreateFunctionStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateFunction): TSQLResult {
     if (instanceOfTQueryCreateFunction(statement)) {
         let c: TQueryCreateFunction = statement;
 
@@ -38,14 +39,15 @@ export function processCreateFunctionStatement(db: SKSQL, context: TExecutionCon
         let sql = "SELECT true FROM master.routines WHERE name = @name AND TYPE = 'FUNCTION'";
         let doesItExist = new SQLStatement(db, sql, false);
         doesItExist.setParameter("@name", c.functionName);
-        let exists = doesItExist.run(kResultType.JSON);
+        let exists = doesItExist.run().getRows();
         doesItExist.close();
-        if ((exists as any[]).length > 0 && exists[0]["true"].true !== true) {
+        if (exists.length > 0 && exists[0]["true"].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
             let stUpdate = new SQLStatement(db, sqlUpdate, false);
             stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.functionName);
             let retUpdate = stUpdate.run();
+            addModifiedBlocksToContext(context, stUpdate.context);
             stUpdate.close();
         } else {
             let sqlInsert = "INSERT INTO master.routines (schema, name, type, definition, modified) VALUES (@schema, @name, 'FUNCTION', @text, GETUTCDATE())";
@@ -54,6 +56,7 @@ export function processCreateFunctionStatement(db: SKSQL, context: TExecutionCon
             stInsert.setParameter("@name", c.functionName);
             stInsert.setParameter("@text", text);
             stInsert.run();
+            addModifiedBlocksToContext(context, stInsert.context);
             stInsert.close();
         }
 

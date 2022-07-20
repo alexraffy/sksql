@@ -41,7 +41,7 @@ function writeRow(db: SKSQL, context: TExecutionContext, tw: TTableWalkInfo, td:
         writeRecord = evaluate(db, context, tep.having, context.tables, undefined, {forceTable: tw.name, aggregateMode: "final", aggregateObjects: aggregateFunctions}) as TBooleanResult;
     }
     if (instanceOfTBooleanResult(writeRecord) && writeRecord.value === kBooleanResult.isTrue) {
-        let newRow = addRow(td.table.data, 4096);
+        let newRow = addRow(td.table.data, 4096, context);
 
         for (let x = 0; x < tep.projections.length; x++) {
             let p = tep.projections[x];

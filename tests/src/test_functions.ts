@@ -1,4 +1,4 @@
-import {SQLStatement, readTableAsJSON, kResultType, numericLoad, SKSQL, SQLResult} from "sksql";
+import {SQLStatement, readTableAsJSON, kResultType, numericLoad, SKSQL, TSQLResult} from "sksql";
 import assert = require("assert");
 import {checkNoTempTables, runTest} from "./runTest";
 
@@ -47,9 +47,9 @@ export function test_functions(db: SKSQL, next: ()=>void )  {
     DUAL";
 
     let st1 = new SQLStatement(db, sql);
-    let res1 = st1.run() as SQLResult;
+    let res1 = st1.run();
     assert(res1.error === undefined, "SQL ERROR " + res1.error)
-    let ret = readTableAsJSON(db, res1.resultTableName);
+    let ret = res1.getRows();
     assert(ret[0]["padleft"] === "001", "Error USING FUNCTION PADLEFT");
     st1.close();
 
@@ -71,7 +71,7 @@ export function test_functions(db: SKSQL, next: ()=>void )  {
         ";
 
         let st = new SQLStatement(db, sCreateFunction);
-        let res = st.run() as SQLResult;
+        let res = st.run();
         st.close();
         runTest(db, "SELECT testfunction(false) as greetings FROM dual", false, false, [["Good afternoon"]]);
 

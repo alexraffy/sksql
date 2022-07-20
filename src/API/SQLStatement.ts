@@ -10,7 +10,7 @@ import {ParseError} from "../BaseParser/ParseError";
 import {instanceOfParseError} from "../BaseParser/Guards/instanceOfParseError";
 import {SKSQL} from "./SKSQL";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
-import {SQLResult} from "./SQLResult";
+import {TSQLResult} from "./TSQLResult";
 import {whitespaceOrNewLine} from "../BaseParser/Predicates/whitespaceOrNewLine";
 import {returnPred} from "../BaseParser/Predicates/ret";
 import {oneOf} from "../BaseParser/Predicates/oneOf";
@@ -55,6 +55,9 @@ import {predicateTGO} from "../Query/Parser/predicateTGO";
 import {TDebugInfo} from "../Query/Types/TDebugInfo";
 import {predicateVacuum} from "../Query/Parser/predicateVacuum";
 import {predicateParseError} from "../BaseParser/Predicates/predicateParseError";
+import {generateV4UUID} from "./generateV4UUID";
+import {SQLResult} from "./SQLResult";
+import {type} from "os";
 
 
 let performance = undefined;
@@ -81,42 +84,54 @@ try {
 
 // Simple example
 // let st = new SQLStatement(db, "SELECT 'Hello' as greetings FROM dual");
-// let ret = st.run(kResultType.JSON);
-// ret[0]["greetings"] === "Hello"
+// let ret = st.run();
+// const rows = ret.getRows();
+// rows[0]["greetings"] === "Hello"
 // // delete the result table
 // ret.close();
 
 // With a parameter
 // let st = new SQLStatement(db, "SELECT FirstName FROM users WHERE Lastname = @lastname");
 // st.setParameter("@lastname", "Doe");
-// let ret = st.run(kResultType.JSON);
-// ret[0]["FirstName"] === "John";
+// let ret = st.run();
+// const rows = ret.getRows();
+// rows[0]["FirstName"] === "John";
+// // delete the result table
+// ret.close();
+
+// Return a typescript type
+// interface Person {
+//      FirstName: string;
+//      Lastname: string;
+// }
+// let st = new SQLStatement(db, "SELECT FirstName, Lastname FROM users WHERE Lastname = @lastname");
+// st.setParameter("@lastname", "Doe");
+// let ret = st.run();
+// const rows = ret.getRows<Person>();
+// rows[0].FirstName === "John";
 // // delete the result table
 // ret.close();
 
 // Open a cursor on the result table and loop through all records
 // let st = new SQLStatement(db, "SELECT FirstName, Lastname FROM users");
-// let ret = st.run() as SQLResult;
+// let ret = st.run();
 // // get the result table
 // if (ret.error !== undefined) { throw "Error: " + ret.error; }
-// let tableData = db.getTable(ret.resultTableName);
-// let tableDef = readTableDefinition(tableData.data);
 // // open a cursor
-// let cursor = readFirst(tableData, tableDef);
+// let cursor = ret.getCursor();
 // // loop while we still have records
-// while (!cursorEOF(cursor)) {
+// while (!cursor.eof()) {
 //  // get the row
-//  let row = new DataView(tableData.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
-//  // read the first column
-//  let value = readValue(tableData, tableDef, tableDef.columns[0], row, rowHeaderSize) as string;
+//  let value = cursor.get("FirstName");
 //  console.log(value); // John
 //  // read the next row
-//  cursor = readNext(tableData, tableDef, cursor);
+//  cursor.next();
 // }
 // // delete the result table
 // ret.close();
 
 export class SQLStatement {
+    id: string;
     db: SKSQL;
     query: string = "";
     broadcast: boolean;
@@ -125,6 +140,7 @@ export class SQLStatement {
     contextOriginal: TExecutionContext;
 
     constructor(db: SKSQL, statements: string, broadcast: boolean = true) {
+        this.id = generateV4UUID();
         this.db = db;
         this.query = statements;
         this.broadcast = broadcast;
@@ -186,11 +202,10 @@ export class SQLStatement {
             this.db.dropTable(this.context.openedTempTables[i]);
         }
     }
-    runOnWebWorker(): Promise<string> {
-        return new Promise<string>( (resolve, reject) => {
+    runOnWebWorker(): Promise<SQLResult> {
+        return new Promise<SQLResult>( (resolve: (SQLResult) => void, reject: (string, SQLResult) => void) => {
             this.db.updateWorkerDB(0);
             this.db.sendWorkerQuery(0, this, reject, resolve);
-
         });
     }
     private parse() {
@@ -396,7 +411,17 @@ export class SQLStatement {
         }, new Stream(this.query, 0));
         this.context.parseResult = this.ast;
     }
-    run(type: kResultType = kResultType.SQLResult, options: {printDebug: boolean} = {printDebug: false}): SQLResult | any[] {
+
+
+    runRemote(): Promise<SQLResult> {
+        return new Promise<SQLResult>( (resolve, reject) => {
+            this.db.sendWorkerQuery(0, this, reject, resolve);
+        });
+    }
+
+
+
+    run(options: {printDebug: boolean} = {printDebug: false}): SQLResult {
         if (options !== undefined && options.printDebug === true) {
             console.log("****************************************");
             console.log("DEBUG INFO");
@@ -427,25 +452,23 @@ export class SQLStatement {
         }
 
         if (this.hasErrors) {
-            if (type === kResultType.SQLResult) {
-                if (options !== undefined && options.printDebug === true) {
-                    console.log("--------------------------");
-                    console.log("ERROR: " + (this.ast as ParseError).description);
-                }
-                return {
-                    error: (this.ast as ParseError).description,
-                    rowCount: 0,
-                    rowsDeleted: 0,
-                    rowsModified: 0,
-                    rowsInserted: 0,
-                    queries: [],
-                    resultTableName: "",
-                    totalRuntime: 0,
-                    parserTime: perfs.parser
-                } as SQLResult;
-            } else if (type === kResultType.JSON) {
-                return [];
+
+            if (options !== undefined && options.printDebug === true) {
+                console.log("--------------------------");
+                console.log("ERROR: " + (this.ast as ParseError).description);
             }
+            return new SQLResult(this.db, {
+                error: (this.ast as ParseError).description,
+                rowCount: 0,
+                rowsDeleted: 0,
+                rowsModified: 0,
+                rowsInserted: 0,
+                queries: [],
+                resultTableName: "",
+                totalRuntime: 0,
+                parserTime: perfs.parser
+            } as TSQLResult);
+
         }
 
         this.context.result = {
@@ -458,29 +481,20 @@ export class SQLStatement {
             rowsModified: 0,
             rowsDeleted: 0,
             rowCount: 0
-        } as SQLResult
+        } as TSQLResult
 
         let statements:  (TValidStatementsInProcedure | TValidStatementsInFunction)[] = [];
         if (instanceOfParseResult(this.ast)) {
             statements = this.ast.value.statements;
         } else {
             this.context.result.error = (this.ast as ParseError).description;
-            return this.context.result;
+            return new SQLResult(this.db, this.context.result);
         }
 
-        // if remote mode is enabled, we don't execute the query but send it to the server.
-        if (this.db.remoteModeOnly === true) {
-            if (this.db.connections.length > 0) {
-                let tc = this.db.getConnectionInfoForDB(this.db.connections[0].databaseHashId);
-                if (tc !== undefined) {
-                    tc.socket.send(WSRSQL, {
-                        id: tc.socket.con_id,
-                        p: this.contextOriginal.stack,
-                        r: this.query
-                    } as TWSRSQL);
-                }
-            }
-            return this.context.result;
+        // if command mode is enabled, we don't execute the query but send it to the server.
+        if (this.db.commandModeOnly === true) {
+            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, false, undefined, undefined);
+            return new SQLResult(this.db, this.context.result);
         }
 
 
@@ -512,26 +526,11 @@ export class SQLStatement {
         }
 
 
-        if (this.broadcast && this.context.broadcastQuery) {
-            if (this.db.connections.length > 0) {
-                let tc = this.db.getConnectionInfoForDB(this.db.connections[0].databaseHashId);
-                if (tc !== undefined) {
-                    tc.socket.send(WSRSQL, {
-                        id: tc.socket.con_id,
-                        p: this.contextOriginal.stack,
-                        r: this.query
-                    } as TWSRSQL);
-                }
-            }
+        if (this.broadcast && this.context.broadcastQuery && this.db.connections.length > 0) {
+            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, true, undefined, undefined);
         }
 
-        if (type === kResultType.SQLResult) {
-            return this.context.result;
-        } else if (type === kResultType.JSON) {
-            if (this.context.result.resultTableName !== undefined && this.context.result.resultTableName !== "") {
-                return readTableAsJSON(this.db, this.context.result.resultTableName);
-            }
-        }
+        return new SQLResult(this.db, this.context.result);
 
     }
 

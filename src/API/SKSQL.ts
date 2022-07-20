@@ -1,18 +1,23 @@
 import {ITable} from "../Table/ITable";
 import {readTableDefinition} from "../Table/readTableDefinition";
 import {SQLStatement} from "./SQLStatement";
-import {SQLResult} from "./SQLResult";
+import {TSQLResult} from "./TSQLResult";
 import {generateV4UUID} from "./generateV4UUID";
 import {
     compileNewRoutines,
     decompress,
     genStatsForTable,
     kConnectionStatus,
+    kModifiedBlockType,
+    SQLResult,
     TableColumnType,
+    TExecutionContext,
     TWSRDataResponse,
     TWSRGNIDResponse,
+    TWSRSQLResponse,
     WSRGNID,
-    WSROK
+    WSROK,
+    WSRSQLResponse
 } from "../main";
 import {kFunctionType} from "../Functions/kFunctionType";
 import {TRegisteredFunction} from "../Functions/TRegisteredFunction";
@@ -55,7 +60,7 @@ workerJavascript += "   let result = st.run();\n";
 workerJavascript += "   if (result.error === undefined && result.resultTableName !== \"\") {\n";
 workerJavascript += "       parentPort.postMessage({c: \"DB\", d: db.allTables});\n";
 workerJavascript += "   }\n";
-workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, openedTempTables: st.context.openedTempTables, result: result} });\n";
+workerJavascript += "   parentPort.postMessage({ c: \"QS\", d: {id: id, openedTempTables: st.context.openedTempTables, result: result.getStruct()} });\n";
 workerJavascript += "   st.close();\n";
 workerJavascript += "}\n\n";
 workerJavascript += "parentPort.on('message', (value) => {\n";
@@ -109,7 +114,7 @@ export class SKSQL {
     // webworkers instances
     private workers: Worker[] = [];
     // list of queries that need to be processed
-    private pendingQueries: {id: string, statement:SQLStatement, resolve: (result: string) => void, reject: (reason: string) => void}[] = [];
+    private pendingQueries: {id: string, statement:SQLStatement, resolve: (result: SQLResult) => void, reject: (reason: string, result: SQLResult) => void}[] = [];
     // SQL and js functions
     functions: TRegisteredFunction[] = [];
     // SQL procs
@@ -121,7 +126,7 @@ export class SKSQL {
     callbackDropTable: (db: SKSQL, tableName: string) => void = (db, tableName) => {};
     callbackRenameTable: (db: SKSQL, tableName: string, newName: string) => void = (db, tableName, newName) => {};
     // if remote mode is enabled, no data is downloaded and all commands are sent to the server for execution.
-    remoteModeOnly: boolean = false;
+    commandModeOnly: boolean = false;
 
 
     constructor() {
@@ -182,7 +187,7 @@ export class SKSQL {
                         connectionInfo.socket.send(WSRAuthenticate, {
                             id: msg.id,
                             info: connectionInfo.auth,
-                            remoteMode: db.remoteModeOnly
+                            commandMode: db.commandModeOnly
                         } as TWSRAuthenticateRequest)
 
                     } else {
@@ -209,6 +214,98 @@ export class SKSQL {
                         console.warn(e.message);
                     }
                 }
+                if (msg.message === WSRSQLResponse) {
+                    let payload = msg.param as TWSRSQLResponse;
+                    if (payload.res.error === undefined) {
+                        let restack : TWSRDataResponse[] = [];
+                        let restackCount = 0;
+                        while (payload.t.length > 0 || restack.length > 0) {
+                            let block: TWSRDataResponse = undefined;
+                            if (payload.t.length > 0) {
+                                block = payload.t.splice(0, 1)[0];
+                            } else if (restack.length > 0) {
+                                restackCount++;
+
+                                if (restackCount > restack.length  && restack.length > 0) {
+                                    // we have gone through the restack and can't find anything to process correctly.
+                                    console.log("Response sent by server could not be synced completely.");
+                                    break;
+                                }
+                                block = restack.splice(0, 1)[0];
+                            }
+                            if (block !== undefined) {
+                                // decompress the block
+                                let compressedBuf: ArrayBuffer = new ArrayBuffer(block.data.byteLength);
+                                let dvCompressedBuf = new DataView(compressedBuf);
+                                for (let i = 0; i < compressedBuf.byteLength; i++) {
+                                    dvCompressedBuf.setUint8(i, block.data[i]);
+                                }
+                                let decompressedBuf: SharedArrayBuffer | ArrayBuffer = decompress(compressedBuf, SKSQL.supportsSharedArrayBuffers);
+
+                                switch (block.type) {
+                                    case kModifiedBlockType.tableHeader:
+                                    {
+                                        let table: ITable;
+                                        let tableDataAndIndex = db.getTableDataAndIndex(block.tableName);
+                                        if (tableDataAndIndex === undefined) {
+                                            // table doesn't exist
+                                            table = {
+                                                data: {
+                                                    tableDef: undefined,
+                                                    blocks: []
+                                                }
+                                            };
+                                            table.data.tableDef = decompressedBuf;
+                                            db.allTables.push(table);
+                                        } else {
+                                            // table header was updated
+                                            tableDataAndIndex.table.data.tableDef = decompressedBuf;
+                                        }
+                                        restackCount = 0;
+                                    }
+                                    break;
+                                    case kModifiedBlockType.tableBlock:
+                                    {
+                                        let tableDataAndIndex = db.getTableDataAndIndex(block.tableName);
+                                        if (tableDataAndIndex === undefined) {
+                                            // table doesn't exist
+                                            // put the block in restack to process it after we have processed the table header
+                                            restack.push(block);
+                                        } else {
+                                            // does the block already exists
+                                            if ( block.indexBlock <= tableDataAndIndex.table.data.blocks.length - 1) {
+                                                tableDataAndIndex.table.data.blocks[block.indexBlock] = decompressedBuf;
+                                                restackCount = 0;
+                                            } else {
+                                                if (block.indexBlock > tableDataAndIndex.table.data.blocks.length) {
+                                                    // block index is not in order
+                                                    restack.push(block);
+                                                } else {
+                                                    tableDataAndIndex.table.data.blocks.push(decompressedBuf);
+                                                    restackCount = 0;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        // recreate the cache
+                        db.tableInfo.syncAll();
+                    }
+                    // notify callback
+                    let pq = db.pendingQueries.find((p) => {
+                        return p.id ===  payload.u;
+                    });
+                    if (pq !== undefined) {
+                        if (payload.res.error !== undefined && payload.res.error !== "") {
+                            pq.reject(payload.res.error, new SQLResult(db, payload.res));
+                        } else {
+                            pq.resolve(new SQLResult(db, payload.res));
+                        }
+                    }
+                }
                 if (msg.message === WSROK) {
                     db.tableInfo.syncAll();
                     compileNewRoutines(db);
@@ -219,7 +316,7 @@ export class SKSQL {
                 }
                 if (msg.message === WSRDataRequest) {
                     let payload = msg.param as TWSRDataResponse;
-                    if (payload.type === "T") {
+                    if (payload.type === kModifiedBlockType.tableHeader) {
                         let buf: SharedArrayBuffer | ArrayBuffer;
                         if (SKSQL.supportsSharedArrayBuffers) {
                             buf = new SharedArrayBuffer(payload.size);
@@ -242,7 +339,7 @@ export class SKSQL {
                         }
                         db.allTables.push(t);
 
-                    } else if (payload.type === "B") {
+                    } else if (payload.type === kModifiedBlockType.tableBlock) {
                         let t = db.getTable(payload.tableName);
                         if (t !== undefined) {
                             let buf: SharedArrayBuffer | ArrayBuffer;
@@ -577,16 +674,58 @@ export class SKSQL {
         this.workers[idx].postMessage({c:"DB", d: this.allTables});
     }
 
-    sendWorkerQuery(idx: number, query: SQLStatement, reject, resolve) {
-        let queryId = generateV4UUID();
+    sendRemoteDatabaseQuery(query: SQLStatement, context: TExecutionContext, returnData: boolean, broadcast: boolean, reject: (string, SQLResult) => void, resolve: (SQLResult) => void) {
+        if (this.connections.length === 0) {
+            let res: TSQLResult = {
+                error: "No remote connection.",
+                messages: "",
+                queries: [],
+                resultTableName: "",
+                rowCount: 0,
+                returnValue: undefined,
+                totalRuntime: 0,
+                rowsModified: 0,
+                rowsInserted: 0,
+                rowsDeleted: 0,
+                dropTable: [],
+                parserTime: 0
+            }
+            if (reject !== undefined) {
+                reject("No remote connection.", res);
+            }
+            return;
+        }
+        let tc = this.getConnectionInfoForDB(this.connections[0].databaseHashId);
+
         this.pendingQueries.push({
-            id: queryId,
+            id: query.id,
             statement: query,
             resolve: resolve,
             reject: reject
         });
 
-        let msg = { c: "QR", d: { id: queryId, query: query.query, params: []}};
+        let msg: TWSRSQL = {
+            id: tc.socket.con_id,
+            r: query.query,
+            p: [],
+            u: query.id,
+            rd: returnData,
+            b: broadcast
+        };
+        msg.p = JSON.parse(JSON.stringify(context.stack));
+        this.connections[0].socket.send(WSRSQL, msg);
+    }
+
+    sendWorkerQuery(idx: number, query: SQLStatement, reject: (string, SQLResult) => void, resolve: (SQLResult) => void) {
+
+        this.pendingQueries.push({
+            id: query.id,
+            statement: query,
+            resolve: resolve,
+            reject: reject
+        });
+
+        let msg = { c: "QR", d: { id: query.id, query: query.query, params: []}};
         for (let i = 0; i < query.context.stack.length; i++) {
             msg.d.params.push({key: query.context.stack[i].name, value: query.context.stack[i].value});
         }
@@ -594,16 +733,20 @@ export class SKSQL {
     }
 
     // internal, callback from a WebWorker
-    receivedResult(id: string, openedTempTables: string[], result: SQLResult) {
+    receivedResult(id: string, openedTempTables: string[], result: TSQLResult) {
         let idx = this.pendingQueries.findIndex((pq) => { return pq.id === id;});
         if (idx > -1) {
             if (this.pendingQueries[idx].statement !== undefined && openedTempTables !== undefined && openedTempTables.length > 0) {
                 this.pendingQueries[idx].statement.context.openedTempTables.push(...openedTempTables);
             }
             if (result.error !== undefined) {
-                this.pendingQueries[idx].reject(result.error);
+                if (this.pendingQueries[idx].reject !== undefined) {
+                    this.pendingQueries[idx].reject(result.error, new SQLResult(this, result));
+                }
             } else {
-                this.pendingQueries[idx].resolve(result.resultTableName);
+                if (this.pendingQueries[idx].resolve !== undefined) {
+                    this.pendingQueries[idx].resolve(new SQLResult(this, result));
+                }
             }
         }
         this.pendingQueries.splice(idx, 1);

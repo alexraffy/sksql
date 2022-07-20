@@ -1,13 +1,14 @@
 
-import {SKSQL, SQLStatement, SQLResult, readFirst, kBlockHeaderField,
+import {SKSQL, SQLStatement, TSQLResult, readFirst, kBlockHeaderField,
     readNext, addRow, cursorEOF, ITableData, ITable, ITableDefinition, TableColumn,rowHeaderSize, writeValue,
-    readTableDefinition} from "sksql";
+    readTableDefinition, TExecutionContext, createNewContext} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 import {performance} from "perf_hooks";
 
 
 
 function insertRawTest(db: SKSQL, blockSize: number, loop: number, entries: number) {
+    let context: TExecutionContext = createNewContext("", "", undefined);
     let insertTests1: number[] = [];
     for (let i = 0; i < loop; i++) {
         runTest(db, "DROP TABLE t1; CREATE TABLE t1(a int);", false, false, undefined);
@@ -17,7 +18,7 @@ function insertRawTest(db: SKSQL, blockSize: number, loop: number, entries: numb
 
         let start = performance.now();
         for (let x = 0; x < entries; x++) {
-            let row = addRow(t1.data, blockSize);
+            let row = addRow(t1.data, blockSize, context);
             writeValue(t1, t1Def, aCol, row, x, rowHeaderSize);
         }
         let end = performance.now();
@@ -143,12 +144,13 @@ function insertTSQLLoopTest(db: SKSQL, blockSize: number, loop: number, entries:
 }
 
 function scanTest(db: SKSQL, blockSize: number, sample: number, entries: number) {
+    let context = createNewContext("", "", undefined);
     runTest(db, "DROP TABLE t1; CREATE TABLE t1(a int);", false, false, undefined);
     let t1 = db.getTable("t1");
     let t1Def = readTableDefinition(t1.data, false);
     let aCol = t1Def.columns[0];
     for (let x = 0; x < entries; x++) {
-        let row = addRow(t1.data, blockSize);
+        let row = addRow(t1.data, blockSize, context);
         writeValue(t1, t1Def, aCol, row, x, rowHeaderSize);
     }
 
@@ -188,12 +190,13 @@ function scanTest(db: SKSQL, blockSize: number, sample: number, entries: number)
 }
 
 function selectTest(db: SKSQL, blockSize: number, sample: number, entries: number) {
+    let context = createNewContext("", "", undefined);
     runTest(db, "DROP TABLE t1; CREATE TABLE t1(a int);", false, false, undefined);
     let t1 = db.getTable("t1");
     let t1Def = readTableDefinition(t1.data, false);
     let aCol = t1Def.columns[0];
     for (let x = 0; x < entries; x++) {
-        let row = addRow(t1.data, blockSize);
+        let row = addRow(t1.data, blockSize, context);
         writeValue(t1, t1Def, aCol, row, x, rowHeaderSize);
     }
 

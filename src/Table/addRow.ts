@@ -6,6 +6,9 @@ import {recordSize} from "./recordSize";
 import {getLastRowId} from "../BlockIO/getLastRowId";
 import {setLastRowId} from "../BlockIO/setLastRowId";
 import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {kModifiedBlockType, TExecutionContext} from "../ExecutionPlan/TExecutionContext";
+import {addModifiedBlockToContext} from "../ExecutionPlan/addModifiedBlockToContext";
+import {readTableName} from "./readTableName";
 
 
 export const rowHeaderSize = 4 + // ROWID
@@ -14,27 +17,28 @@ export const rowHeaderSize = 4 + // ROWID
 
 /*
     adds a row to the table and returns the full row DataView
-
     if the last block does not have the space required, a new block of size growBy will be generated.
-
+    the block will be added to the list of modified blocks in context
  */
-export function addRow(tb: ITableData, growBy: number = 4096): DataView {
+export function addRow(tb: ITableData, growBy: number = 4096, context: TExecutionContext): DataView {
     const length = recordSize(tb);
     if (length * 10 > growBy) {
         growBy = length * 10;
     }
+    const name = readTableName(tb);
     let d: ArrayBuffer | SharedArrayBuffer = undefined;
     if (tb.blocks === undefined || tb.blocks.length === 0) {
         d = newBlock(growBy, BlockType.rows, tb.blocks.length + 1);
         tb.blocks = [d];
+        addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, name, 0);
     } else {
         d = tb.blocks[tb.blocks.length -1];
         let size = tb.blocks[0].byteLength;
-
         if (freeSpaceInBlock(d) < length + rowHeaderSize) {
             d = newBlock(size, BlockType.rows, tb.blocks.length+1);
             tb.blocks.push(d);
         }
+        addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, name, tb.blocks.length - 1);
     }
     let dv = new DataView(d);
     let offset = dv.getUint32(kBlockHeaderField.DataEnd);

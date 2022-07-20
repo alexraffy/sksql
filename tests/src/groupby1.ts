@@ -1,5 +1,5 @@
 
-import {SKSQL, SQLStatement, SQLResult, numericCmp, isNumeric,
+import {SKSQL, SQLStatement, TSQLResult, numericCmp, isNumeric,
     numericLoad, readFirst, cursorEOF, recordSize, rowHeaderSize, readValue,
     readNext} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";

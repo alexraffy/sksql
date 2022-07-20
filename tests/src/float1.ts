@@ -2,7 +2,7 @@
 
 
 
-import {SQLStatement, dumpTable, SQLResult, SKSQL, readTableDefinition} from "sksql";
+import {SQLStatement, dumpTable, TSQLResult, SKSQL, readTableDefinition} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 
 // REF: https://stackoverflow.com/questions/4915462/how-should-i-do-floating-point-comparison

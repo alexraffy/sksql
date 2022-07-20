@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import {SQLStatement, readTableAsJSON, dumpTable, SKSQL, SQLResult, numericLoad} from "sksql";
+import {SQLStatement, readTableAsJSON, dumpTable, SKSQL, TSQLResult, numericLoad} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
 
 
@@ -10,7 +10,7 @@ export function test_db_university(db: SKSQL, next:()=>void) {
     let fillSQLScript = fs.readFileSync("res\\university_data.sql").toString();
 
     let createTablesStatement = new SQLStatement(db, createSQLScript);
-    let ret = createTablesStatement.run() as SQLResult;
+    let ret = createTablesStatement.run();
     let fillTablesStatement = new SQLStatement(db, fillSQLScript);
     let ret2 = fillTablesStatement.run();
     fillTablesStatement.close();

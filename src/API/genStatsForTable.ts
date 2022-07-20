@@ -66,7 +66,8 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     let sql = "SELECT TOP(1) id FROM sys_table_statistics WHERE UPPER(table) = UPPER(@tableName);";
     let stExists = new SQLStatement(db, sql, false);
     stExists.setParameter("@tableName", tableName);
-    let retExists = stExists.run(kResultType.JSON) as any[];
+    let ret = stExists.run();
+    let retExists = ret.getRows();
     stExists.close();
     if (retExists !== undefined && retExists.length === 1) {
         id = retExists[0]["id"];

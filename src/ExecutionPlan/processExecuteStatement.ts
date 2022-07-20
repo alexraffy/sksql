@@ -1,7 +1,7 @@
 import {ParseResult} from "../BaseParser/ParseResult";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {TableColumnType} from "../Table/TableColumnType";
-import {SQLResult} from "../API/SQLResult";
+import {TSQLResult} from "../API/TSQLResult";
 import {instanceOfParseResult} from "../BaseParser/Guards/instanceOfParseResult";
 import {instanceOfTQuerySelect} from "../Query/Guards/instanceOfTQuerySelect";
 import {instanceOfTExecute} from "../Query/Guards/instanceOfTExecute";
@@ -18,6 +18,7 @@ import {TVariable} from "../Query/Types/TVariable";
 import {cloneContext} from "./cloneContext";
 import {addNewestResultToList} from "./addNewestResultToList";
 import {swapContext} from "./swapContext";
+import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 
 // Process a EXECUTE/EXEC statement
 //
@@ -28,7 +29,7 @@ import {swapContext} from "./swapContext";
 
 export function processExecuteStatement(db: SKSQL,
                                         context: TExecutionContext,
-                                        statement: TExecute): SQLResult {
+                                        statement: TExecute): TSQLResult {
     if (!instanceOfTExecute(statement)) {
         context.result.error = "Misformed Execute Query.";
         return;
@@ -84,6 +85,7 @@ export function processExecuteStatement(db: SKSQL,
         swapContext(context, newContext);
         context.exitExecution = false;
         addNewestResultToList(context, newContext);
+        addModifiedBlocksToContext(context, newContext);
 
         if (gotOutput) {
             for (let i = 0; i < statement.parameters.length; i++) {

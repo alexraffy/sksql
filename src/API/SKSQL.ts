@@ -300,9 +300,13 @@ export class SKSQL {
                     });
                     if (pq !== undefined) {
                         if (payload.res.error !== undefined && payload.res.error !== "") {
-                            pq.reject(payload.res.error, new SQLResult(db, payload.res));
+                            if (pq.reject !== undefined) {
+                                pq.reject(payload.res.error, new SQLResult(db, payload.res));
+                            }
                         } else {
-                            pq.resolve(new SQLResult(db, payload.res));
+                            if (pq.resolve !== undefined) {
+                                pq.resolve(new SQLResult(db, payload.res));
+                            }
                         }
                     }
                 }

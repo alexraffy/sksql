@@ -413,9 +413,9 @@ export class SQLStatement {
     }
 
 
-    runRemote(): Promise<SQLResult> {
+    runRemote(returnResult: boolean = true, broadcastResult: boolean = false): Promise<SQLResult> {
         return new Promise<SQLResult>( (resolve, reject) => {
-            this.db.sendWorkerQuery(0, this, reject, resolve);
+            this.db.sendRemoteDatabaseQuery(this, this.context, returnResult, broadcastResult, reject, resolve);
         });
     }
 

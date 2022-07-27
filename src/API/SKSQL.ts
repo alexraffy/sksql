@@ -235,9 +235,9 @@ export class SKSQL {
                             }
                             if (block !== undefined) {
                                 // decompress the block
-                                let compressedBuf: ArrayBuffer = new ArrayBuffer(block.data.byteLength);
+                                let compressedBuf: ArrayBuffer = new ArrayBuffer(block.size);
                                 let dvCompressedBuf = new DataView(compressedBuf);
-                                for (let i = 0; i < compressedBuf.byteLength; i++) {
+                                for (let i = 0; i < block.size; i++) {
                                     dvCompressedBuf.setUint8(i, block.data[i]);
                                 }
                                 let decompressedBuf: SharedArrayBuffer | ArrayBuffer = decompress(compressedBuf, SKSQL.supportsSharedArrayBuffers);

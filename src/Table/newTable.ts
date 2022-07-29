@@ -1,15 +1,14 @@
 import {ITableDefinition} from "./ITableDefinition";
-import {ITableData} from "./ITableData";
 import {writeTableDefinition} from "./writeTableDefinition";
 import {ITable} from "./ITable";
-import {readTableDefinition} from "./readTableDefinition";
 import {SKSQL} from "../API/SKSQL";
+import {kModifiedBlockType, TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 
 /*
     generate a new table from the table definition specified.
 
  */
-export function newTable(db: SKSQL, tb: ITableDefinition): ITable {
+export function newTable(db: SKSQL, tb: ITableDefinition, context: TExecutionContext = undefined): ITable {
     let ret: ITable = {
         data: {
             tableDef: undefined,
@@ -22,6 +21,14 @@ export function newTable(db: SKSQL, tb: ITableDefinition): ITable {
     //tb = readTableDefinition(ret.data);
     db.allTables.push(ret);
     db.tableInfo.add(ret, def);
+
+    if (context !== undefined) {
+        context.modifiedBlocks.push({
+            name: tb.name,
+            type: kModifiedBlockType.tableHeader,
+            blockIndex: -1
+        });
+    }
 
     return ret;
 

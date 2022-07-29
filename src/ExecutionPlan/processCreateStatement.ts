@@ -111,8 +111,7 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
 
         }
 
-
-        newTable(db, tblDef);
+        newTable(db, tblDef, context);
         if (!["DUAL", "ROUTINES", "SYS_TABLE_STATISTICS"].includes(tblDef.name.toUpperCase())) {
             genStatsForTable(db, tblDef.name);
         }

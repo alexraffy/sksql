@@ -8,7 +8,7 @@ export function remote1(db: SKSQL, next:()=>void) {
     console.log("TESTING REMOTE...");
     const delegate: TDBEventsDelegate = {
         authRequired(db: SKSQL, databaseHashId: string): TAuthSession {
-            return { token: "", name: "SKSQL Test Suite", valid: true};
+            return { token: "", name: "SKSQL Test Suite", remoteOnly: true};
         },
         connectionLost(db: SKSQL, dbHashId: string) {
             if (expectDisconnection === false) {

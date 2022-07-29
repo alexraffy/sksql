@@ -34,7 +34,7 @@ export function where(db: SKSQL, next: ()=>void) {
         st.setParameter("@w", w);
         st.setParameter("@x", x);
         st.setParameter("@y", y);
-        let ret = st.run();
+        let ret = st.runSync();
         if (ret.error !== undefined && ret.error !== "") {
             throw new Error(ret.error);
         }

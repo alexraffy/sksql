@@ -10,9 +10,9 @@ export function test_db_university(db: SKSQL, next:()=>void) {
     let fillSQLScript = fs.readFileSync("res\\university_data.sql").toString();
 
     let createTablesStatement = new SQLStatement(db, createSQLScript);
-    let ret = createTablesStatement.run();
+    let ret = createTablesStatement.runSync();
     let fillTablesStatement = new SQLStatement(db, fillSQLScript);
-    let ret2 = fillTablesStatement.run();
+    let ret2 = fillTablesStatement.runSync();
     fillTablesStatement.close();
 
     runTest(db, "select title from course where dept_name = 'Comp. Sci.' and credits = 3", false, false,

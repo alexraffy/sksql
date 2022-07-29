@@ -84,7 +84,7 @@ try {
 
 // Simple example
 // let st = new SQLStatement(db, "SELECT 'Hello' as greetings FROM dual");
-// let ret = st.run();
+// let ret = st.runSync();
 // const rows = ret.getRows();
 // rows[0]["greetings"] === "Hello"
 // // delete the result table
@@ -93,7 +93,7 @@ try {
 // With a parameter
 // let st = new SQLStatement(db, "SELECT FirstName FROM users WHERE Lastname = @lastname");
 // st.setParameter("@lastname", "Doe");
-// let ret = st.run();
+// let ret = st.runSync();
 // const rows = ret.getRows();
 // rows[0]["FirstName"] === "John";
 // // delete the result table
@@ -106,7 +106,7 @@ try {
 // }
 // let st = new SQLStatement(db, "SELECT FirstName, Lastname FROM users WHERE Lastname = @lastname");
 // st.setParameter("@lastname", "Doe");
-// let ret = st.run();
+// let ret = st.runSync();
 // const rows = ret.getRows<Person>();
 // rows[0].FirstName === "John";
 // // delete the result table
@@ -114,7 +114,7 @@ try {
 
 // Open a cursor on the result table and loop through all records
 // let st = new SQLStatement(db, "SELECT FirstName, Lastname FROM users");
-// let ret = st.run();
+// let ret = st.runSync();
 // // get the result table
 // if (ret.error !== undefined) { throw "Error: " + ret.error; }
 // // open a cursor
@@ -202,10 +202,10 @@ export class SQLStatement {
             this.db.dropTable(this.context.openedTempTables[i]);
         }
     }
-    runOnWebWorker(): Promise<SQLResult> {
-        return new Promise<SQLResult>( (resolve: (SQLResult) => void, reject: (string, SQLResult) => void) => {
+    async runOnWebWorker(): Promise<SQLResult> {
+        return new Promise<SQLResult>( (resolve: (SQLResult) => void) => {
             this.db.updateWorkerDB(0);
-            this.db.sendWorkerQuery(0, this, reject, resolve);
+            this.db.sendWorkerQuery(0, this, resolve);
         });
     }
     private parse() {
@@ -262,6 +262,7 @@ export class SQLStatement {
                                 ],"")
                                 ])], "");
                             if (stAlter === undefined) { yield str("ALTER TABLE, ALTER FUNCTION or ALTER PROCEDURE");}
+
                             if ((stAlter as any[])[2] === "TABLE") {
                                 result = yield predicateTQueryCreateTable;
                             }
@@ -374,22 +375,6 @@ export class SQLStatement {
                 }
 
 
-                //let result = yield maybe(predicateValidStatementsInProcedure);
-/*
-                if (result === undefined) {
-                    let statementType = yield checkAhead([str("CREATE"), str("ALTER")], "");
-                    switch (statementType) {
-                        case "CREATE":
-                        case "ALTER":
-                            result = yield oneOf([predicateTQueryCreateTable, predicateTQueryCreateProcedure, predicateTQueryCreateFunction], "");
-                            break;
-                        default:
-                            yield str("a SQL statement")
-                    }
-                }
-
- */
-
                 if (result !== undefined && typeof result !== "string") {
                     ret.push(result);
                 }
@@ -413,15 +398,24 @@ export class SQLStatement {
     }
 
 
-    runRemote(returnResult: boolean = true, broadcastResult: boolean = false): Promise<SQLResult> {
-        return new Promise<SQLResult>( (resolve, reject) => {
-            this.db.sendRemoteDatabaseQuery(this, this.context, returnResult, broadcastResult, reject, resolve);
+    async runRemote(returnResult: boolean = true, broadcastResult: boolean = false): Promise<SQLResult> {
+        return new Promise<SQLResult>( (resolve) => {
+            this.db.sendRemoteDatabaseQuery(this, this.context, returnResult, broadcastResult, resolve);
         });
     }
 
+    runAsync(options: {printDebug: boolean} = {printDebug: false}): Promise<SQLResult> {
+        return new Promise<SQLResult>((resolve) => {
+            let opts = {
+                printDebug: options.printDebug,
+                remoteCallback: resolve
+            };
+            let ret = this.runSync(options);
+            resolve(ret);
+        });
+    }
 
-
-    run(options: {printDebug: boolean} = {printDebug: false}): SQLResult {
+    runSync(options: {printDebug: boolean, remoteCallback?: (SQLResult) => void} = {printDebug: false, remoteCallback: undefined}): SQLResult {
         if (options !== undefined && options.printDebug === true) {
             console.log("****************************************");
             console.log("DEBUG INFO");
@@ -491,9 +485,16 @@ export class SQLStatement {
             return new SQLResult(this.db, this.context.result);
         }
 
-        // if command mode is enabled, we don't execute the query but send it to the server.
-        if (this.db.commandModeOnly === true) {
-            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, false, undefined, undefined);
+        // is the connection read-only?
+        if (this.db.isReadOnly === true && this.ast)
+
+        // if the connection is remote only, we don't execute the query but send it to the server.
+        if (this.db.isRemoteOnly === true && this.broadcast === true) {
+            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, false, options.remoteCallback);
+            return new SQLResult(this.db, this.context.result);
+        } else if (this.db.isRemoteOnly === true && this.broadcast === false) {
+            this.context.result.resultTableName = "";
+            this.context.result.error = "CONNECTION IS SET TO REMOTE ONLY BUT QUERY BROADCAST IS SET TO FALSE";
             return new SQLResult(this.db, this.context.result);
         }
 
@@ -527,7 +528,7 @@ export class SQLStatement {
 
 
         if (this.broadcast && this.context.broadcastQuery && this.db.connections.length > 0) {
-            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, true, undefined, undefined);
+            this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, true, options.remoteCallback);
         }
 
         return new SQLResult(this.db, this.context.result);

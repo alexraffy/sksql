@@ -32,7 +32,7 @@ export function test_sqlresult(db: SKSQL, next: ()=>void) {
 
     runTest(db, sqlPirates, false, false, undefined);
     let st = new SQLStatement(db, "SELECT name, country, dob, death, bounty FROM pirates ORDER BY name");
-    let ret = st.run();
+    let ret = st.runSync();
     let pirates = ret.getRows<Pirate>();
     let cursor = ret.getCursor();
     let str = "";

@@ -54,6 +54,8 @@ import {genStatsForTable} from "../API/genStatsForTable";
 
 export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure, options: {printDebug: boolean} = {printDebug: false}) {
 
+    let connectionIsReadOnly = db.isReadOnly;
+
     if (options !== undefined && options.printDebug === true) {
         console.log("--------------------------");
         console.log("PROCESS STATEMENT: " + context.query.substring((op as TDebugInfo).debug.start), (op as TDebugInfo).debug.end);
@@ -235,26 +237,32 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTQueryCreateProcedure(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("CREATE PROCEDURE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processCreateProcedureStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryCreateFunction(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("CREATE FUNCTION NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processCreateFunctionStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryCreateTable(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("CREATE TABLE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processCreateStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryInsert(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("INSERT NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processInsertStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryUpdate(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("UPDATE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processUpdateStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryDelete(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("DELETE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processDeleteStatement(db, context, op);
         return;
     }
@@ -263,14 +271,17 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
         return;
     }
     if (instanceOfTQueryDropTable(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("DROP TABLE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processDropTableStatement(db, context, op);
         return;
     }
     if (instanceOfTQueryDropFunction(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("DROP FUNCTION NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processDropFunctionStatement(db, context, op);
         return;
     }
     if (instanceOfTVacuum(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("VACUUM NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         let list: string[] = [];
         for (let i = 0; i < db.allTables.length; i++) {
             let name = readTableName(db.allTables[i].data).toUpperCase();

@@ -40,7 +40,7 @@ export function test_date(db: SKSQL, next:()=>void) {
     }
 
     let st = new SQLStatement(db, "CREATE TABLE date_tests(dates DATE)");
-    st.run();
+    st.runSync();
     st.close();
     let dateAdded = [];
     let inserts = new SQLStatement(db, "INSERT INTO date_tests(dates) VALUES(@date)");
@@ -51,7 +51,7 @@ export function test_date(db: SKSQL, next:()=>void) {
         let sdate = padLeft(y.toString(), 4, "0") + "-" + padLeft(m.toString(), 2, "0") + "-" + padLeft(d.toString(), 2, "0");
         dateAdded.push(sdate);
         inserts.setParameter("@date", sdate);
-        inserts.run();
+        inserts.runSync();
     }
     inserts.close();
     dateAdded.sort((a, b) => {
@@ -64,15 +64,15 @@ export function test_date(db: SKSQL, next:()=>void) {
 
 
     let stTimes = new SQLStatement(db, "CREATE TABLE time_tests(times TIME)");
-    stTimes.run();
+    stTimes.runSync();
     stTimes.close();
     let timesInserts = new SQLStatement(db, "INSERT INTO time_tests(times) VALUES(@time)");
     timesInserts.setParameter("@time", "12:05:50");
-    timesInserts.run();
+    timesInserts.runSync();
     timesInserts.setParameter("@time", "04:50");
-    timesInserts.run();
+    timesInserts.runSync();
     timesInserts.setParameter("@time", "10:30:00");
-    timesInserts.run();
+    timesInserts.runSync();
     timesInserts.close();
 
 

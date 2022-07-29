@@ -74,7 +74,7 @@ export function strings(db: SKSQL, next: ()=>void) {
     let arabic = "هناك وأزيز كان عن. عرض الهادي التخطيط إذ, ان المارق الأرواح الانجليزية أسر. ان الصينية المعاهدات جعل. ذلك وشعار وأزيز واتّجه في, جُل أي سياسة مدينة الأراضي. أما أم خطّة جديدة للصين, ان ودول تنفّس إعمار ضرب.";
     let sqlArabic = new SQLStatement(db, "SELECT @arabic as result FROM dual");
     sqlArabic.setParameter("@arabic", arabic);
-    let retArabic = sqlArabic.run();
+    let retArabic = sqlArabic.runSync();
     let resultArabic = retArabic.getRows();
     assert(resultArabic[0]["result"] === arabic, "Error RTL string.");
     sqlArabic.close();

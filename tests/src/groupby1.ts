@@ -15,7 +15,7 @@ export function groupby1(db: SKSQL, next:()=>void) {
     INSERT INTO sales VALUES ('United States', 'Montana', 900); \
     ";
     let st = new SQLStatement(db, sql);
-    st.run();
+    st.runSync();
     st.close();
 
     let sqlGroupBy1 = "SELECT Country, Region, SUM(sales) AS TotalSales " +

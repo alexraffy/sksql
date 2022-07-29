@@ -25,7 +25,6 @@ export const WSRAuthenticate: string = "WSRA";
 export interface TWSRAuthenticateRequest {
     id: number;
     info: TAuthSession;
-    commandMode: boolean;
 }
 // Response to WSRAuthenticate
 // origin: Server
@@ -33,6 +32,7 @@ export interface TWSRAuthenticateRequest {
 // returns a final id for the connection
 export interface TWSRAuthenticateResponse {
     con_id: number; // the id for the connection
+    info: TAuthSession;
 }
 
 // Request a copy of the database

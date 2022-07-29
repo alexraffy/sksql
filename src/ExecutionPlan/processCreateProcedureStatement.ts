@@ -36,14 +36,14 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
         let sql = "SELECT true FROM master.routines WHERE name = @name AND TYPE = 'PROCEDURE'";
         let doesItExist = new SQLStatement(db, sql, false);
         doesItExist.setParameter("@name", c.procName);
-        let exists = doesItExist.run().getRows();
+        let exists = doesItExist.runSync().getRows();
         doesItExist.close();
         if (exists.length > 0 && exists[0]["true"].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
             let stUpdate = new SQLStatement(db, sqlUpdate, false);
             stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.procName);
-            let retUpdate = stUpdate.run();
+            let retUpdate = stUpdate.runSync();
             addModifiedBlocksToContext(context, stUpdate.context);
             stUpdate.close();
         } else {
@@ -52,7 +52,7 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
             stInsert.setParameter("@schema", 'dbo');
             stInsert.setParameter("@name", c.procName);
             stInsert.setParameter("@text", text);
-            stInsert.run();
+            stInsert.runSync();
             addModifiedBlocksToContext(context, stInsert.context);
             stInsert.close();
         }

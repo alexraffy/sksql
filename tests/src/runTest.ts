@@ -37,7 +37,7 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
     let st: SQLStatement = undefined;
     try {
         st = new SQLStatement(db, sql);
-        let ret = st.run(options);
+        let ret = st.runSync(options);
         if (error === true && ret.error === undefined) {
             throwError =  sql + " should have triggered an error.";
             console.log(dumpTable(db.getTable(ret.resultTableName)));

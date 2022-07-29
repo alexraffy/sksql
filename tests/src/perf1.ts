@@ -53,7 +53,7 @@ function insertTest(db: SKSQL, blockSize: number, loop: number, entries: number)
         let start = performance.now();
         let st = new SQLStatement(db, "INSERT INTO t1 VALUES(@a);");
             st.setParameter("@a", i);
-            st.run();
+            st.runSync();
             st.close();
 
         let end = performance.now();
@@ -87,7 +87,7 @@ function insertPreparedTest(db: SKSQL, blockSize: number, loop: number, entries:
     for (let i = 0; i < loop; i++) {
         let start = performance.now();
         st.setParameter("@a", i);
-        st.run();
+        st.runSync();
         let end = performance.now();
         let millis = end - start;
         insertTests1.push(millis);
@@ -120,7 +120,7 @@ function insertTSQLLoopTest(db: SKSQL, blockSize: number, loop: number, entries:
 
         let start = performance.now();
         let st = new SQLStatement(db, "DECLARE @loop INT = 0; WHILE @loop < " + entries + " BEGIN SET @loop = @loop + 1; INSERT INTO t1 VALUES(@loop); END;");
-        st.run();
+        st.runSync();
         st.close();
         let end = performance.now();
         let millis = end - start;
@@ -204,7 +204,7 @@ function selectTest(db: SKSQL, blockSize: number, sample: number, entries: numbe
     for (let i = 0; i < sample; i++) {
         let start = performance.now();
         let st = new SQLStatement(db, "SELECT * FROM t1;");
-        st.run();
+        st.runSync();
         st.close();
         let end = performance.now();
         let millis = end - start;

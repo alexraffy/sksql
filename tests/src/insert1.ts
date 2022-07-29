@@ -115,7 +115,7 @@ export function insert1(db: SKSQL, next:()=>void) {
     ('Bartholomew Roberts', 'Wales', '1682-05-17', '1722-02-10', 800000),\
     ('Blackbeard (Edward Teach)', 'England', '1680-00-00', '1718-11-22', 900000);";
     let st = new SQLStatement(db, sql);
-    st.run();
+    st.runSync();
 
     runTest(db, "SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')", false, false,
         [["Anne Bonny", "Ireland"], ["Bartholomew Roberts", "Wales"]]);

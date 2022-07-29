@@ -23,7 +23,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
         let stDelete = new SQLStatement(db, sql, false);
         stDelete.setParameter("@tableName", tableName.toUpperCase());
         try {
-            stDelete.run();
+            stDelete.runSync();
         } catch (eDelete) {
             return;
         }
@@ -66,7 +66,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     let sql = "SELECT TOP(1) id FROM sys_table_statistics WHERE UPPER(table) = UPPER(@tableName);";
     let stExists = new SQLStatement(db, sql, false);
     stExists.setParameter("@tableName", tableName);
-    let ret = stExists.run();
+    let ret = stExists.runSync();
     let retExists = ret.getRows();
     stExists.close();
     if (retExists !== undefined && retExists.length === 1) {
@@ -79,7 +79,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
         stUpdate.setParameter("@total_size", totalDataBlocksSize);
         stUpdate.setParameter("@largest_block_size", largestDataBlockSize);
         stUpdate.setParameter("@id", id);
-        stUpdate.run();
+        stUpdate.runSync();
         stUpdate.close();
     } else {
         let sqlInsert = "INSERT INTO sys_table_statistics(timestamp, table, active_rows, dead_rows, header_size, total_size, largest_block_size, table_timestamp) VALUES (GETUTCDATE(), @tableName, @active_rows, @dead_rows, @header_size, @total_size, @largest_block_size, GETUTCDATE())";
@@ -90,7 +90,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
         stInsert.setParameter("@header_size", headerBlockSize);
         stInsert.setParameter("@total_size", totalDataBlocksSize);
         stInsert.setParameter("@largest_block_size", largestDataBlockSize);
-        stInsert.run();
+        stInsert.runSync();
         stInsert.close();
         id = stInsert.context.scopedIdentity;
     }

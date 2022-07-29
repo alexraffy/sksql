@@ -28,7 +28,7 @@ export function compileNewRoutines(db: SKSQL) {
 
     for (let i = 0; i < functions.length; i++) {
         let sql = new SQLStatement(db, functions[i].fnDef, false);
-        sql.run();
+        sql.runSync();
     }
 }
 

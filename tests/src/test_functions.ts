@@ -47,7 +47,7 @@ export function test_functions(db: SKSQL, next: ()=>void )  {
     DUAL";
 
     let st1 = new SQLStatement(db, sql);
-    let res1 = st1.run();
+    let res1 = st1.runSync();
     assert(res1.error === undefined, "SQL ERROR " + res1.error)
     let ret = res1.getRows();
     assert(ret[0]["padleft"] === "001", "Error USING FUNCTION PADLEFT");
@@ -71,7 +71,7 @@ export function test_functions(db: SKSQL, next: ()=>void )  {
         ";
 
         let st = new SQLStatement(db, sCreateFunction);
-        let res = st.run();
+        let res = st.runSync();
         st.close();
         runTest(db, "SELECT testfunction(false) as greetings FROM dual", false, false, [["Good afternoon"]]);
 

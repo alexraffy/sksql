@@ -55,7 +55,7 @@ workerJavascript += "       for (let i = 0; i < params.length; i++) {\n";
 workerJavascript += "           st.setParameter(params[i].key, params[i].value);\n";
 workerJavascript += "       }\n";
 workerJavascript += "   }\n";
-workerJavascript += "   let result = st.run();\n";
+workerJavascript += "   let result = st.runSync();\n";
 //workerJavascript += "   console.dir(result);\n";
 workerJavascript += "   if (result.error === undefined && result.resultTableName !== \"\") {\n";
 workerJavascript += "       parentPort.postMessage({c: \"DB\", d: db.allTables});\n";
@@ -114,7 +114,7 @@ export class SKSQL {
     // webworkers instances
     private workers: Worker[] = [];
     // list of queries that need to be processed
-    private pendingQueries: {id: string, statement:SQLStatement, resolve: (result: SQLResult) => void, reject: (reason: string, result: SQLResult) => void}[] = [];
+    private pendingQueries: {id: string, statement:SQLStatement, resolve: (result: SQLResult) => void}[] = [];
     // SQL and js functions
     functions: TRegisteredFunction[] = [];
     // SQL procs
@@ -125,22 +125,19 @@ export class SKSQL {
     // used in skserver to delete/rename physical tables
     callbackDropTable: (db: SKSQL, tableName: string) => void = (db, tableName) => {};
     callbackRenameTable: (db: SKSQL, tableName: string, newName: string) => void = (db, tableName, newName) => {};
-    // if remote mode is enabled, no data is downloaded and all commands are sent to the server for execution.
-    commandModeOnly: boolean = false;
-
 
     constructor() {
         this.allTables = [];
         this.tableInfo = new CTableInfoManager(this);
         // SELECT without a FROM is not supported. you can use SELECT ... FROM DUAL instead
         let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
-        dual.run();
+        dual.runSync();
         // store number of active/dead rows in tables,
         let stats = new SQLStatement(this, "CREATE TABLE master.sys_table_statistics(id uint32 identity(1,1), timestamp datetime, table VARCHAR(255), active_rows UINT32, dead_rows UINT32, header_size UINT32, total_size UINT32, largest_block_size UINT32, table_timestamp DATETIME);", false);
-        stats.run();
+        stats.runSync();
         // functions and procedures definitions are stored in the routines table.
         let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
-        routines.run();
+        routines.runSync();
         registerFunctions(this);
     }
 
@@ -152,6 +149,62 @@ export class SKSQL {
             return kConnectionStatus.disconnected;
         }
         return this.connections[0].socket.connected;
+    }
+
+    get isReadOnly(): boolean {
+        if (this.connections.length === 0) {
+            return false;
+        }
+        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
+            return false;
+        }
+        if (this.connections[0].auth === undefined) { return false; }
+        return this.connections[0].auth.readOnly;
+    }
+
+    get isRemoteOnly(): boolean {
+        if (this.connections.length === 0) {
+            return false;
+        }
+        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
+            return false;
+        }
+        if (this.connections[0].auth === undefined) { return false; }
+        return this.connections[0].auth.remoteOnly;
+    }
+
+
+    async connectAsync(databaseHashId: string, token: string, name: string = "", remoteModeOnly: boolean = false): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            let delegate: TDBEventsDelegate & {resolve: (boolean) => void} = {
+                resolve: resolve,
+                on(db: SKSQL, databaseHashId: string, message: string, payload: any) {
+
+                },
+                connectionError(db: SKSQL, databaseHashId: string, error: string) {
+                    if (this.resolve !== undefined) {
+                        resolve(false);
+                        this.resolve = undefined;
+                    }
+                },
+                connectionLost(db: SKSQL, databaseHashId: string) {
+                },
+                ready(db: SKSQL, databaseHashId: string) {
+                    if (this.resolve !== undefined) {
+                        resolve(true);
+                        this.resolve = undefined;
+                    }
+                },
+                authRequired(db: SKSQL, databaseHashId: string): TAuthSession {
+                    return {
+                        token: token,
+                        name: name,
+                        remoteOnly: remoteModeOnly
+                    };
+                }
+            }
+            this.connectToDatabase(databaseHashId, delegate);
+        });
     }
 
 
@@ -186,8 +239,7 @@ export class SKSQL {
 
                         connectionInfo.socket.send(WSRAuthenticate, {
                             id: msg.id,
-                            info: connectionInfo.auth,
-                            commandMode: db.commandModeOnly
+                            info: connectionInfo.auth
                         } as TWSRAuthenticateRequest)
 
                     } else {
@@ -197,8 +249,22 @@ export class SKSQL {
                 if (msg.message === WSRAuthenticate) {
                     let payload = msg.param as TWSRAuthenticateResponse;
                     let connection_id = payload.con_id;
+                    let info = db.getConnectionInfoForDB(databaseHashId);
+                    if (info === undefined) {
+                        // client attempted to disconnect the connection was accepted?
+                        return;
+                    }
+                    info.auth = JSON.parse(JSON.stringify(payload.info));
+                    if (info.auth.valid !== true) {
+                        if  (info.delegate.connectionError !== undefined) {
+                            info.delegate.connectionError(db, databaseHashId, "Connection was denied.");
+                            return;
+                        }
+                    }
                     // Request data
-                    connectionInfo.socket.send(WSRDataRequest, { id: connectionInfo.auth.id } as TWSRDataRequest)
+                    if (info.auth.remoteOnly !== true) {
+                        connectionInfo.socket.send(WSRDataRequest, {id: connectionInfo.auth.id} as TWSRDataRequest)
+                    }
                 }
                 if (msg.message === WSRSQL) {
                     let payload = msg.param as TWSRSQL;
@@ -209,7 +275,7 @@ export class SKSQL {
                                 statement.setParameter(payload.p[i].name, payload.p[i].value, payload.p[i].type);
                             }
                         }
-                        let rets = statement.run();
+                        let rets = statement.runSync();
                     } catch (e) {
                         console.warn(e.message);
                     }
@@ -299,14 +365,8 @@ export class SKSQL {
                         return p.id ===  payload.u;
                     });
                     if (pq !== undefined) {
-                        if (payload.res.error !== undefined && payload.res.error !== "") {
-                            if (pq.reject !== undefined) {
-                                pq.reject(payload.res.error, new SQLResult(db, payload.res));
-                            }
-                        } else {
-                            if (pq.resolve !== undefined) {
-                                pq.resolve(new SQLResult(db, payload.res));
-                            }
+                        if (pq.resolve !== undefined) {
+                            pq.resolve(new SQLResult(db, payload.res));
                         }
                     }
                 }
@@ -459,51 +519,6 @@ export class SKSQL {
                 () => {
 
                 });
-            /*
-            fetch("https://sksql.com/api/v1/connect", {
-                method: 'post',
-                body: JSON.stringify(payload),
-                headers: {'Content-Type': 'application/json'}
-            }).then((value: Response) => {
-                try {
-                    value.json().then((json) => {
-                        if (json.valid === false) {
-                            if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                                connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
-                            }
-                            return;
-                        }
-
-                        connectionEntry.socket.connect(json.address).then((v) => {
-                            if (v === false) {
-                                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection was rejected.");
-                                }
-                            }
-                        }).catch((e) => {
-                            if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                                connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + e.message);
-                            }
-                        });
-
-
-                    }).catch((err) => {
-                        if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                            connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + err.message);
-                        }
-                    });
-                } catch (jsonError) {
-                    if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionError) {
-                        connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + jsonError.message);
-                    }
-                }
-            }).catch ((reason) => {
-                if (connectionEntry.delegate !== undefined && connectionEntry.delegate.connectionLost) {
-                    connectionEntry.delegate.connectionError(this, databaseHashId, "Connection error: " + reason.message);
-                }
-            })
-
-             */
         }
 
 
@@ -678,7 +693,7 @@ export class SKSQL {
         this.workers[idx].postMessage({c:"DB", d: this.allTables});
     }
 
-    sendRemoteDatabaseQuery(query: SQLStatement, context: TExecutionContext, returnData: boolean, broadcast: boolean, reject: (string, SQLResult) => void, resolve: (SQLResult) => void) {
+    sendRemoteDatabaseQuery(query: SQLStatement, context: TExecutionContext, returnData: boolean, broadcast: boolean, resolve: (SQLResult) => void) {
         if (this.connections.length === 0) {
             let res: TSQLResult = {
                 error: "No remote connection.",
@@ -694,8 +709,8 @@ export class SKSQL {
                 dropTable: [],
                 parserTime: 0
             }
-            if (reject !== undefined) {
-                reject("No remote connection.", res);
+            if (resolve !== undefined) {
+                resolve(res);
             }
             return;
         }
@@ -704,8 +719,7 @@ export class SKSQL {
         this.pendingQueries.push({
             id: query.id,
             statement: query,
-            resolve: resolve,
-            reject: reject
+            resolve: resolve
         });
 
         let msg: TWSRSQL = {
@@ -720,13 +734,12 @@ export class SKSQL {
         this.connections[0].socket.send(WSRSQL, msg);
     }
 
-    sendWorkerQuery(idx: number, query: SQLStatement, reject: (string, SQLResult) => void, resolve: (SQLResult) => void) {
+    sendWorkerQuery(idx: number, query: SQLStatement, resolve: (SQLResult) => void) {
 
         this.pendingQueries.push({
             id: query.id,
             statement: query,
-            resolve: resolve,
-            reject: reject
+            resolve: resolve
         });
 
         let msg = { c: "QR", d: { id: query.id, query: query.query, params: []}};
@@ -743,14 +756,8 @@ export class SKSQL {
             if (this.pendingQueries[idx].statement !== undefined && openedTempTables !== undefined && openedTempTables.length > 0) {
                 this.pendingQueries[idx].statement.context.openedTempTables.push(...openedTempTables);
             }
-            if (result.error !== undefined) {
-                if (this.pendingQueries[idx].reject !== undefined) {
-                    this.pendingQueries[idx].reject(result.error, new SQLResult(this, result));
-                }
-            } else {
-                if (this.pendingQueries[idx].resolve !== undefined) {
-                    this.pendingQueries[idx].resolve(new SQLResult(this, result));
-                }
+            if (this.pendingQueries[idx].resolve !== undefined) {
+                this.pendingQueries[idx].resolve(new SQLResult(this, result));
             }
         }
         this.pendingQueries.splice(idx, 1);

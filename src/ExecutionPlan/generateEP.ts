@@ -155,11 +155,17 @@ export function generateEP(db: SKSQL,
 
     // the temp table name for our results
     if (instanceOfTQuerySelect(select)) {
+        returnTableName = select.resultTableName.toUpperCase();
+        while (db.tableInfo.get(returnTableName) !== undefined || context.openedTempTables.includes(returnTableName.toUpperCase())) {
+            returnTableName = "#" + generateV4UUID().toUpperCase();
+        }
+        /*
         let i = 1;
         returnTableName = "#query" + i;
         while (db.tableInfo.get(returnTableName) !== undefined || context.openedTempTables.includes(returnTableName.toUpperCase())) {
             returnTableName = "#query" + (++i);
         }
+         */
     }
     returnTableName = returnTableName.toUpperCase();
     returnTableDefinition.name = returnTableName;
@@ -613,7 +619,7 @@ export function generateEP(db: SKSQL,
 
     let returnTable: ITable;
     if (returnTableName !== "") {
-        returnTable = newTable(db, returnTableDefinition);
+        returnTable = newTable(db, returnTableDefinition, context);
         returnTableDefinition = db.tableInfo.get(returnTableDefinition.name).def;
         context.tables.push(
             {
@@ -737,7 +743,7 @@ export function generateEP(db: SKSQL,
                 }
             }
             groupByResultTableDef.name = groupByResultTableName;
-            let groupByResultTable = newTable(db, groupByResultTableDef);
+            let groupByResultTable = newTable(db, groupByResultTableDef, context);
             groupByResultTableDef = db.tableInfo.get(groupByResultTableName).def;
             currentPlan.tempTables.push(groupByResultTableName);
             context.openedTempTables.push(groupByResultTableName);
@@ -842,7 +848,7 @@ export function generateEP(db: SKSQL,
                     identitySeed: 1,
                     identityValue: 0
                 };
-                let afterOrderByTable = newTable(db, afterOrderByTableDef);
+                let afterOrderByTable = newTable(db, afterOrderByTableDef, context);
                 context.openedTempTables.push(afterOrderByTableName);
                 currentPlan.tempTables.push(afterOrderByTableName);
                 newDest = afterOrderByTableName;

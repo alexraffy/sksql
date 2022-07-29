@@ -38,7 +38,7 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
 
 
     let st1 = new SQLStatement(db, "SELECT 0.1 + 0.2 as ret FROM dual")
-    let ret = st1.run().getRows();
+    let ret = st1.runSync().getRows();
     let check = numericLoad("0.3");
     assert(numericCmp(ret[0]["ret"], check) === 0, "Adding two numeric");
     st1.close();
@@ -72,11 +72,11 @@ export function test_numeric(db: SKSQL, next: ()=> void) {
 
 
     let st2 = new SQLStatement(db, "CREATE TABLE numSum(val NUMERIC(8,2))");
-    st2.run();
+    st2.runSync();
     let ins = new SQLStatement(db, "INSERT INTO numSum(val) VALUES(@val)");
     for (let i = 10; i > 0; i--) {
         ins.setParameter("@val", i);
-        ins.run();
+        ins.runSync();
     }
 
     runTest(db, "SELECT val FROM numSum ORDER BY val ASC", false, false, [

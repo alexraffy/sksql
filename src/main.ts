@@ -142,6 +142,7 @@ export * from "./Date/parseTimeString";
 export * from "./Date/TDateCmp";
 export * from "./Date/TDateTimeCmp";
 export * from "./Date/TTimeCmp";
+export * from "./Date/formatDate";
 
 export * from "./ExecutionPlan/cloneContext";
 export * from "./ExecutionPlan/newContext";

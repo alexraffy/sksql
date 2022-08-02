@@ -1,5 +1,5 @@
 
-import {parseDateString, SQLStatement, dumpTable, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, TSQLResult} from "sksql";
+import {parseDateString, SQLStatement, formatDate, kFormatDateTime, SKSQL, readTableDefinition, readTableAsJSON, parseTimeString, parseDateTimeString, kResultType, TSQLResult} from "sksql";
 import * as assert from "assert";
 import {checkNoTempTables, runTest} from "./runTest";
 
@@ -29,6 +29,24 @@ export function test_date(db: SKSQL, next:()=>void) {
     let str14 = "12:60"; let r14 = parseTimeString(str14); assert(r14 === undefined, str14 + " should fail to be parsed as a time");
     let str15 = "2021-12-29T22:10:00.000"; let r15 = parseDateTimeString(str15); assert(r15 !== undefined, str15 + " could not be parsed as datetime");
 
+    assert(formatDate(r15, "yyyy") === "2021", "formatDate error");
+    assert(formatDate(r15, "yyy") === "021", "formatDate error");
+    assert(formatDate(r15, "yy") === "21", "formatDate error");
+    assert(formatDate(r15, "y") === "1", "formatDate error");
+    assert(formatDate(r15, "MM") === "12", "formatDate error");
+    assert(formatDate(r15, "M") === "12", "formatDate error");
+    assert(formatDate(r15, "dd") === "29", "formatDate error");
+    assert(formatDate(r15, "d") === "29", "formatDate error");
+    assert(formatDate(r15, "hh") === "10", "formatDate error");
+    assert(formatDate(r15, "h") === "10", "formatDate error");
+    assert(formatDate(r15, "HH") === "22", "formatDate error");
+    assert(formatDate(r15, "H") === "22", "formatDate error");
+    assert(formatDate(r15, "mm") === "10", "formatDate error");
+    assert(formatDate(r15, "m") === "10", "formatDate error");
+    assert(formatDate(r15, "ss") === "00", "formatDate error");
+    assert(formatDate(r15, "s") === "0", "formatDate error");
+    assert(formatDate(r15, "YYYY-MM-DDTHH:mm:ss.SSSZ") === "2021-12-29T22:10:00.000Z", "formatDate error");
+    assert(formatDate(r15, "YYYY/MM/dd hh:mm:ss") === "2021/12/29 10:10:00", "formatDate error");
 
 
     let padLeft = (str, size, char) => {

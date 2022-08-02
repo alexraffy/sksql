@@ -262,9 +262,8 @@ export class SKSQL {
                         }
                     }
                     // Request data
-                    if (info.auth.remoteOnly !== true) {
-                        connectionInfo.socket.send(WSRDataRequest, {id: connectionInfo.auth.id} as TWSRDataRequest)
-                    }
+                    connectionInfo.socket.send(WSRDataRequest, {id: connectionInfo.auth.id} as TWSRDataRequest)
+
                 }
                 if (msg.message === WSRSQL) {
                     let payload = msg.param as TWSRSQL;

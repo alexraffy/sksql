@@ -30,7 +30,7 @@ export class CWebSocket {
     private _connection: WebSocket | Object;
     private handlers: TWebSocketMessageHandlerInfo[] = [];
 
-    private _con_id: number = 0;
+    private _con_id: string = "";
     private msg_count: number = 0;
 
     private outGoing: string[] = [];
@@ -38,7 +38,7 @@ export class CWebSocket {
     public get connected(): kConnectionStatus {
         return this._connected;
     }
-    public get con_id(): number {
+    public get con_id(): string {
         return this._con_id;
     }
 

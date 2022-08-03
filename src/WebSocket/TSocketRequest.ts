@@ -1,6 +1,6 @@
 
 export interface TSocketRequest {
-    id: number;
+    id: string; // client id
     msg_id: number;
     message: string;
     param?: any;

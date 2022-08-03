@@ -12,7 +12,7 @@ import {kModifiedBlockType} from "../ExecutionPlan/TExecutionContext";
 // origin: Server
 export const WSRAuthenticatePlease: string = "WSRAP";
 export interface TWSRAuthenticatePleaseResponse {
-    id: number; // a temporary id number to identify the connection
+    id: string; // a temporary id to identify the connection
 }
 
 // Send authentication information to the server
@@ -23,7 +23,7 @@ export interface TWSRAuthenticatePleaseResponse {
 // from that client is only executed on the server without any data being returned or broadcasted to other connected clients
 export const WSRAuthenticate: string = "WSRA";
 export interface TWSRAuthenticateRequest {
-    id: number;
+    id: string;
     info: TAuthSession;
 }
 // Response to WSRAuthenticate
@@ -31,7 +31,7 @@ export interface TWSRAuthenticateRequest {
 // if the authentication is accepted,
 // returns a final id for the connection
 export interface TWSRAuthenticateResponse {
-    con_id: number; // the id for the connection
+    con_id: string; // the id for the connection
     info: TAuthSession;
 }
 
@@ -39,13 +39,13 @@ export interface TWSRAuthenticateResponse {
 // origin: Client or Server running in Relay mode
 export const WSRDataRequest: string = "DR";
 export interface TWSRDataRequest {
-    id: number;
+    id: string;
 }
 
 // A compressed table header or a table block
 // origin: Server
 export interface TWSRDataResponse {
-    id: number;
+    id: string;
     type: kModifiedBlockType;
     indexTable: number;
     indexBlock: number;
@@ -63,14 +63,13 @@ export const WSROK: string = "OK";
 // origin: Server
 export const WSRON: string = "ON";
 export interface TWSRON {
-    id: number;
     name: string;
 }
 // A user has disconnected from the server
 // origin: Server
 export const WSROFF: string = "OFF";
 export interface TWSROFF {
-    id: number;
+    name: string;
 }
 
 // Execute an SQL statement
@@ -80,7 +79,7 @@ export interface TWSROFF {
 export const WSRSQL: string = "SQL";
 export interface TWSRSQL {
     r: string; // request
-    id: number; // request id for the client
+    id: string; // request id for the client
     u: string; // guid for the request
     rd: boolean; // ask to return data
     b: boolean; // broadcast result to other clients

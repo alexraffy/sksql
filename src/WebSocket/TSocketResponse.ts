@@ -1,6 +1,6 @@
 
 export interface TSocketResponse {
-    id: number;
+    id: string; // client id
     msg_id: number;
     prev_id: number;
     message: string;

@@ -8,6 +8,6 @@ export interface TAuthSession {
     remoteOnly: boolean; // if set to true, the client connection will not receive a copy of the database
     // set by server
     valid?: boolean; // the connection was accepted
-    id?: number; // the connection id
+    id?: string; // the connection id
     readOnly?: boolean; // if set to true, the client will not be able to modify the database
 }

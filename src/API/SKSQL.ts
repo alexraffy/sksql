@@ -110,7 +110,7 @@ export class SKSQL {
     // All tables and temp results are stored here
     allTables: ITable[];
     // The connection to the server
-    public connections: TConnectionData[] = [];
+    public connection: TConnectionData = undefined;
     // webworkers instances
     private workers: Worker[] = [];
     // list of queries that need to be processed
@@ -142,35 +142,29 @@ export class SKSQL {
     }
 
     get connected(): kConnectionStatus {
-        if (this.connections.length === 0) {
+        if (this.connection === undefined) {
             return kConnectionStatus.disconnected;
         }
-        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
+        if (this.connection.socket === undefined) {
             return kConnectionStatus.disconnected;
         }
-        return this.connections[0].socket.connected;
+        return this.connection.socket.connected;
     }
 
     get isReadOnly(): boolean {
-        if (this.connections.length === 0) {
+        if (this.connection === undefined || this.connection.socket === undefined) {
             return false;
         }
-        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
-            return false;
-        }
-        if (this.connections[0].auth === undefined) { return false; }
-        return this.connections[0].auth.readOnly;
+        if (this.connection.auth === undefined) { return false; }
+        return this.connection.auth.readOnly;
     }
 
     get isRemoteOnly(): boolean {
-        if (this.connections.length === 0) {
+        if (this.connection === undefined || this.connection.socket === undefined) {
             return false;
         }
-        if (this.connections[0] === undefined || this.connections[0].socket === undefined) {
-            return false;
-        }
-        if (this.connections[0].auth === undefined) { return false; }
-        return this.connections[0].auth.remoteOnly;
+        if (this.connection.auth === undefined) { return false; }
+        return this.connection.auth.remoteOnly;
     }
 
 
@@ -212,7 +206,9 @@ export class SKSQL {
     // databaseHashId can be a sksql.com database or a websocket
     // implement TDBEventsDelegate if you want to get notifications about disconnection, SQL statements from other clients connected to the same DB.
     connectToDatabase(databaseHashId: string, delegate: TDBEventsDelegate) {
-
+        if (this.connection !== undefined) {
+            this.disconnect();
+        }
         let connectionEntry: TConnectionData = {
             databaseHashId: databaseHashId,
             socket: new CWebSocket(this, databaseHashId),
@@ -221,7 +217,7 @@ export class SKSQL {
         let socketDelegate: TWebSocketDelegate = {
             databaseHashId: databaseHashId,
             connectionError(db: SKSQL, databaseHashId: string, error: string) {
-                let connectionInfo: TConnectionData = db.getConnectionInfoForDB(this.databaseHashId);
+                let connectionInfo: TConnectionData = db.getConnectionInfoForDB();
                 if (connectionInfo !== undefined) {
                     if (connectionInfo.delegate !== undefined && connectionInfo.delegate.connectionError !== undefined) {
                         connectionInfo.delegate.connectionError(db, databaseHashId, error);
@@ -229,7 +225,7 @@ export class SKSQL {
                 }
             },
             on(db: SKSQL, databaseHashId: string, msg: TSocketResponse) {
-                let connectionInfo: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
+                let connectionInfo: TConnectionData = db.getConnectionInfoForDB();
                 if (connectionInfo === undefined) {
                     return;
                 }
@@ -249,7 +245,7 @@ export class SKSQL {
                 if (msg.message === WSRAuthenticate) {
                     let payload = msg.param as TWSRAuthenticateResponse;
                     let connection_id = payload.con_id;
-                    let info = db.getConnectionInfoForDB(databaseHashId);
+                    let info = db.getConnectionInfoForDB();
                     if (info === undefined) {
                         // client attempted to disconnect the connection was accepted?
                         return;
@@ -258,8 +254,8 @@ export class SKSQL {
                     if (info.auth.valid !== true) {
                         if  (info.delegate.connectionError !== undefined) {
                             info.delegate.connectionError(db, databaseHashId, "Connection was denied.");
-                            return;
                         }
+                        return;
                     }
                     // Request data
                     connectionInfo.socket.send(WSRDataRequest, {id: connectionInfo.auth.id} as TWSRDataRequest)
@@ -425,14 +421,14 @@ export class SKSQL {
                 }
             },
             connectionLost(db: SKSQL, databaseHashId: string) {
-                let t: TConnectionData = db.getConnectionInfoForDB(databaseHashId);
+                let t: TConnectionData = db.getConnectionInfoForDB();
                 if (t !== undefined && t.delegate !== undefined) {
                     t.delegate.connectionLost(db, databaseHashId);
                 }
             }
         }
         connectionEntry.socket.delegate = socketDelegate;
-        this.connections.push(connectionEntry);
+        this.connection = connectionEntry;
         if (databaseHashId.startsWith("wss://") || databaseHashId.startsWith("ws://")) {
             connectionEntry.socket.connect(connectionEntry.databaseHashId).then( (v) => {
                 if (v === false) {
@@ -596,17 +592,15 @@ export class SKSQL {
     }
 
     // disconnect from a socket
-    disconnect(databaseHashId: string) {
+    disconnect() {
         let index = -1;
-        for (let i = 0; i < this.connections.length; i++) {
-            if (this.connections[i].databaseHashId === databaseHashId) {
-                index = i;
-            }
+        if (this.connection === undefined) {
+            return;
         }
-        if (index > -1) {
-            this.connections[index].socket.close();
-            this.connections.splice(index, 1);
+        if (this.connection.socket !== undefined) {
+            this.connection.socket.close();
         }
+        this.connection = undefined;
     }
 
     // remove a table from the local session
@@ -631,9 +625,9 @@ export class SKSQL {
     // do not expect locally-generated identity to be safe if multiple users access the same table.
     // if a UUID is used as identity, make sure to generate it in JAVASCRIPT code before passing it to a SQLStatement as a string param.
     // Important: calling NEWID() in SQL will generate a different UUID locally and remotely.
-    getNextId(databaseHashId: string, table: string, count: number = 1): Promise<(number | number[])> {
+    getNextId(table: string, count: number = 1): Promise<(number | number[])> {
         return new Promise<(number | number[])> ( (resolve, reject) => {
-            let ci = this.getConnectionInfoForDB(databaseHashId);
+            let ci = this.getConnectionInfoForDB();
             if (ci === undefined) {
                 return reject({message: "Unknown connection."});
             }
@@ -653,8 +647,8 @@ export class SKSQL {
     }
 
     // Connection data
-    getConnectionInfoForDB(databaseHashId: string) {
-        return this.connections.find((c) => { return c.databaseHashId === databaseHashId;});
+    getConnectionInfoForDB() {
+        return this.connection;
     }
 
     // Get the function data
@@ -693,7 +687,7 @@ export class SKSQL {
     }
 
     sendRemoteDatabaseQuery(query: SQLStatement, context: TExecutionContext, returnData: boolean, broadcast: boolean, resolve: (SQLResult) => void) {
-        if (this.connections.length === 0) {
+        if (this.connection === undefined) {
             let res: TSQLResult = {
                 error: "No remote connection.",
                 messages: "",
@@ -713,7 +707,6 @@ export class SKSQL {
             }
             return;
         }
-        let tc = this.getConnectionInfoForDB(this.connections[0].databaseHashId);
 
         this.pendingQueries.push({
             id: query.id,
@@ -722,7 +715,7 @@ export class SKSQL {
         });
 
         let msg: TWSRSQL = {
-            id: tc.socket.con_id,
+            id: this.connection.socket.con_id,
             r: query.query,
             p: [],
             u: query.id,
@@ -730,7 +723,7 @@ export class SKSQL {
             b: broadcast
         };
         msg.p = JSON.parse(JSON.stringify(context.stack));
-        this.connections[0].socket.send(WSRSQL, msg);
+        this.connection.socket.send(WSRSQL, msg);
     }
 
     sendWorkerQuery(idx: number, query: SQLStatement, resolve: (SQLResult) => void) {

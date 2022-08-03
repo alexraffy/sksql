@@ -527,7 +527,7 @@ export class SQLStatement {
         }
 
 
-        if (this.broadcast && this.context.broadcastQuery && this.db.connections.length > 0) {
+        if (this.broadcast && this.context.broadcastQuery && this.db.getConnectionInfoForDB() !== undefined) {
             this.db.sendRemoteDatabaseQuery(this, this.contextOriginal, false, true, options.remoteCallback);
         }
 

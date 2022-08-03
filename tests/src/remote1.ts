@@ -35,7 +35,7 @@ function remoteTest1(db: SKSQL, dbHashId: string, next: ()=> void) {
     runTest(db, "DROP TABLE test1; CREATE TABLE test1(x INTEGER, y INTEGER); INSERT INTO test1 VALUES(10, 30); INSERT INTO test1 VALUES(20, 40);", false, false, undefined);
 
     expectDisconnection = true;
-    db.disconnect(dbHashId);
+    db.disconnect();
     currentStep = 2;
     runTest(db, "DROP TABLE test1;", false, false, undefined);
     remote1(db, next);
@@ -44,7 +44,7 @@ function remoteTest1(db: SKSQL, dbHashId: string, next: ()=> void) {
 function remoteTest2(db: SKSQL, dbHashId: string, next: ()=> void) {
     runTest(db, "SELECT * FROM test1", false, false, [[10, 30], [20, 40]]);
     expectDisconnection = true;
-    db.disconnect(dbHashId);
+    db.disconnect();
     runTest(db, "DROP TABLE test1;", false, false, undefined);
     next();
 }

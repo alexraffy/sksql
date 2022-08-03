@@ -79,7 +79,7 @@ export interface TWSROFF {
 export const WSRSQL: string = "SQL";
 export interface TWSRSQL {
     r: string; // request
-    id: string; // request id for the client
+    id: string; //  id for the client
     u: string; // guid for the request
     rd: boolean; // ask to return data
     b: boolean; // broadcast result to other clients
@@ -93,7 +93,7 @@ export interface TWSRSQL {
 export const WSRSQLResponse: string = "SQLR";
 export interface TWSRSQLResponse {
     r: string; // the client request
-    id: number; // request id for the client
+    id: string; // client id
     u: string; // guid for the request
     res: TSQLResult;
     t: TWSRDataResponse[]; // a list of headers and blocks

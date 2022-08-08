@@ -139,12 +139,13 @@ export class SQLStatement {
     context: TExecutionContext;
     contextOriginal: TExecutionContext;
 
-    constructor(db: SKSQL, statements: string, broadcast: boolean = true) {
+    constructor(db: SKSQL, statements: string, broadcast: boolean = true, accessRights: string | "RW" | "R" | "W" | "N" = undefined) {
         this.id = generateV4UUID();
         this.db = db;
         this.query = statements;
         this.broadcast = broadcast;
         this.context = createNewContext("", statements, undefined);
+        this.context.accessRights = accessRights;
         this.contextOriginal = cloneContext(this.context, "", false, false);
     }
 
@@ -430,7 +431,21 @@ export class SQLStatement {
             t0 = performance.now();
         }
         if (this.ast === undefined) {
-            this.parse();
+            try {
+                this.parse();
+            } catch (parseError) {
+                return new SQLResult(this.db, {
+                    error: parseError.message,
+                    rowCount: 0,
+                    rowsDeleted: 0,
+                    rowsModified: 0,
+                    rowsInserted: 0,
+                    queries: [],
+                    resultTableName: "",
+                    totalRuntime: 0,
+                    parserTime: perfs.parser
+                } as TSQLResult);
+            }
         } else {
             // clear the temp tables if we run again
             this.close();
@@ -505,7 +520,21 @@ export class SQLStatement {
         }
         for (let i = 0; i < statements.length; i++) {
             let statement = statements[i];
-            processStatement(this.db, this.context, statement, options);
+            try {
+                processStatement(this.db, this.context, statement, options);
+            } catch (e) {
+                return new SQLResult(this.db, {
+                    error: e.message,
+                    rowCount: 0,
+                    rowsDeleted: 0,
+                    rowsModified: 0,
+                    rowsInserted: 0,
+                    queries: [],
+                    resultTableName: "",
+                    totalRuntime: 0,
+                    parserTime: perfs.parser
+                } as TSQLResult);
+            }
             if (this.context.rollback === true) {
                 throw new TParserError(this.context.rollbackMessage);
                 break;

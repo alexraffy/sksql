@@ -10,6 +10,7 @@ import {SQLStatement} from "../API/SQLStatement";
 import {kResultType} from "../API/kResultType";
 import {TExecutionContext} from "./TExecutionContext";
 import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
+import {TParserError} from "../API/TParserError";
 
 
 // Process a CREATE/ALTER FUNCTION statement
@@ -20,6 +21,10 @@ import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 export function processCreateFunctionStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateFunction): TSQLResult {
     if (instanceOfTQueryCreateFunction(statement)) {
         let c: TQueryCreateFunction = statement;
+
+        if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+            throw new TParserError("CREATE FUNCTION: NO WRITE ACCESS.");
+        }
 
         let parameters: {name: string, type: TableColumnType}[] = [];
         for (let i = 0; i < c.parameters.length; i++) {

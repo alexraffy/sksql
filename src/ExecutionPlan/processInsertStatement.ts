@@ -171,6 +171,11 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
     let tbl: ITable;
     let def: ITableDefinition;
     let rowLength: number;
+
+    if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+        throw new TParserError("INSERT: NO WRITE ACCESS.");
+    }
+
     let newContext: TExecutionContext = cloneContext(context, "insert", true, true);
     let tblInfo = db.tableInfo.get(insert.table.table);
     if (tblInfo === undefined) {
@@ -252,6 +257,7 @@ export function processInsertStatement(db: SKSQL, context: TExecutionContext, st
         }
         let selectContext = createNewContext("select", q, context.parseResult as ParseResult);
         selectContext.stack = context.stack;
+        selectContext.accessRights = context.accessRights;
         selectResultTable = processSelectStatement(db, selectContext, insert.selectStatement, true);
         let selectTableInfo = db.tableInfo.get(selectResultTable.table);
         addTempTablesToContext(newContext, selectContext.openedTempTables);

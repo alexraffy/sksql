@@ -33,6 +33,10 @@ export function processSelectStatement(db: SKSQL, context: TExecutionContext,
 
     context.currentStatement = select;
 
+    if (context.accessRights !== undefined && context.accessRights.indexOf("R") === -1) {
+        throw new TParserError("SELECT: NO READ ACCESS.");
+    }
+
     if (db.debugLevel >= kDebugLevel.L990_contextUpdate) {
         console.log("processSelectStatement Start for " + serializeTQuery(statement));
         console.log(dumpContextInfo(context, "processSelectStatement START"));

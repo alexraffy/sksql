@@ -28,6 +28,7 @@ import {readFirstColumnOfTable} from "../API/readFirstColumnOfTable";
 import {kBooleanResult} from "../API/kBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 import {TBooleanResult} from "../API/TBooleanResult";
+import {TParserError} from "../API/TParserError";
 
 
 // Write a final result row from a group by
@@ -81,14 +82,14 @@ export function runGroupBy(db: SKSQL, context: TExecutionContext, tep: TEPGroupB
     let tableToOpen = getValueForAliasTableOrLiteral(tep.source);
     let tw = context.tables.find((t) => { return t.name.toUpperCase() === tableToOpen.table.toUpperCase();});
     if (tw === undefined) {
-        throw "GroupBy with unknown table";
+        throw new TParserError("GroupBy with unknown table");
     }
     bubbleSort(db, context, tw.table, tw.def, tep.groupBy);
 
     let destTable = getValueForAliasTableOrLiteral(tep.dest);
     let td = context.tables.find((t) => { return t.name.toUpperCase() === destTable.table.toUpperCase();});
     if (td === undefined) {
-        throw "GroupBy with unknown table";
+        throw new TParserError("GroupBy with unknown table");
     }
 
     let groups = [];

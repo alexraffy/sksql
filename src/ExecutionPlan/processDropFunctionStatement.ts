@@ -2,6 +2,7 @@ import {TExecutionContext} from "./TExecutionContext";
 import {TQueryDropFunction} from "../Query/Types/TQueryDropFunction";
 import {SKSQL} from "../API/SKSQL";
 import {SQLStatement} from "../API/SQLStatement";
+import {TParserError} from "../API/TParserError";
 
 // Process a DROP FUNCTION statement
 //
@@ -9,6 +10,10 @@ import {SQLStatement} from "../API/SQLStatement";
 
 
 export function processDropFunctionStatement(db: SKSQL, context: TExecutionContext, st: TQueryDropFunction) {
+
+    if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+        throw new TParserError("DROP FUNCTION: NO WRITE ACCESS.");
+    }
 
     db.dropFunction(st.funcName);
 

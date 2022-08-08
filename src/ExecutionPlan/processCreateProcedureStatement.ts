@@ -12,6 +12,7 @@ import {instanceOfTQueryCreateProcedure} from "../Query/Guards/instanceOfTQueryC
 import {TQueryCreateProcedure} from "../Query/Types/TQueryCreateProcedure";
 import {TExecutionContext} from "./TExecutionContext";
 import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
+import {TParserError} from "../API/TParserError";
 
 
 // Process a CREATE/ALTER PROCEDURE statement
@@ -21,6 +22,12 @@ import {addModifiedBlocksToContext} from "./addModifiedBlocksToContext";
 export function processCreateProcedureStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateProcedure): TSQLResult {
     if (instanceOfTQueryCreateProcedure(statement)) {
         let c: TQueryCreateProcedure = statement;
+
+
+        if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+            throw new TParserError("CREATE PROCEDURE: NO WRITE ACCESS.");
+        }
+
         db.declareProcedure(c);
 
         let text = "";

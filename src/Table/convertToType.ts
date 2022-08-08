@@ -18,6 +18,7 @@ import {instanceOfTTime} from "../Query/Guards/instanceOfTTime";
 import {instanceOfTDateTime} from "../Query/Guards/instanceOfTDateTime";
 import {isNumeric} from "../Numeric/isNumeric";
 import {numericRound} from "../Numeric/numericRound";
+import {TParserError} from "../API/TParserError";
 
 
 export function convertToType(value: number | string | boolean | bigint | numeric | TDate | TTime | TDateTime, type: TableColumnType, dest: TableColumnType) {
@@ -176,6 +177,6 @@ export function convertToType(value: number | string | boolean | bigint | numeri
         }
     }
 
-    throw `Could not convert ${columnTypeToString(type)} to ${columnTypeToString(dest)}`;
+    throw new TParserError(`Could not convert ${columnTypeToString(type)} to ${columnTypeToString(dest)}`);
 
 }

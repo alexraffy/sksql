@@ -18,6 +18,11 @@ export function processDropTableStatement(db: SKSQL, context: TExecutionContext,
     if (tableName === "DUAL" || tableName === "ROUTINES" || tableName === "SYS_TABLE_STATISTICS") {
         return;
     }
+
+    if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+        throw new TParserError("DROP TABLE: NO WRITE ACCESS.");
+    }
+
     let allTables = db.allTables;
     for (let i = 0; i < allTables.length; i++) {
         let def = readTableDefinition(allTables[i].data, true);

@@ -12,6 +12,7 @@ import {TEPUpdate} from "./TEPUpdate";
 import {SKSQL} from "../API/SKSQL";
 import {openTable} from "../API/openTables";
 import {generateEP} from "./generateEP";
+import {TParserError} from "../API/TParserError";
 
 
 // Process a UPDATE statement
@@ -20,6 +21,10 @@ import {generateEP} from "./generateEP";
 export function processUpdateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryUpdate) {
 
     let update = statement as TQueryUpdate;
+
+    if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+        throw new TParserError("UPDATE: NO WRITE ACCESS.");
+    }
 
     let numberOfRowsModified: number = 0;
     let done = false;

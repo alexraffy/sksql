@@ -199,6 +199,6 @@ export function compareValues(a: string | number | boolean | bigint | numeric | 
     }
 
 
-    throw "Comparison between values " + a  + " and " + b + " not implemented.";
+    throw new TParserError("Comparison between values " + a  + " and " + b + " not implemented.");
 
 }

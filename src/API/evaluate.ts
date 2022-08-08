@@ -507,6 +507,7 @@ export function evaluate(
                 if (instanceOfTQuerySelect(struct.value.right)) {
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
+                    newC.accessRights = context.accessRights;
                     tt = evaluate(db, newC, struct.value.right, newC.tables, undefined, options, withRow) as TTable;
                     addTempTablesToContext(context, newC.openedTempTables);
                     addModifiedBlocksToContext(context, newC);
@@ -821,6 +822,7 @@ export function evaluate(
         let subQueryContext = createNewContext("", "", undefined);
         subQueryContext.tables = [];
         subQueryContext.stack = context.stack;
+        subQueryContext.accessRights = context.accessRights;
         let destTable = "";
         if ((struct as TQuerySelect).hasForeignColumns) {
             if (options.currentStep !== undefined) {

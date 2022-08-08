@@ -10,6 +10,7 @@ import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {parseTimeString} from "../Date/parseTimeString";
 import {parseDateTimeString} from "../Date/parseDateTimeString";
+import {TParserError} from "../API/TParserError";
 
 /*
     write a column value in the DataView fullrow
@@ -56,7 +57,7 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 } else if (column.length === 8) {
                     fullRow.setBigInt64(column.offset + extraOffset + 1, 0n);
                 } else {
-                    throw "Int column must have a size of 1,2,4 or 8";
+                    throw new TParserError("Int column must have a size of 1,2,4 or 8");
                 }
                 break;
             case TableColumnType.varchar:
@@ -157,7 +158,7 @@ export function writeValue(table: ITable, tableDef: ITableDefinition,
                 } else if (column.length === 8) {
                     fullRow.setBigInt64(column.offset + extraOffset + 1, value as bigint);
                 } else {
-                    throw "Int column must have a size of 1,2,4 or 8";
+                    throw new TParserError("Int column must have a size of 1,2,4 or 8");
                 }
                 break;
             case TableColumnType.varchar:

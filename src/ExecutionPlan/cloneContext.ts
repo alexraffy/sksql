@@ -20,5 +20,6 @@ export function cloneContext(context: TExecutionContext, label: string, keepStac
     newContext.returnValue = context.returnValue;
     newContext.openedTempTables = context.openedTempTables;
     newContext.modifiedBlocks = JSON.parse(JSON.stringify(context.modifiedBlocks));
+    newContext.accessRights = context.accessRights;
     return newContext;
 }

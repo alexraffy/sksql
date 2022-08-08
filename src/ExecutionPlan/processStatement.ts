@@ -50,6 +50,8 @@ import {instanceOfTVacuum} from "../Query/Guards/instanceOfTVacuum";
 import {readTableName} from "../Table/readTableName";
 import {vacuumTable} from "../API/vacuum";
 import {genStatsForTable} from "../API/genStatsForTable";
+import {instanceOfTQueryDropProcedure} from "../Query/Guards/instanceOfTQueryDropProcedure";
+import {processDropProcedureStatement} from "./processDropProcedureStatement";
 
 
 export function processStatement(db: SKSQL, context: TExecutionContext, op: TValidStatementsInProcedure, options: {printDebug: boolean} = {printDebug: false}) {
@@ -278,6 +280,11 @@ export function processStatement(db: SKSQL, context: TExecutionContext, op: TVal
     if (instanceOfTQueryDropFunction(op)) {
         if (connectionIsReadOnly) { throw new TParserError("DROP FUNCTION NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
         processDropFunctionStatement(db, context, op);
+        return;
+    }
+    if (instanceOfTQueryDropProcedure(op)) {
+        if (connectionIsReadOnly) { throw new TParserError("DROP PROCEDURE NOT ALLOWED FOR READ-ONLY CONNECTIONS"); }
+        processDropProcedureStatement(db, context, op);
         return;
     }
     if (instanceOfTVacuum(op)) {

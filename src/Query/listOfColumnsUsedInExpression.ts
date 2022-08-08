@@ -19,6 +19,7 @@ import {TQueryAnyType} from "./Types/TQueryAnyType";
 import {instanceOfTQueryInsert} from "./Guards/instanceOfTQueryInsert";
 import {TQueryInsert} from "./Types/TQueryInsert";
 import {TValidExpressions} from "./Types/TValidExpressions";
+import {TParserError} from "../API/TParserError";
 
 
 export function listOfColumnsUsedInExpression(struct: TQueryAnyType | TValidExpressions, tables: TTableWalkInfo[]): TColumn[] {
@@ -48,10 +49,10 @@ export function listOfColumnsUsedInExpression(struct: TQueryAnyType | TValidExpr
             let tablesMatch = findTableNameForColumn(name, tables, struct);
             if (tablesMatch.length !== 1) {
                 if (tables.length === 0) {
-                    throw "Unknown column name " + name;
+                    throw new TParserError("Unknown column name " + name);
                 }
                 if (tables.length > 1) {
-                    throw "Ambiguous column name " + name;
+                    throw new TParserError("Ambiguous column name " + name);
                 }
             }
             table = tablesMatch[0];

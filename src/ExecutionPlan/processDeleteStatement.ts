@@ -31,6 +31,10 @@ import {addModifiedBlockToContext} from "./addModifiedBlockToContext";
 
 export function processDeleteStatement(db: SKSQL, context: TExecutionContext, statement: TQueryDelete) {
 
+    if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+        throw new TParserError("DELETE: NO WRITE ACCESS.");
+    }
+
     let del = statement as TQueryDelete;
     let tbl: ITable;
     let def: ITableDefinition;

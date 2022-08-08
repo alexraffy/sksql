@@ -591,6 +591,15 @@ export class SKSQL {
         }
     }
 
+    // remove the procedure for the session
+    // to remove a proc definitely use the SQL statement DROP PROCEDURE
+    dropProcedure(procName: string) {
+        let exists = this.procedures.findIndex((f) => { return f.procName.toUpperCase() === procName.toUpperCase();});
+        if (exists > -1) {
+            this.procedures.splice(exists, 1);
+        }
+    }
+
     // disconnect from a socket
     disconnect() {
         let index = -1;

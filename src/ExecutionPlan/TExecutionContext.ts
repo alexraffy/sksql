@@ -40,6 +40,7 @@ export interface TExecutionContext {
     rollback: boolean;
     rollbackMessage: string;
     currentStatement: TValidStatementsInProcedure;
+    accessRights: string | "RW" | "R" | "W" | "N";
     modifiedBlocks: {
         type: kModifiedBlockType,
         name: string;

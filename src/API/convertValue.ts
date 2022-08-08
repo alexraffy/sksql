@@ -11,6 +11,7 @@ import {instanceOfTDate} from "../Query/Guards/instanceOfTDate";
 import {TBooleanResult} from "./TBooleanResult";
 import {instanceOfTBooleanResult} from "../Query/Guards/instanceOfTBooleanResult";
 import {kBooleanResult} from "./kBooleanResult";
+import {TParserError} from "./TParserError";
 
 // Convert a value to a new Column Type
 export function convertValue(value: string | number | numeric | boolean | TDate | TDateTime | TTime | bigint | TBooleanResult,
@@ -48,7 +49,7 @@ export function convertValue(value: string | number | numeric | boolean | TDate 
     } else if (instanceOfTBooleanResult(value)) {
         val2Write = value.value === kBooleanResult.isTrue;
     } else {
-        throw "convertValue does not implement the right converter for value " + value + " to TableColumnType " + type;
+        throw new TParserError("convertValue does not implement the right converter for value " + value + " to TableColumnType " + type);
     }
     return val2Write;
 }

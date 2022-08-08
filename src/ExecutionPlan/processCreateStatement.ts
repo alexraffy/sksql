@@ -25,6 +25,11 @@ import {genStatsForTable} from "../API/genStatsForTable";
 export function processCreateStatement(db: SKSQL, context: TExecutionContext, statement: TQueryCreateTable): TSQLResult {
     if (instanceOfTQueryCreateTable(statement)) {
         let c: TQueryCreateTable = statement;
+
+        if (context.accessRights !== undefined && context.accessRights.indexOf("W") === -1) {
+            throw new TParserError("CREATE TABLE: NO WRITE ACCESS.");
+        }
+
         let tblDef = {
             name: c.name.table,
             columns: [],

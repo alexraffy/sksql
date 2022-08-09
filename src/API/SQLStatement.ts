@@ -145,6 +145,14 @@ export class SQLStatement {
         this.query = statements;
         this.broadcast = broadcast;
         this.context = createNewContext("", statements, undefined);
+        if (accessRights === undefined) {
+            // check if we have a connection, if that's the case we take the access rights from it
+            const info = db.getConnectionInfoForDB();
+            if (info !== undefined && info.auth !== undefined && info.auth.accessRights !== undefined) {
+                accessRights = info.auth.accessRights;
+            }
+        }
+
         this.context.accessRights = accessRights;
         this.contextOriginal = cloneContext(this.context, "", false, false);
     }

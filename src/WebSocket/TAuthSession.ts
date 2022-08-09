@@ -10,4 +10,5 @@ export interface TAuthSession {
     valid?: boolean; // the connection was accepted
     id?: string; // the connection id
     readOnly?: boolean; // if set to true, the client will not be able to modify the database
+    accessRights?: string | "RW" | "R" | "W" | "N";
 }

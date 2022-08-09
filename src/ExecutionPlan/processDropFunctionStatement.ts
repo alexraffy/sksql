@@ -18,7 +18,7 @@ export function processDropFunctionStatement(db: SKSQL, context: TExecutionConte
     db.dropFunction(st.funcName);
 
     let sql = "DELETE FROM master.routines WHERE name = @name AND TYPE = 'FUNCTION';";
-    let deleteFunction = new SQLStatement(db, sql, false);
+    let deleteFunction = new SQLStatement(db, sql, false, "RW");
     deleteFunction.setParameter("@name", st.funcName.toUpperCase());
     deleteFunction.runSync();
 

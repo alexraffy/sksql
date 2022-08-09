@@ -130,13 +130,13 @@ export class SKSQL {
         this.allTables = [];
         this.tableInfo = new CTableInfoManager(this);
         // SELECT without a FROM is not supported. you can use SELECT ... FROM DUAL instead
-        let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false);
+        let dual = new SQLStatement(this, "CREATE TABLE dual(DUMMY VARCHAR(1)); INSERT INTO dual (DUMMY) VALUES('X');", false, "RW");
         dual.runSync();
         // store number of active/dead rows in tables,
-        let stats = new SQLStatement(this, "CREATE TABLE master.sys_table_statistics(id uint32 identity(1,1), timestamp datetime, table VARCHAR(255), active_rows UINT32, dead_rows UINT32, header_size UINT32, total_size UINT32, largest_block_size UINT32, table_timestamp DATETIME);", false);
+        let stats = new SQLStatement(this, "CREATE TABLE master.sys_table_statistics(id uint32 identity(1,1), timestamp datetime, table VARCHAR(255), active_rows UINT32, dead_rows UINT32, header_size UINT32, total_size UINT32, largest_block_size UINT32, table_timestamp DATETIME);", false, "RW");
         stats.runSync();
         // functions and procedures definitions are stored in the routines table.
-        let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false);
+        let routines = new SQLStatement(this, "CREATE TABLE master.routines(schema VARCHAR(255), name VARCHAR(255), type VARCHAR(10), definition VARCHAR(64536), modified DATETIME);", false, "RW");
         routines.runSync();
         registerFunctions(this);
     }
@@ -264,7 +264,8 @@ export class SKSQL {
                 if (msg.message === WSRSQL) {
                     let payload = msg.param as TWSRSQL;
                     try {
-                        let statement = new SQLStatement(db, payload.r, false);
+                        // we override the access rights so even if the connection is read-only, we accept sql commands from the server
+                        let statement = new SQLStatement(db, payload.r, false, "RW");
                         if (payload.p !== undefined) {
                             for (let i = 0; i < payload.p.length; i++) {
                                 statement.setParameter(payload.p[i].name, payload.p[i].value, payload.p[i].type);

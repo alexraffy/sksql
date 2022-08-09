@@ -41,13 +41,13 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
 
         // write function text in routines
         let sql = "SELECT true FROM master.routines WHERE name = @name AND TYPE = 'PROCEDURE'";
-        let doesItExist = new SQLStatement(db, sql, false);
+        let doesItExist = new SQLStatement(db, sql, false, "RW");
         doesItExist.setParameter("@name", c.procName);
         let exists = doesItExist.runSync().getRows();
         doesItExist.close();
         if (exists.length > 0 && exists[0]["true"].true !== true) {
             let sqlUpdate = "UPDATE SET definition = @text, modified = GETUTCDATE() FROM master.routines WHERE name = @name";
-            let stUpdate = new SQLStatement(db, sqlUpdate, false);
+            let stUpdate = new SQLStatement(db, sqlUpdate, false, "RW");
             stUpdate.setParameter("@text", text);
             stUpdate.setParameter("@name", c.procName);
             let retUpdate = stUpdate.runSync();
@@ -55,7 +55,7 @@ export function processCreateProcedureStatement(db: SKSQL, context: TExecutionCo
             stUpdate.close();
         } else {
             let sqlInsert = "INSERT INTO master.routines (schema, name, type, definition, modified) VALUES (@schema, @name, 'PROCEDURE', @text, GETUTCDATE())";
-            let stInsert = new SQLStatement(db, sqlInsert, false);
+            let stInsert = new SQLStatement(db, sqlInsert, false, "RW");
             stInsert.setParameter("@schema", 'dbo');
             stInsert.setParameter("@name", c.procName);
             stInsert.setParameter("@text", text);

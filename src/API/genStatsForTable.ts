@@ -20,7 +20,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     let table = db.getTable(tableName);
     if (table === undefined) {
         let sql = "DELETE TOP(1) FROM sys_table_statistics WHERE table = @tableName";
-        let stDelete = new SQLStatement(db, sql, false);
+        let stDelete = new SQLStatement(db, sql, false, "RW");
         stDelete.setParameter("@tableName", tableName.toUpperCase());
         try {
             stDelete.runSync();
@@ -64,7 +64,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     }
     let id = 0;
     let sql = "SELECT TOP(1) id FROM sys_table_statistics WHERE UPPER(table) = UPPER(@tableName);";
-    let stExists = new SQLStatement(db, sql, false);
+    let stExists = new SQLStatement(db, sql, false, "RW");
     stExists.setParameter("@tableName", tableName);
     let ret = stExists.runSync();
     let retExists = ret.getRows();
@@ -72,7 +72,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     if (retExists !== undefined && retExists.length === 1) {
         id = retExists[0]["id"];
         let sqlUpdate = "UPDATE sys_table_statistics SET timestamp = GETUTCDATE(), active_rows = @active_rows, dead_rows = @dead_rows, header_size = @header_size, total_size = @total_size, largest_block_size = @largest_block_size WHERE id = @id"
-        let stUpdate = new SQLStatement(db, sqlUpdate, false);
+        let stUpdate = new SQLStatement(db, sqlUpdate, false, "RW");
         stUpdate.setParameter("@active_rows", activeRows);
         stUpdate.setParameter("@dead_rows", deadRows);
         stUpdate.setParameter("@header_size", headerBlockSize);
@@ -83,7 +83,7 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
         stUpdate.close();
     } else {
         let sqlInsert = "INSERT INTO sys_table_statistics(timestamp, table, active_rows, dead_rows, header_size, total_size, largest_block_size, table_timestamp) VALUES (GETUTCDATE(), @tableName, @active_rows, @dead_rows, @header_size, @total_size, @largest_block_size, GETUTCDATE())";
-        let stInsert = new SQLStatement(db, sqlInsert, false);
+        let stInsert = new SQLStatement(db, sqlInsert, false, "RW");
         stInsert.setParameter("@tableName", tableName.toUpperCase());
         stInsert.setParameter("@active_rows", activeRows);
         stInsert.setParameter("@dead_rows", deadRows);

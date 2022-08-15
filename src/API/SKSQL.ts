@@ -266,6 +266,7 @@ export class SKSQL {
                     try {
                         // we override the access rights so even if the connection is read-only, we accept sql commands from the server
                         let statement = new SQLStatement(db, payload.r, false, "RW");
+                        statement.id = payload.u;
                         if (payload.p !== undefined) {
                             for (let i = 0; i < payload.p.length; i++) {
                                 statement.setParameter(payload.p[i].name, payload.p[i].value, payload.p[i].type);

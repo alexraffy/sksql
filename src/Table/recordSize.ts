@@ -1,5 +1,5 @@
 import {ITableData} from "./ITableData";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 
 /*
     return the size of a row not accounting for row header
@@ -10,5 +10,5 @@ export function recordSize(tb: ITableData) {
         return 0;
     }
     let dv = new DataView(tb.tableDef);
-    return dv.getUint32(kBlockHeaderField.TableDefRowSize);
+    return dv.getUint32(offs().TableDefRowSize);
 }

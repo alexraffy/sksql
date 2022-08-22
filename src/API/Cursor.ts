@@ -15,7 +15,8 @@ import {TDate} from "../Query/Types/TDate";
 import {TTime} from "../Query/Types/TTime";
 import {TDateTime} from "../Query/Types/TDateTime";
 import {TableColumn} from "../Table/TableColumn";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
+
 
 
 export class Cursor {
@@ -88,8 +89,8 @@ export class Cursor {
         if (this.fullRow === undefined) {
             return true;
         }
-        let flag = this.fullRow.getUint8(kBlockHeaderField.DataRowFlag);
-        return ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? true : false;
+        let flag = this.fullRow.getUint8(offs().DataRowFlag);
+        return ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? true : false;
     }
 
 

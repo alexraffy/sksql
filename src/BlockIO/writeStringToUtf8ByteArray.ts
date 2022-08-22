@@ -2,7 +2,12 @@
 // Write a 0 terminated UTF8 string to a DataView
 // erasing maxLengthInBytes
 
+import {TParserError} from "../API/TParserError";
+
 export function writeStringToUtf8ByteArray (dataView: DataView, offset: number, str: string, maxLengthInBytes: number) {
+    if (str === undefined) {
+        throw new TParserError("writeStringToUtf8ByteArray called with an undefined string.");
+    }
     let p = offset;
     for (var i = 0; i < maxLengthInBytes; i++) {
         if (i >= str.length ) {

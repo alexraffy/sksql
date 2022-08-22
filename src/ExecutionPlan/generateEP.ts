@@ -102,7 +102,7 @@ export function generateEP(db: SKSQL,
     }
 
     let returnTableName = "";
-    let returnTableDefinition = {
+    let returnTableDefinition: ITableDefinition = {
         name: returnTableName,
         columns: [],
         hasIdentity: false,
@@ -110,7 +110,9 @@ export function generateEP(db: SKSQL,
         identitySeed: 1,
         identityIncrement: 1,
         constraints: [],
-    } as ITableDefinition
+        object_id: generateV4UUID(),
+        id: 0
+    }
     let groupByResultTableDef: ITableDefinition = {
         name: "",
         columns: [],
@@ -118,8 +120,10 @@ export function generateEP(db: SKSQL,
         identityColumnName: '',
         identitySeed: 1,
         identityIncrement: 1,
-        constraints: []
-    } as ITableDefinition;
+        constraints: [],
+        id: 1,
+        object_id: generateV4UUID()
+    };
     let projectionsGroupBy: TEPProjection[] = [];
     let aggregateFunctions: {name: string, fn: TRegisteredFunction, funcCall: TQueryFunctionCall, data: any}[] = [];
     let projections: TEPProjection[] = [];
@@ -205,7 +209,7 @@ export function generateEP(db: SKSQL,
                     let newC = createNewContext("subQuery", context.query, undefined);
                     newC.stack = context.stack;
                     newC.tables = [];
-                    newC.openedTempTables = [...context.openedTempTables];
+                    //newC.openedTempTables = [...context.openedTempTables];
                     addTempTablesToContext(newC, context.openedTempTables);
                     for (let i = 0; i < oldContext.tables.length; i++) {
                         if (oldContext.tables[i].name.startsWith("#")) {
@@ -839,6 +843,7 @@ export function generateEP(db: SKSQL,
                 let afterOrderByTableName = currentDestName + "_" + "orderBy";
                 let afterOrderByTableDef: ITableDefinition = {
                     id: 999,
+                    object_id: generateV4UUID(),
                     name: afterOrderByTableName,
                     columns: JSON.parse(JSON.stringify(currentDestTableDef.columns)),
                     hasIdentity: false,

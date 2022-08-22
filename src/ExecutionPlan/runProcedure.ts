@@ -15,7 +15,7 @@ import {readFirst} from "../Cursor/readFirst";
 import {runScan} from "./runScan";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {rowHeaderSize} from "../Table/addRow";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {readNext} from "../Cursor/readNext";
 import {readValue} from "../BlockIO/readValue";
 import {TableColumn} from "../Table/TableColumn";
@@ -47,8 +47,8 @@ export function runProcedure(db: SKSQL, context: TExecutionContext, st: TExecute
         let cursor = readFirst(routines.pointer, routines.def);
         while (!cursorEOF(cursor)) {
             let dv = new DataView(routines.pointer.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
-            let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-            const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+            let flag = dv.getUint8(offs().DataRowFlag);
+            const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
             if (isDeleted) {
                 cursor = readNext(routines.pointer, routines.def, cursor);
                 continue;

@@ -1,5 +1,5 @@
 
-import {SKSQL, SQLStatement, TSQLResult, readFirst, kBlockHeaderField,
+import {SKSQL, SQLStatement, TSQLResult, readFirst, offs,
     readNext, addRow, cursorEOF, ITableData, ITable, ITableDefinition, TableColumn,rowHeaderSize, writeValue,
     readTableDefinition, TExecutionContext, createNewContext} from "sksql";
 import {checkNoTempTables, runTest} from "./runTest";
@@ -161,8 +161,8 @@ function scanTest(db: SKSQL, blockSize: number, sample: number, entries: number)
         while (!cursorEOF(cursor)) {
             let b = t1.data.blocks[cursor.blockIndex];
             let dv = new DataView(b, cursor.offset, cursor.rowLength + rowHeaderSize);
-            let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-            const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+            let flag = dv.getUint8(offs().DataRowFlag);
+            const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
             if (isDeleted) {
                 cursor = readNext(t1, t1Def, cursor);
                 continue;

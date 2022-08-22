@@ -16,6 +16,7 @@ import {readTableDefinition} from "../Table/readTableDefinition";
 import {TTableConstraint} from "../Table/TTableConstraint";
 import {kTableConstraintType} from "../Table/kTableConstraintType";
 import {genStatsForTable} from "../API/genStatsForTable";
+import {generateV4UUID} from "../API/generateV4UUID";
 
 
 // Process a CREATE TABLE statement
@@ -30,15 +31,17 @@ export function processCreateStatement(db: SKSQL, context: TExecutionContext, st
             throw new TParserError("CREATE TABLE: NO WRITE ACCESS.");
         }
 
-        let tblDef = {
+        let tblDef: ITableDefinition = {
+            object_id: generateV4UUID(),
             name: c.name.table,
             columns: [],
             hasIdentity: c.hasIdentity,
             identityColumnName: c.identityColumnName,
             identitySeed: parseInt(c.identitySeed.toString()),
             identityIncrement: parseInt(c.identityIncrement.toString()),
-            constraints: c.constraints
-        } as ITableDefinition;
+            constraints: c.constraints,
+            id: 0
+        };
         for (let i = 0; i < c.columns.length; i++) {
             let col = c.columns[i];
             let type = undefined;

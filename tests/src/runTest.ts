@@ -14,7 +14,7 @@ import {
     TableColumnType,
     kResultType,
     numericDisplay,
-    kBlockHeaderField,
+    offs,
     readTableDefinition,
     readTableAsJSON
 } from "sksql";
@@ -65,8 +65,8 @@ export function runTest(db, sql, excep: boolean, error: boolean, rowsRet: any[],
                 let totalChecked = 0;
                 while (!cursorEOF(cursor)) {
                     let dv = new DataView(tbl.data.blocks[cursor.blockIndex], cursor.offset, len);
-                    let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-                    const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                    let flag = dv.getUint8(offs().DataRowFlag);
+                    const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
                     if (isDeleted) {
                         cursor = readNext(tbl, def, cursor);
                         continue;

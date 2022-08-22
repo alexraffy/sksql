@@ -1,4 +1,4 @@
-import {kBlockHeaderField} from "./kBlockHeaderField";
+import {offs} from "./kBlockHeaderField";
 
 /*
     Check the amount of space free in the block by checking the address of the last record entered in the block
@@ -6,5 +6,5 @@ import {kBlockHeaderField} from "./kBlockHeaderField";
 export function freeSpaceInBlock(d: ArrayBuffer | SharedArrayBuffer): number {
     let ret = 0;
     let dv = new DataView(d);
-    return d.byteLength - dv.getUint32(kBlockHeaderField.DataEnd);
+    return d.byteLength - dv.getUint32(offs().DataEnd);
 }

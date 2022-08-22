@@ -14,7 +14,7 @@ import {TEPSelect} from "./TEPSelect";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TEPGroupBy} from "./TEPGroupBy";
 import {runGroupBy} from "./runGroupBy";
@@ -61,7 +61,7 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
             // mark the block as dirty
             let b = targetTable.table.data.blocks[targetTable.cursor.blockIndex];
             let blockDV = new DataView(b, 0, 25);
-            blockDV.setUint8(kBlockHeaderField.BlockDirty, 1);
+            blockDV.setUint8(offs().BlockDirty, 1);
 
             // source row
             let dv = new DataView(b, targetTable.cursor.offset, targetTable.cursor.rowLength + rowHeaderSize );
@@ -155,8 +155,8 @@ export function runUpdatePlan(db: SKSQL, context: TExecutionContext,
                         num++;
                         if (num>topValue.m) {
                             let dv = new DataView(resultWI.table.data.blocks[curs.blockIndex]);
-                            dv.setUint32(kBlockHeaderField.DataEnd, curs.offset);
-                            dv.setUint32(kBlockHeaderField.NumRows, num);
+                            dv.setUint32(offs().DataEnd, curs.offset);
+                            dv.setUint32(offs().NumRows, num);
                             break;
                         }
                         curs = readNext(resultWI.table, resultWI.def, curs);

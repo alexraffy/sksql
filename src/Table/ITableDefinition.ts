@@ -14,6 +14,21 @@ import {TTableConstraint} from "./TTableConstraint";
  */
 export interface ITableDefinition {
     id: number;
+    object_id: string;
+    name: string;
+    columns: TableColumn[];
+    constraints: TTableConstraint[];
+
+    hasIdentity: boolean;
+    identityColumnName: string;
+    identitySeed: number;
+    identityIncrement: number;
+
+    identityValue?: number;
+}
+
+export interface ITableDefinitionV0 {
+    id: number;
     name: string;
     columns: TableColumn[];
     constraints: TTableConstraint[];

@@ -3,10 +3,10 @@ import {SKSQL} from "./SKSQL";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {rowHeaderSize} from "../Table/addRow";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
 import {readNext} from "../Cursor/readNext";
 import {SQLStatement} from "./SQLStatement";
 import {kResultType} from "./kResultType";
+import {offs} from "../Blocks/kBlockHeaderField";
 
 
 
@@ -51,8 +51,8 @@ export function genStatsForTable(db: SKSQL, tableName: string): number {
     let cursor = readFirst(table, def);
     while (!cursorEOF(cursor)) {
         let dv = new DataView(table.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
-        let rowFlag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = ((rowFlag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+        let rowFlag = dv.getUint8(offs().DataRowFlag);
+        const isDeleted = ((rowFlag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted) {
             deadRows++;
             cursor = readNext(table, def, cursor);

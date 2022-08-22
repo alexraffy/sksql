@@ -1,6 +1,6 @@
 import {ITableData} from "../Table/ITableData";
 import {ITableDefinition} from "../Table/ITableDefinition";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {readNext} from "../Cursor/readNext";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readFirst} from "../Cursor/readFirst";
@@ -15,8 +15,8 @@ export function isRowInSet(row1: DataView, table1: ITable, table1Def: ITableDefi
     let cursor = readFirst(table2, table2Def);
     while (!cursorEOF(cursor)) {
         let row2 = new DataView(table2.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + rowHeaderSize);
-        let flag = row2.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+        let flag = row2.getUint8(offs().DataRowFlag);
+        const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted) {
             cursor = readNext(table2, table2Def, cursor);
             continue;

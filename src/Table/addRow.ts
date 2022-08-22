@@ -5,7 +5,7 @@ import {freeSpaceInBlock} from "../Blocks/freeSpaceInBlock";
 import {recordSize} from "./recordSize";
 import {getLastRowId} from "../BlockIO/getLastRowId";
 import {setLastRowId} from "../BlockIO/setLastRowId";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {kModifiedBlockType, TExecutionContext} from "../ExecutionPlan/TExecutionContext";
 import {addModifiedBlockToContext} from "../ExecutionPlan/addModifiedBlockToContext";
 import {readTableName} from "./readTableName";
@@ -41,16 +41,16 @@ export function addRow(tb: ITableData, growBy: number = 4096, context: TExecutio
         addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, name, tb.blocks.length - 1);
     }
     let dv = new DataView(d);
-    let offset = dv.getUint32(kBlockHeaderField.DataEnd);
+    let offset = dv.getUint32(offs().DataEnd);
     let rowId = getLastRowId(tb) + 1;
     setLastRowId(tb, rowId);
     // mark block as dirty
-    dv.setUint8(kBlockHeaderField.BlockDirty, 1);
+    dv.setUint8(offs().BlockDirty, 1);
     // set the rowId and flag
     dv.setUint32(offset, rowId);
     dv.setUint8(offset + 4, 0);
     // update the next offset
-    dv.setUint32(kBlockHeaderField.DataEnd, offset + length + rowHeaderSize);
+    dv.setUint32(offs().DataEnd, offset + length + rowHeaderSize);
     // return a dataview of the empty record
     return new DataView(d, offset, length + rowHeaderSize);
 }

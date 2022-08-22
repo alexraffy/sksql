@@ -14,7 +14,7 @@ import {TEPSelect} from "./TEPSelect";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {isNumeric} from "../Numeric/isNumeric";
 import {TQuerySelect} from "../Query/Types/TQuerySelect";
 import {TEPGroupBy} from "./TEPGroupBy";
@@ -210,8 +210,8 @@ export function run(db: SKSQL, context: TExecutionContext,
                 let num = 0;
                 while (!cursorEOF(curs)) {
                     let dv = new DataView(resultWI.table.data.blocks[curs.blockIndex], curs.offset, curs.rowLength + rowHeaderSize);
-                    let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-                    const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                    let flag = dv.getUint8(offs().DataRowFlag);
+                    const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
                     if (isDeleted) {
                         curs = readNext(resultWI.table, resultWI.def, curs);
                         continue;
@@ -260,8 +260,8 @@ export function run(db: SKSQL, context: TExecutionContext,
         if (statement.unionType !== kUnionType.none && statement.unionType !== kUnionType.intersect) {
             while (!cursorEOF(subSetCursor)) {
                 let dv = new DataView(subSetTable.data.blocks[subSetCursor.blockIndex], subSetCursor.offset, subSetCursor.rowLength + rowHeaderSize);
-                let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-                const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                let flag = dv.getUint8(offs().DataRowFlag);
+                const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
                 if (isDeleted) {
                     subSetCursor = readNext(subSetTable, subSetTableDef, subSetCursor);
                     continue;
@@ -278,9 +278,9 @@ export function run(db: SKSQL, context: TExecutionContext,
                         if (rowExists.exists === true) {
                             for (let i = 0; i < rowExists.info.length; i++) {
                                 let row = new DataView(mainTable.data.blocks[rowExists.info[i].blockIndex], rowExists.info[i].offset);
-                                let flag = row.getUint8(kBlockHeaderField.DataRowFlag);
-                                flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
-                                row.setUint8(kBlockHeaderField.DataRowFlag, flag);
+                                let flag = row.getUint8(offs().DataRowFlag);
+                                flag = flag | offs().DataRowFlag_BitDeleted;
+                                row.setUint8(offs().DataRowFlag, flag);
                             }
                         }
                     }
@@ -297,8 +297,8 @@ export function run(db: SKSQL, context: TExecutionContext,
         } else if (statement.unionType === kUnionType.intersect) {
             while (!cursorEOF(mainTableCursor)) {
                 let mainTableRow = new DataView(mainTable.data.blocks[mainTableCursor.blockIndex], mainTableCursor.offset, mainTableCursor.rowLength + rowHeaderSize);
-                let flag = mainTableRow.getUint8(kBlockHeaderField.DataRowFlag);
-                const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+                let flag = mainTableRow.getUint8(offs().DataRowFlag);
+                const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
                 if (isDeleted) {
                     mainTableCursor = readNext(mainTable, mainTableDef, mainTableCursor);
                     continue;
@@ -306,9 +306,9 @@ export function run(db: SKSQL, context: TExecutionContext,
 
                 let rowExists = isRowInSet(mainTableRow, mainTable, mainTableDef, subSetTable, subSetTableDef);
                 if (rowExists.exists === false) {
-                    let flag = mainTableRow.getUint8(kBlockHeaderField.DataRowFlag);
-                    flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
-                    mainTableRow.setUint8(kBlockHeaderField.DataRowFlag, flag);
+                    let flag = mainTableRow.getUint8(offs().DataRowFlag);
+                    flag = flag | offs().DataRowFlag_BitDeleted;
+                    mainTableRow.setUint8(offs().DataRowFlag, flag);
                 }
 
                 mainTableCursor = readNext(mainTable, mainTableDef, mainTableCursor);

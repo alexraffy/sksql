@@ -1,6 +1,6 @@
 import {ITableDefinition} from "./ITableDefinition";
 import {ITable} from "./ITable";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";

@@ -1,7 +1,7 @@
 import {TTableWalkInfo} from "../API/TTableWalkInfo";
 import {evaluate} from "../API/evaluate";
 import {TQueryDelete} from "../Query/Types/TQueryDelete";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {ITable} from "../Table/ITable";
 import {ITableDefinition} from "../Table/ITableDefinition";
 import {readFirst} from "../Cursor/readFirst";
@@ -80,13 +80,13 @@ export function processDeleteStatement(db: SKSQL, context: TExecutionContext, st
 
         let b = tbl.data.blocks[w.cursor.blockIndex];
         let dv = new DataView(b, w.cursor.offset, w.rowLength);
-        let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        flag = flag | kBlockHeaderField.DataRowFlag_BitDeleted;
-        dv.setUint8(kBlockHeaderField.DataRowFlag, flag);
+        let flag = dv.getUint8(offs().DataRowFlag);
+        flag = flag | offs().DataRowFlag_BitDeleted;
+        dv.setUint8(offs().DataRowFlag, flag);
 
         // mark the block as dirty
         let dvBlock = new DataView(b, 0, 25);
-        dvBlock.setUint8(kBlockHeaderField.BlockDirty, 1);
+        dvBlock.setUint8(offs().BlockDirty, 1);
 
         addModifiedBlockToContext(context, kModifiedBlockType.tableBlock, w.name, w.cursor.blockIndex);
 

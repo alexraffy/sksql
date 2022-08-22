@@ -5,7 +5,7 @@ import {kDebugLevel, SKSQL} from "../API/SKSQL";
 import {readFirst} from "../Cursor/readFirst";
 import {cursorEOF} from "../Cursor/cursorEOF";
 import {readNext} from "../Cursor/readNext";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 import {TExecutionContext} from "./TExecutionContext";
 import {findWalkTable} from "./findWalkTable";
 import {kBooleanResult} from "../API/kBooleanResult";
@@ -68,8 +68,8 @@ export function runScan(db: SKSQL, context: TExecutionContext,
         //console.log(tblDef.name + " blk: " + walk.cursor.blockIndex + ":" + walk.cursor.offset);
         let b = walk.table.data.blocks[walk.cursor.blockIndex];
         let dv = new DataView(b, walk.cursor.offset, walk.rowLength);
-        let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+        let flag = dv.getUint8(offs().DataRowFlag);
+        const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted) {
             retInfo.rowsScannedTotal += 1;
             walk.cursor = readNext(walk.table, walk.def, walk.cursor);

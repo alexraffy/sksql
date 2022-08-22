@@ -8,7 +8,7 @@ import { isNumeric } from "../Numeric/isNumeric";
 import { instanceOfTDate } from "../Query/Guards/instanceOfTDate";
 import { padLeft } from "../Date/padLeft";
 import { numericToNumber } from "../Numeric/numericToNumber";
-import {kBlockHeaderField} from "../Blocks/kBlockHeaderField";
+import {offs} from "../Blocks/kBlockHeaderField";
 
 // Read a table and return a JSON array of JSON dictionaries
 
@@ -21,8 +21,8 @@ export function readTableAsJSON(db: SKSQL, table: string): any[] {
         let row = {};
         let dv = new DataView(tbl.pointer.data.blocks[cursor.blockIndex], cursor.offset, cursor.rowLength + 5);
 
-        let flag = dv.getUint8(kBlockHeaderField.DataRowFlag);
-        const isDeleted = ((flag & kBlockHeaderField.DataRowFlag_BitDeleted) === kBlockHeaderField.DataRowFlag_BitDeleted) ? 1 : 0;
+        let flag = dv.getUint8(offs().DataRowFlag);
+        const isDeleted = ((flag & offs().DataRowFlag_BitDeleted) === offs().DataRowFlag_BitDeleted) ? 1 : 0;
         if (isDeleted == 0) {
             for (let i = 0; i < tbl.def.columns.length; i++) {
                 if (tbl.def.columns[i].invisible !== true) {

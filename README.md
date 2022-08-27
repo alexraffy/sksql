@@ -1,22 +1,16 @@
-Title: readme
-Author: 
 
 SKSQL is a SQL database for the web and node.js written in Typescript.
 
 
 It uses as storage on the client, Shared Array Buffers. Allowing for fast communication between the main web page and web workers.
-[SharedArrayBuffer - JavaScript | MDN (mozilla.org) ]
 
-It supports persistence and replication through web-socket. 
-A client can connect to a SKSQL Server and all INSERT, UPDATE and DELETE statements are then sent to the server, written to disk and broadcasted to other connected clients.
+It can be used stand-alone as a SQL engine or with a server allowing for persistence and replication to other connected clients.
 
+T-SQL inspired syntax with support for functions and procedures. Execute javascript functions in SQL statements and procedures.
 
-Sandbox: https://sksql.com/sandbox 
-Multiplayer chat: https://sksql.com/chat
+###Quick Example
 
-Quick Example
-
-pirates.sql
+SQL_STRING = 
 	
 	CREATE TABLE pirates (
 		id uint32 IDENTITY(1,1),
@@ -37,31 +31,60 @@ pirates.sql
 Typescript
 	
 	import * as sksql from "sksql";
+	let db = new sksql.SKSQL();
+	let pirates = new sksql.SQLStatement(db, SQL_STRING);
+	pirates.runSync();
 	
-	let pirates = new sksql.SQLStatement(require("pirates.sql"));
-	pirates.run();
+	let st = new sksql.SQLStatement(db, "SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
+	let res = st.runSync();
 	
-	let st = new sksql.SQLStatement("SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
-	let result = st.run(sksql.kResultType.JSON);
-	
+	interface IPirateInfo {
+		name: string;
+		country: string;
+	}
+	let result = res.getRows<IPirateInfo>();
 	// result = [{name: "Anne Bonny", country: "Ireland"}, {name: "Bartholomew Roberts", country: "Wales"}]
 	
 
 
-Webworker
-
-Example: 
+###Webworker
+ 
 	
-	let st = new sksql.SQLStatement("SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
-	st.runOnWebWorker().then((tempTable: string) => {
-		let result = sksql.readTableAsJSON(tempTable);
+	import {SKSQL, SQLStatement} from "sksql";
+	import * as fs from "fs";
+	
+	let db = new SKSQL();
+	let sksqlData = fs.readFileSync("../dist/sksql.min.js").toString();
+	db.initWorkerPool(4, sksqlData);
+	
+	let st = new SQLStatement(db, "SELECT name, country FROM pirates WHERE country IN ('Wales', 'Ireland')");
+	st.runOnWebWorker().then((result: SQLResult) => {
+		let rows = result.getRows();
 		
 	});
 
 
+###Connect to server:
+	
+	import {SKSQL, SQLStatement} from "sksql";
 
+	// node-js only
+	import {WebSocket} from 'ws';
+	//@ts-ignore
+	global["WebSocket"] = WebSocket;
 
-Installation
+	let db = new SKSQL();
+	let token = "";
+	let ok = await db.connectAsync("ws://localhost:32000", token, "ClientRW");
+	let sql = new SQLStatement(db, "SELECT * from table");
+	let result = sql.runSync();	
+	
+	// this command will be executed locally and then sent to the server and to all connected clients
+	let sql2 = new SQLStatement(db, "INSERT INTO table(a) VALUES(@a);");
+	sql2.setParameter("@a", "Hello");
+	sql2.runSync();
+
+#Installation
 
 NodeJS:
 
@@ -89,29 +112,38 @@ SUPPORTED SQL STATEMENTS
 
 SQL statements supported
  - CREATE TABLE:
-	COLUMN_DEF IDENTITY (SEED, INCREMENT),
-	COLUMN_DEF NOT NULL/NULL
-	COLUMN_DEF DEFAULT EXPRESSION
-	PRIMARY KEY [CONSTRAINT_NAME] (COLUMN,...)
-	FOREIGN KEY [CONSTRAINT_NAME] (COLUMN ASC|DESC, ...) REFERENCES 		{TABLENAME} (FOREIGN_COLUMN,...)
-	CHECK [CONSTRAINT_NAME] (BOOLEAN EXPRESSION)
+    COLUMN_DEF IDENTITY (SEED, INCREMENT),
+    COLUMN_DEF NOT NULL/NULL
+    COLUMN_DEF DEFAULT EXPRESSION
+    PRIMARY KEY [CONSTRAINT_NAME] (COLUMN,...)
+    FOREIGN KEY [CONSTRAINT_NAME] (COLUMN ASC|DESC, ...) REFERENCES 		{TABLENAME} (FOREIGN_COLUMN,...)
+    CHECK [CONSTRAINT_NAME] (BOOLEAN EXPRESSION)
 
  - INSERT:
-	INSERT INTO {TABLE} (COLUMNS) VALUES (...),...
-	INSERT INTO {TABLE} VALUES(COLUMN...),...
+    INSERT INTO {TABLE} (COLUMNS) VALUES (...),...
+    INSERT INTO {TABLE} VALUES(COLUMN...),...
 
  - UPDATE:
-	UPDATE [TOP(EXPRESSION)] SET COLUMN = EXPRESSION FROM {TABLE} [WHERE CLAUSE]
+    UPDATE [TOP(EXPRESSION)] SET COLUMN = EXPRESSION FROM {TABLE} [WHERE CLAUSE]
 
  - DELETE:
-	DELETE [TOP(EXPRESSION)] FROM {TABLE} [WHERE CLAUSE]
+    DELETE [TOP(EXPRESSION)] FROM {TABLE} [WHERE CLAUSE]
 
  - SELECT:
-	SELECT  
-		COLUMN | EXPRESSION [AS ALIAS],...
-	FROM
-		TABLE1, [JOIN | LEFT JOIN | RIGHT JOIN] TABLE2...
-	[WHERE BOOLEAN_EXPRESSION]
-	[ORDER BY COLUMN_A ASC | DESC, ...]
-	[GROUP BY COLUMN_A ASC | DESC, ...]
-	[HAVING EXPRESSION]
+    SELECT  
+        COLUMN | EXPRESSION [AS ALIAS],...
+    FROM
+        TABLE1, [JOIN | LEFT JOIN | RIGHT JOIN] TABLE2...
+    [WHERE BOOLEAN_EXPRESSION]
+    [ORDER BY COLUMN_A ASC | DESC, ...]
+    [GROUP BY COLUMN_A ASC | DESC, ...]
+    [HAVING EXPRESSION]
+
+T-SQL Statements
+ - CREATE PROCEDURE
+ - CREATE FUNCTION
+ - DECLARE
+ - IF, WHILE
+ - SET
+ - EXECUTE
+ - RETURN

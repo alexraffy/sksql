@@ -43,8 +43,12 @@ import {readTableName} from "../Table/readTableName";
 import {CTableInfoManager} from "./CTableInfoManager";
 import {flowCallback, flowExit, kBreakerState, newFlow} from "flowbreaker";
 
+var isBrowser = new Function("try {return this===window;}catch(e){ return false;}");
+
 let workerJavascript = "";
-workerJavascript = "const { WorkerData, parentPort } = require('worker_threads')\n";
+if (!isBrowser()) {
+    workerJavascript = "const { WorkerData, parentPort } = require('worker_threads');\n";
+}
 workerJavascript += "\n";
 workerJavascript += "let db = new sksql.SKSQL();\n";
 workerJavascript += "function runQuery(id, str, params) {\n";
@@ -787,8 +791,13 @@ export class SKSQL {
     // sksqlLib must contain the minified string of this library
     initWorkerPool(poolSize: number, sksqlLib: string) {
 
-        let blob_src = sksqlLib + "\n\n"+workerJavascript;
-        var isBrowser = new Function("try {return this===window;}catch(e){ return false;}");
+        let header = "";
+        if (!isBrowser()) {
+            header += "global['perf_hooks'] = require('perf_hooks');\n";
+            header += "global['worker_threads'] = require('worker_threads');\n";
+        }
+        let blob_src = header + "\n\n" + sksqlLib + "\n\n"+workerJavascript;
+
         for (let i = 0; i < poolSize; i++) {
             var worker = undefined;
             if (isBrowser()) {
@@ -834,7 +843,10 @@ export class SKSQL {
                 }
 
             } else {
-                const {Worker} = require("worker_threads");
+                if (global === undefined || global["worker_threads"] === undefined) {
+                    throw new Error("worker_threads must be added to the global var before importing SKSQL.\nAdd these two lines in your index.ts:\n//@ts-ignore\nglobal[\"worker_threads\"] = require(\"worker_threads\");");
+                }
+                const {Worker} = global["worker_threads"]; //require("worker_threads");
                 let blob = blob_src;
                 worker = new Worker(blob, {eval: true});
                 worker.on("message", (e) => {

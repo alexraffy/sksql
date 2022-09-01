@@ -10,7 +10,7 @@
     "lib": ["ES2020", "DOM"],
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "removeComments": false,
+    "removeComments": true,
     "noImplicitAny": false,
     "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true,

@@ -1,7 +1,4 @@
-import {test_numeric} from "./numeric";
-import {test_parser} from "./parser";
-import {test_db_university} from "./db_university";
-import {test_worker} from "./worker";
+
 
 import fetch from "node-fetch";
 // @ts-ignore
@@ -11,8 +8,19 @@ import {WebSocket} from 'ws';
 //@ts-ignore
 global["WebSocket"] = WebSocket;
 
+//@ts-ignore
+global["worker_threads"] = require("worker_threads");
+
+//@ts-ignore
+global["perf_hooks"] = require("perf_hooks");
+
+
 import {SKSQL} from "sksql";
 import * as fs from "fs";
+import {test_numeric} from "./numeric";
+import {test_parser} from "./parser";
+import {test_db_university} from "./db_university";
+import {test_worker} from "./worker";
 import {test_date} from "./test_date";
 import {insert1} from "./insert1";
 import {test_functions} from "./test_functions";

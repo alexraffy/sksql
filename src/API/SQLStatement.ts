@@ -57,7 +57,7 @@ import {predicateVacuum} from "../Query/Parser/predicateVacuum";
 import {predicateParseError} from "../BaseParser/Predicates/predicateParseError";
 import {generateV4UUID} from "./generateV4UUID";
 import {SQLResult} from "./SQLResult";
-import {type} from "os";
+
 
 
 let performance = undefined;
@@ -65,10 +65,16 @@ try {
     if (window !== undefined) {
         performance = window.performance;
     } else {
-        performance = require('perf_hooks').performance;
+        if (global === undefined || global["perf_hooks"] === undefined ) {
+            throw new Error("perf_hooks must be added to the global var before importing SKSQL.\nAdd these two lines in your index.ts:\n//@ts-ignore\nglobal[\"perf_hooks\"] = require(\"perf_hooks\");");
+        }
+        performance = global["perf_hooks"].performance;
     }
 } catch (e) {
-    performance = require('perf_hooks').performance;
+    if (global === undefined || global["perf_hooks"] === undefined ) {
+        throw new Error("perf_hooks must be added to the global var before importing SKSQL.\nAdd these two lines in your index.ts:\n//@ts-ignore\nglobal[\"perf_hooks\"] = require(\"perf_hooks\");");
+    }
+    performance = global["perf_hooks"].performance;
 }
 
 

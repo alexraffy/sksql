@@ -8,7 +8,7 @@ It can be used stand-alone as a SQL engine or with a server allowing for persist
 
 T-SQL inspired syntax with support for functions and procedures. Execute javascript functions in SQL statements and procedures.
 
-###Quick Example
+### Quick Example
 
 SQL_STRING = 
 	
@@ -47,7 +47,7 @@ Typescript
 	
 
 
-###Webworker
+### Webworker
  
 	
 	import {SKSQL, SQLStatement} from "sksql";
@@ -64,7 +64,7 @@ Typescript
 	});
 
 
-###Connect to server:
+### Connect to server:
 	
 	import {SKSQL, SQLStatement} from "sksql";
 
@@ -84,7 +84,7 @@ Typescript
 	sql2.setParameter("@a", "Hello");
 	sql2.runSync();
 
-#Installation
+# Installation
 
 NodeJS:
 

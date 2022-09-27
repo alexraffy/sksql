@@ -1,12 +1,32 @@
 
-SKSQL is a SQL database for the web and node.js written in Typescript.
+SKSQL is a database engine for the web and node.js written in Typescript.
 
+It has a T-SQL inspired syntax with support for functions and procedures. 
 
 It uses as storage on the client, Shared Array Buffers. Allowing for fast communication between the main web page and web workers.
 
 It can be used stand-alone as a SQL engine or with a server allowing for persistence and replication to other connected clients.
 
-T-SQL inspired syntax with support for functions and procedures. Execute javascript functions in SQL statements and procedures.
+
+
+## What is it for
+- Single Page Applications
+- Single tenant small databases 10-100MB
+- Storing session data
+- Do small calculations on a web worker
+- Store the document/data the user is editing
+- Facilitate “multiplayer” feature by broadcasting the queries the web app is running. 
+
+## Data closer to the code
+Connected clients receive the whole database for fast selection.
+
+SQL or T-SQL queries that modify data are sent after execution to the server and dispatched to other connected clients. 
+
+The server runs in a container for that specific document and shutdowns automatically after a set amount of minutes of inactivity.
+
+Server repo: https://github.com/alexraffy/skserver
+
+Sandbox: https://sksql.com/sandbox/local
 
 ### Quick Example
 
@@ -63,6 +83,12 @@ Typescript
 		
 	});
 
+### Spawn a test server (see skserver https://github.com/alexraffy/skserver)
+    podman run --detach --rm=true --network="host" --volume=PATH:/data --env SKWORKER_PORT=32000 skeletapp/skserver:latest node build/main.js
+    
+    or with docker
+
+    docker run --detach --rm=true --network="host" --volume=PATH:/data --env SKWORKER_PORT=32000 skeletapp/skserver:latest node build/main.js
 
 ### Connect to server:
 	
@@ -76,6 +102,7 @@ Typescript
 	let db = new SKSQL();
 	let token = "";
 	let ok = await db.connectAsync("ws://localhost:32000", token, "ClientRW");
+    // we have received the data, we can select data locally
 	let sql = new SQLStatement(db, "SELECT * from table");
 	let result = sql.runSync();	
 	

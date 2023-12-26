@@ -570,7 +570,14 @@ export function evaluate(
                 }
                 break;
                 case kQueryExpressionOp.supEq: {
-                    return {kind: "TBooleanResult", value: cmp >= 0 ? kBooleanResult.isTrue : kBooleanResult.isFalse };
+                    if (typeof cmp === 'number') {
+                        return {
+                            kind: "TBooleanResult",
+                            value: cmp >= 0 ? kBooleanResult.isTrue : kBooleanResult.isFalse
+                        };
+                    } else {
+                        throw new Error('Cannot use operator >= to boolean values')
+                    }
                 }
                 break;
                 case kQueryExpressionOp.inf: {
@@ -578,7 +585,14 @@ export function evaluate(
                 }
                 break;
                 case kQueryExpressionOp.infEq: {
-                    return {kind: "TBooleanResult", value: cmp <= 0 ? kBooleanResult.isTrue : kBooleanResult.isFalse };
+                    if (typeof cmp === 'number') {
+                        return {
+                            kind: "TBooleanResult",
+                            value: cmp <= 0 ? kBooleanResult.isTrue : kBooleanResult.isFalse
+                        };
+                    } else {
+                        throw new Error('Cannot use operator <= to boolean values');
+                    }
                 }
                 break;
                 case kQueryExpressionOp.dif: {

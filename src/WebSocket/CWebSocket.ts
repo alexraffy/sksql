@@ -167,11 +167,13 @@ export class CWebSocket {
 
 
     close() {
-        if (isBrowser) {
-            (this._connection as WebSocket).close();
-        } else {
-            // @ts-ignore
-            this._connection.close();
+        if (this._connection) {
+            if (isBrowser) {
+                (this._connection as WebSocket).close();
+            } else {
+                // @ts-ignore
+                this._connection.close();
+            }
         }
     }
 

@@ -12,7 +12,6 @@
     "experimentalDecorators": true,
     "removeComments": true,
     "noImplicitAny": false,
-    "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true,
     "typeRoots": ["node_modules/@types"],
   },

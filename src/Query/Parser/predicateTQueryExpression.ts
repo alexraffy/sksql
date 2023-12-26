@@ -465,7 +465,7 @@ export function * predicateTQueryExpression() {
 
     fn(chain);
     if (chain.length > 1) {
-        throw new TParserError("Unexpected operand in expression: " + chain[1]);
+        throw new TParserError("Unexpected operand in expression: " + JSON.stringify(chain[1]));
     }
 
     yield returnPred(chain[0]);

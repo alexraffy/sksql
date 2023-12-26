@@ -12,7 +12,6 @@
     "experimentalDecorators": true,
     "removeComments": false,
     "noImplicitAny": false,
-    "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true
   },
   "exclude": [
